@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
