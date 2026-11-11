@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/track_actions.dart' show goToAlbumOfTrack;
 import '../../app/window_lifecycle.dart';
 import '../../core/storage/prefs.dart';
 import '../../core/artwork/animated_artwork_service.dart';
@@ -1386,18 +1387,29 @@ class _TrackMetadataSection extends ConsumerWidget {
       crossAxisAlignment:
           centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
-        Text(
-          track.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: centered ? TextAlign.center : TextAlign.start,
-          style: (touch ? WaveTouchType.title : WaveType.pageTitle).copyWith(
-            fontSize: touch ? null : 25,
-            height: 1.12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-            color: Colors.white,
-            shadows: _metadataShadow,
+        // Tapping the title opens the song's album, like the artist link
+        // opens the artist.
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => goToAlbumOfTrack(
+            ref,
+            title: track.title,
+            artist: track.artist,
+            album: track.album,
+          ),
+          child: Text(
+            track.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: (touch ? WaveTouchType.title : WaveType.pageTitle).copyWith(
+              fontSize: touch ? null : 25,
+              height: 1.12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+              color: Colors.white,
+              shadows: _metadataShadow,
+            ),
           ),
         ),
         const SizedBox(height: 5),

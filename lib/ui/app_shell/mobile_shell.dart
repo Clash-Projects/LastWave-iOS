@@ -922,7 +922,23 @@ class _MobileTransportDock extends ConsumerWidget {
       color: waveTextSecondary(context),
     );
 
+    final tint = snapshot.current == null
+        ? null
+        : ref.watch(artworkSeedProvider(snapshot.current!.artworkUrl)).valueOrNull;
+    final dark = waveIsDark(context);
+    // See-through glass with a soft artwork-coloured gradient, matching the
+    // stage behind it instead of a flat dark slab.
     return WaveFloatingSurface(
+      artworkTint: tint,
+      fillAlpha: 0.30,
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          (tint ?? waveAccent(context)).withValues(alpha: dark ? 0.20 : 0.12),
+          Colors.white.withValues(alpha: dark ? 0.03 : 0.10),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           WaveSpacing.x12,

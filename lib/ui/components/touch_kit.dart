@@ -85,12 +85,20 @@ class WaveFloatingSurface extends StatelessWidget {
   final Color? base;
   final BorderRadius? borderRadius;
 
+  /// Absolute frost alpha (see [WaveHaze.fillAlpha]); lower = more see-through.
+  final double? fillAlpha;
+
+  /// Optional tint laid over the glass, e.g. an artwork-coloured wash.
+  final Gradient? gradient;
+
   const WaveFloatingSurface({
     super.key,
     required this.child,
     this.artworkTint,
     this.base,
     this.borderRadius,
+    this.fillAlpha,
+    this.gradient,
   });
 
   @override
@@ -109,12 +117,21 @@ class WaveFloatingSurface extends StatelessWidget {
         level: LwHazeLevel.l2,
         base: base ?? waveSurface(context),
         artworkTint: artworkTint,
+        fillAlpha: fillAlpha,
         borderRadius: radius,
         border: Border.all(
           color: (dark ? Colors.white : Colors.black)
               .withValues(alpha: dark ? 0.09 : 0.08),
         ),
-        child: ClipRRect(borderRadius: radius, child: child),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: gradient == null
+              ? child
+              : DecoratedBox(
+                  decoration: BoxDecoration(gradient: gradient),
+                  child: child,
+                ),
+        ),
       ),
     );
   }
