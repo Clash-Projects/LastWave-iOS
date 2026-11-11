@@ -18,6 +18,7 @@ import '../components/ambient.dart' show artworkSeedProvider;
 import '../components/touch_kit.dart';
 import '../navigation/destinations.dart';
 import '../queue/queue_panel.dart';
+import '../now_playing/now_playing_page.dart' show NowPlayingBackdrop;
 import '../components/buttons.dart' show LWVolumeSlider, WaveButton;
 import '../player_dock/player_dock.dart' show WaveTimeline;
 import '../now_playing/immersive.dart' show nowPlayingOverlayRequestProvider;
@@ -268,9 +269,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                             onBack: () => _back(moreDestinations),
                           ),
                         Expanded(
-                          child: ColoredBox(
-                            color: waveBackground(context),
-                            child: Stack(
+                          child: Stack(
                             fit: StackFit.expand,
                             children: [
                               widget.child,
@@ -383,7 +382,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                                 ),
                             ],
                           ),
-                          ),
                         ),
                         if (nowPlaying)
                           _DockFrame(
@@ -486,26 +484,24 @@ class _AmbientArtworkBackdrop extends ConsumerWidget {
     final tint = showArtworkGlow && artworkUrl.isNotEmpty
         ? ref.watch(artworkSeedProvider(artworkUrl)).valueOrNull
         : null;
-    final glow = tint == null
-        ? base
-        : Color.lerp(
-            base,
-            tint,
-            waveIsDark(context) ? 0.10 : 0.06,
-          )!;
-
+    if (!showArtworkGlow) {
+      return Positioned.fill(child: NowPlayingBackdrop(artworkUrl: artworkUrl));
+    }
+    final dark = waveIsDark(context);
+    // One continuous wash from the top edge to the bottom edge, so the
+    // gradient is never cut off behind the bars.
+    final top = tint == null ? base : Color.lerp(base, tint, dark ? 0.26 : 0.16)!;
+    final mid = tint == null ? base : Color.lerp(base, tint, dark ? 0.12 : 0.07)!;
     return Positioned.fill(
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: base,
-          gradient: tint == null
-              ? null
-              : RadialGradient(
-                  center: const Alignment(0, -0.85),
-                  radius: 1.3,
-                  colors: [glow, base],
-                  stops: const [0, 1],
-                ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [top, mid, base],
+            stops: const [0, 0.55, 1],
+          ),
         ),
       ),
     );
@@ -937,7 +933,7 @@ class _MobileTransportDock extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: 28,
+              height: 24,
               child: wavySeekbar
                   ? WaveTimeline(
                       progress: snapshot.position,
@@ -997,7 +993,7 @@ class _MobileTransportDock extends ConsumerWidget {
                 WaveTouchIconButton(
                   icon: WaveIcons.previous,
                   label: 'Previous track',
-                  size: WaveTouch.transportButton,
+                  size: 48,
                   iconSize: WaveTouch.iconPrimary + 2,
                   color: waveTextPrimary(context),
                   onPressed: playback.previous,
@@ -1005,12 +1001,13 @@ class _MobileTransportDock extends ConsumerWidget {
                 WavePlayDisc(
                   playing: snapshot.isPlaying,
                   busy: snapshot.isBuffering,
+                  size: 58,
                   onPressed: playback.toggle,
                 ),
                 WaveTouchIconButton(
                   icon: WaveIcons.next,
                   label: 'Next track',
-                  size: WaveTouch.transportButton,
+                  size: 48,
                   iconSize: WaveTouch.iconPrimary + 2,
                   color: waveTextPrimary(context),
                   onPressed: playback.next,

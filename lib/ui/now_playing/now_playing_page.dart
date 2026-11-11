@@ -282,6 +282,10 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
             // fade with it — and then the backdrop vanished the instant the
             // route did. Painting it here keeps the whole screen, backdrop
             // included, inside the page's own transition.
+            // On iPhone / iPad the shell paints this stage full-screen (behind
+            // the status bar, top bar and control tray) so it never stops at
+            // the page edge; see [NowPlayingBackdrop].
+            if (!Platform.isIOS) ...[
             Positioned.fill(child: ColoredBox(color: waveBackground(context))),
 
             // Background Visualizer
@@ -304,6 +308,7 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                 child: const SizedBox.expand(),
               ),
             ),
+            ],
 
             // Main Layout Content
             AnimatedPositioned(
@@ -960,7 +965,7 @@ class _NarrowCenteredPane extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints:
-              BoxConstraints(maxWidth: Platform.isIOS ? 560 : 440),
+              BoxConstraints(maxWidth: 440),
           child: Column(
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -972,7 +977,7 @@ class _NarrowCenteredPane extends StatelessWidget {
                       0.0,
                       math.min(
                         math.min(constraints.maxWidth, constraints.maxHeight),
-                        Platform.isIOS ? 520.0 : 360.0,
+                        Platform.isIOS ? 380.0 : 360.0,
                       ),
                     );
                     if (artSize <= 0) {
@@ -1696,6 +1701,33 @@ class _OutsetClipper extends CustomClipper<Rect> {
 
   @override
   bool shouldReclip(covariant _OutsetClipper old) => old.outset != outset;
+}
+
+/// Full-screen Now Playing stage (background, artwork ambience, frost) for
+/// the touch shell. It is painted behind all chrome so the gradient reaches
+/// every edge of the display.
+class NowPlayingBackdrop extends StatelessWidget {
+  final String artworkUrl;
+
+  const NowPlayingBackdrop({super.key, required this.artworkUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: waveBackground(context)),
+        RepaintBoundary(child: _NowAmbient(artworkUrl: artworkUrl)),
+        WaveHaze(
+          level: LwHazeLevel.l2,
+          base: waveSurfaceRaised(context),
+          fillAlpha: 0.30,
+          borderRadius: BorderRadius.zero,
+          child: const SizedBox.expand(),
+        ),
+      ],
+    );
+  }
 }
 
 /// Full-bleed blurred artwork backdrop adapted from LastWave-Native's
