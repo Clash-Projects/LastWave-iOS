@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:fluent_ui/fluent_ui.dart';
 
@@ -68,8 +69,9 @@ class WaveCollectionHero extends StatelessWidget {
       ),
     );
 
-    Widget textBlock() => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    Widget textBlock({bool center = false}) => Column(
+          crossAxisAlignment:
+              center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
@@ -82,12 +84,14 @@ class WaveCollectionHero extends StatelessWidget {
             Text(
               title,
               maxLines: 2,
+              textAlign: center ? TextAlign.center : TextAlign.start,
               overflow: TextOverflow.ellipsis,
               style: Platform.isIOS ? WaveTouchType.title : WaveType.pageTitle,
             ),
             const SizedBox(height: 4),
             Text(
               meta,
+              textAlign: center ? TextAlign.center : TextAlign.start,
               style: WaveType.meta.copyWith(
                 color: dark
                     ? WaveColors.textSecondary
@@ -98,6 +102,7 @@ class WaveCollectionHero extends StatelessWidget {
             Wrap(
               spacing: WaveSpacing.x4,
               runSpacing: WaveSpacing.x4,
+              alignment: center ? WrapAlignment.center : WrapAlignment.start,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ...primaryActions,
@@ -135,6 +140,32 @@ class WaveCollectionHero extends StatelessWidget {
       child: LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 720;
+        if (narrow && Platform.isIOS) {
+          // Touch phone layout: centred cover, title and actions.
+          final side = math.min(
+            math.max(artworkSize, 200.0),
+            constraints.maxWidth - 48,
+          );
+          return Column(
+            children: [
+              WaveFlightTarget(
+                kind: flightKind ?? '',
+                id: flightId ?? '',
+                enabled: flightKind != null &&
+                    flightId != null &&
+                    artworkUrl.isNotEmpty,
+                child: WaveArtwork(
+                  url: artworkUrl,
+                  size: side,
+                  radius: WaveRadius.hero,
+                  label: title,
+                ),
+              ),
+              const SizedBox(height: WaveSpacing.x12),
+              textBlock(center: true),
+            ],
+          );
+        }
         if (narrow) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,

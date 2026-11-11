@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,20 +37,21 @@ class LWSectionHeader extends StatelessWidget {
     final dark = waveIsDark(context);
     final tertiary =
         dark ? WaveColors.textTertiary : WaveColors.lightTextTertiary;
+    final touch = Platform.isIOS;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: touch ? CrossAxisAlignment.center : CrossAxisAlignment.end,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (overline != null && overline!.isNotEmpty)
+              if (!touch && overline != null && overline!.isNotEmpty)
                 Text(
                   overline!.toUpperCase(),
                   style: WaveType.overline.copyWith(color: tertiary),
                 ),
-              if (overline != null && overline!.isNotEmpty)
+              if (!touch && overline != null && overline!.isNotEmpty)
                 const SizedBox(height: 2),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -58,7 +61,12 @@ class LWSectionHeader extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: WaveType.sectionTitle,
+                      style: touch
+                          ? WaveTouchType.title.copyWith(
+                              fontSize: 20,
+                              color: waveTextPrimary(context),
+                            )
+                          : WaveType.sectionTitle,
                     ),
                   ),
                   if (count != null) ...[
@@ -301,6 +309,10 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
   bool _hover = false;
   bool _pressed = false;
 
+  // Touch: softer 16pt corners on cover cards.
+  double get _rv => Platform.isIOS ? 16 : WaveRadius.artwork;
+  BorderRadius get _r => BorderRadius.circular(_rv);
+
   @override
   Widget build(BuildContext context) {
     final dark = waveIsDark(context);
@@ -348,7 +360,7 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
                   duration: waveMotion(context, WaveMotion.normal),
                   curve: Curves.easeOutCubic,
                   decoration: BoxDecoration(
-                    borderRadius: WaveRadius.artworkRadius,
+                    borderRadius: _r,
                     boxShadow: [
                       if (_hover) ...[
                         ...WaveElevation.lift(dark),
@@ -365,7 +377,7 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
                       WaveArtwork(
                         url: widget.artworkUrl,
                         size: 160,
-                        radius: WaveRadius.artwork,
+                        radius: _rv,
                         title: widget.title,
                         artist: widget.artist,
                       ),
@@ -375,7 +387,7 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
                           opacity: _hover ? 1 : 0,
                           child: Container(
                             decoration: BoxDecoration(
-                              borderRadius: WaveRadius.artworkRadius,
+                              borderRadius: _r,
                               color: Colors.black.withValues(alpha: 0.55),
                             ),
                             child: Center(
@@ -415,12 +427,13 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: Platform.isIOS ? 8 : 6),
               Text(
                 widget.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: WaveType.trackTitle.copyWith(
+                  fontSize: Platform.isIOS ? 14.5 : null,
                   color: dark
                       ? WaveColors.textPrimary
                       : WaveColors.lightTextPrimary,
@@ -491,15 +504,15 @@ class _WaveQuickTileState extends ConsumerState<WaveQuickTile> {
           curve: Curves.easeOutCubic,
           child: AnimatedContainer(
             duration: waveMotion(context, WaveMotion.fast),
-            height: 60,
-            padding: const EdgeInsets.all(6),
+            height: Platform.isIOS ? 68 : 60,
+            padding: EdgeInsets.all(Platform.isIOS ? 8 : 6),
             decoration: BoxDecoration(
               color: widget.playing
                   ? accent.withValues(alpha: 0.14)
                   : _hover
                       ? waveHoverWash(context)
                       : waveSurface(context),
-              borderRadius: WaveRadius.artworkRadius,
+              borderRadius: BorderRadius.circular(Platform.isIOS ? 18 : WaveRadius.artwork),
               border: Border.all(
                 color: widget.playing
                     ? accent.withValues(alpha: 0.5)
@@ -512,8 +525,8 @@ class _WaveQuickTileState extends ConsumerState<WaveQuickTile> {
                 children: [
                   WaveArtwork(
                     url: widget.artworkUrl,
-                    size: 48,
-                    radius: WaveRadius.artwork,
+                    size: Platform.isIOS ? 52 : 48,
+                    radius: Platform.isIOS ? 12 : WaveRadius.artwork,
                   ),
                   if (_hover || widget.playing)
                     Positioned.fill(
@@ -544,13 +557,13 @@ class _WaveQuickTileState extends ConsumerState<WaveQuickTile> {
                       widget.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: WaveType.trackTitle.copyWith(fontSize: 12.5),
+                      style: WaveType.trackTitle.copyWith(fontSize: Platform.isIOS ? 14 : 12.5),
                     ),
                     Text(
                       widget.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: WaveType.meta.copyWith(fontSize: 11.5),
+                      style: WaveType.meta.copyWith(fontSize: Platform.isIOS ? 12.5 : 11.5),
                     ),
                   ],
                 ),

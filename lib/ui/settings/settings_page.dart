@@ -191,11 +191,14 @@ const WavePageHeader(
                       for (final s in _settingsSections)
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
-                          child: ToggleButton(
-                            checked: _section == s.$1,
-                            onChanged: (_) =>
-                                setState(() => _section = s.$1),
-                            child: Text(s.$2),
+                          child: SizedBox(
+                            height: Platform.isIOS ? WaveTouch.hit : null,
+                            child: ToggleButton(
+                              checked: _section == s.$1,
+                              onChanged: (_) =>
+                                  setState(() => _section = s.$1),
+                              child: Text(s.$2),
+                            ),
                           ),
                         ),
                     ],
@@ -245,7 +248,7 @@ const Text('Settings', style: WaveType.pageTitle),
               child: ListView(
                   controller: _contentScrollController,
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                  padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
                   children: [
                     SettingsSearchBox(onPick: _jump),
                     const SizedBox(height: 20),

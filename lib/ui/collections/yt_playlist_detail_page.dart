@@ -166,7 +166,7 @@ class _Body extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding:
-                  const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 0),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
                   maxWidth: WaveDensity.contentMax,

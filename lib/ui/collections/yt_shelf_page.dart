@@ -120,7 +120,7 @@ class WaveYtShelfPage extends ConsumerWidget {
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 22, 28, 16),
+              padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 22, waveGutter(context, 28), 16),
               child: WaveEntrance(
                 rise: 10,
                 child: Row(
@@ -169,7 +169,7 @@ class WaveYtShelfPage extends ConsumerWidget {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+            padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 0, waveGutter(context, 28), 28),
             sliver: SliverToBoxAdapter(
               child: Wrap(
                 spacing: 12,

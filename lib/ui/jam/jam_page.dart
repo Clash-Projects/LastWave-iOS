@@ -153,7 +153,7 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
     );
     final active = jam.phase == JamPhase.active;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+      padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 24, waveGutter(context, 28), 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

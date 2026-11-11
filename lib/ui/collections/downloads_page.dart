@@ -97,7 +97,7 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding:
-                const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 0),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: WaveDensity.contentMax,
@@ -125,6 +125,10 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
                     children: [
                       Expanded(
                         child: TextBox(
+                          padding: Platform.isIOS
+                              ? const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 13)
+                              : const EdgeInsets.all(6),
                           placeholder: 'Search downloads',
                           prefix: const Padding(
                             padding: EdgeInsets.only(left: 10),
@@ -367,11 +371,13 @@ class _DownloadRowState extends ConsumerState<_DownloadRow> {
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
+          // Touch: a single tap plays; desktop keeps double-click.
+          onTap: Platform.isIOS ? _play : null,
           onDoubleTap: _play,
           child: AnimatedContainer(
             duration: waveMotion(context, WaveMotion.fast),
             curve: Curves.easeOutCubic,
-            height: 54,
+            height: Platform.isIOS ? 64 : 54,
             // Inset the content, not the fill: the 6px hover plate keeps its
             // full width while the artwork clears its rounded edge (same
             // 8px row inset as the track rows).
@@ -387,7 +393,7 @@ class _DownloadRowState extends ConsumerState<_DownloadRow> {
                   children: [
                     WaveArtwork(
                         url: art,
-                        size: 40,
+                        size: Platform.isIOS ? 48 : 40,
                         radius: WaveRadius.artwork,
                         label: e.title,
                         title: e.title,

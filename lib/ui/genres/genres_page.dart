@@ -160,7 +160,7 @@ class _WaveGenresPageState extends ConsumerState<WaveGenresPage> {
       );
     if (widget.embedded) return body;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 22, 28, 16),
+      padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 22, waveGutter(context, 28), 16),
       child: body,
     );
   }

@@ -146,7 +146,7 @@ class _WaveFriendsPageState extends ConsumerState<WaveFriendsPage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
       children: [
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: WaveDensity.contentMax),

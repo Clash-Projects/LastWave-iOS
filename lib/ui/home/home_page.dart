@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -1078,6 +1080,7 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       child: WavePageHeader(
         overline: date,
+        subtitle: Platform.isIOS ? date : null,
         title: greeting,
         action: WaveIconButton(
           tooltip: 'Refresh home feed',

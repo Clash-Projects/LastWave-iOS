@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'dart:math' as math;
 
 import 'package:fluent_ui/fluent_ui.dart';
@@ -164,7 +166,12 @@ class _StatsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 800;
 
-    final title = Text('Statistics', style: WaveType.pageTitle);
+    final title = Text(
+      'Statistics',
+      style: Platform.isIOS
+          ? WaveTouchType.largeTitle.copyWith(color: waveTextPrimary(context))
+          : WaveType.pageTitle,
+    );
     final refresh = WaveIconButton(
       tooltip: 'Refresh statistics & scrobbles',
       icon: const Icon(FluentIcons.refresh, size: 14),
@@ -254,7 +261,10 @@ class _TabButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: waveMotion(context, WaveMotion.fast),
           curve: WaveMotion.standard,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: Platform.isIOS ? 12 : 8,
+          ),
           decoration: BoxDecoration(
             color: selected
                 ? (dark

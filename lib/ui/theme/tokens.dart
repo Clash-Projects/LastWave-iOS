@@ -874,3 +874,8 @@ class WaveTouchType {
     fontFeatures: [FontFeature.tabularFigures()],
   );
 }
+
+/// Horizontal page gutter: 16 on a compact iPhone-width view, otherwise the
+/// roomier desktop / iPad inset passed as [wide].
+double waveGutter(BuildContext context, [double wide = 24]) =>
+    MediaQuery.sizeOf(context).width < 600 ? 16 : wide;

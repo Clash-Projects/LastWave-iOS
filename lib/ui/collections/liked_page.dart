@@ -147,7 +147,7 @@ class _WaveLikedPageState
     // plus a second giant icon.
     if (mergedTotal == 0) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 32),
         children: [
           ConstrainedBox(
             constraints: const BoxConstraints(
@@ -180,7 +180,7 @@ class _WaveLikedPageState
         SliverToBoxAdapter(
           child: Padding(
             padding:
-                const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 0),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: WaveDensity.contentMax,

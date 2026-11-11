@@ -19,7 +19,7 @@ class WaveHomeLayoutPage extends ConsumerWidget {
     final notifier = ref.read(homeShelfLayoutProvider.notifier);
     final order = layout.order;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 22, 28, 20),
+      padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 22, waveGutter(context, 28), 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

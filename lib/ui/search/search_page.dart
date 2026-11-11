@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -299,6 +301,9 @@ decoration: waveInputDecoration(),
                 controller: _controller,
                 focusNode: _focus,
                 autofocus: false,
+                padding: Platform.isIOS
+                    ? const EdgeInsets.symmetric(horizontal: 10, vertical: 13)
+                    : const EdgeInsets.all(6),
                 placeholder: 'Songs, artists, albums, users…',
                 prefix: Padding(
                   padding: const EdgeInsets.only(left: 8),
@@ -433,8 +438,8 @@ class _SuggestionRowState extends State<_SuggestionRow> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 10, vertical: 6),
+          padding: EdgeInsets.symmetric(
+              horizontal: 10, vertical: Platform.isIOS ? 12 : 6),
           decoration: BoxDecoration(
             color: active
                 ? waveHoverWash(context)

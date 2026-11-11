@@ -870,7 +870,9 @@ class _TableRow<T extends Object> extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: WaveRadius.artworkRadius,
+              borderRadius: touch
+                  ? BorderRadius.circular(WaveRadius.hero * 0.6)
+                  : WaveRadius.artworkRadius,
               border: focused
                   ? Border.all(
                       color: waveFocusRing(context), width: WaveState.focusRing)
@@ -883,10 +885,8 @@ class _TableRow<T extends Object> extends StatelessWidget {
               children: [
                 // 30px gutter: number → play on hover → animated EQ when playing.
                 SizedBox(
-                  width: touch
-                      ? WaveMobileChrome.trackIndexWidth
-                      : 30,
-                  child: Center(
+                  width: touch ? 4 : 30,
+                  child: touch ? null : Center(
                     child: Text(
                                 (index + 1).toString().padLeft(2, '0'),
                                 style: WaveType.meta.copyWith(
@@ -1019,7 +1019,7 @@ class _TableRow<T extends Object> extends StatelessWidget {
                 // Hover-only like action; the full action menu opens on long-press.
                 SizedBox(
                   width: touch
-                      ? WaveMobileChrome.trackActionsWidth
+                      ? WaveTouch.hit * 2
                       : _kRowActions,
                   child: AnimatedOpacity(
                   duration: waveMotion(context, WaveMotion.fast),
@@ -1035,7 +1035,12 @@ class _TableRow<T extends Object> extends StatelessWidget {
                           active: liked,
                           onTap: onToggleLike!,
                         ),
-
+                      if (touch)
+                        _HoverGlyph(
+                          tooltip: 'More',
+                          icon: WaveIcons.more,
+                          onTap: () => showWaveMenuSheet(context, menuItems()),
+                        ),
                     ],
                   ),
                 ),
@@ -1257,16 +1262,17 @@ class _HoverGlyphState extends State<_HoverGlyph> {
             : (dark
                 ? WaveColors.textTertiary
                 : WaveColors.lightTextTertiary);
+    final touch = Platform.isIOS;
     final glyph = Container(
-      width: 30,
-      height: 36,
+      width: touch ? WaveTouch.hit : 30,
+      height: touch ? WaveTouch.hit : 36,
       color: Colors.transparent,
       child: Center(
         child: AnimatedScale(
           scale: _hover ? 1.15 : 1.0,
           duration: waveMotion(context, WaveMotion.fast),
           curve: Curves.easeOutCubic,
-          child: Icon(widget.icon, size: 14, color: color),
+          child: Icon(widget.icon, size: touch ? 20 : 14, color: color),
         ),
       ),
     );

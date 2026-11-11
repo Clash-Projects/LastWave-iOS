@@ -431,7 +431,7 @@ class _WavePodcastsPageState extends ConsumerState<WavePodcastsPage> {
           }
         }
         return ListView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
           children: [
             WaveCollectionHero(
               overline: 'Listen',
@@ -581,7 +581,7 @@ class _WavePodcastShowPageState extends ConsumerState<WavePodcastShowPage> {
           playbackServiceProvider.select((s) => s.current?.videoId),
         );
         return ListView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
           children: [
             WaveCollectionHero(
               overline: 'Podcast',
