@@ -273,17 +273,21 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              widget.child,
+                              // Overlays hide the page by taking it off stage (state
+                              // kept) instead of painting an opaque box, so the
+                              // full-screen gradient behind them is never cut.
+                              Offstage(
+                                offstage: (_showMore && !nowPlaying) ||
+                                    (_showQueue && nowPlaying),
+                                child: widget.child,
+                              ),
                               if (_showMore && !nowPlaying)
                                 Positioned.fill(
-                                  child: ColoredBox(
-                                    color: waveBackground(context),
-                                    child: _MorePage(
-                                      destinations: moreDestinations,
-                                      onGo: _go,
-                                      onBack: () =>
-                                          setState(() => _showMore = false),
-                                    ),
+                                  child: _MorePage(
+                                    destinations: moreDestinations,
+                                    onGo: _go,
+                                    onBack: () =>
+                                        setState(() => _showMore = false),
                                   ),
                                 ),
                               if (_showEqualizer && nowPlaying)
@@ -295,24 +299,21 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                                 ),
                               if (_showQueue && nowPlaying)
                                 Positioned.fill(
-                                  child: ColoredBox(
-                                    color: waveBackground(context),
-                                    child: Column(
-                                      children: [
-                                        _MobileOverlayHeader(
-                                          title: 'Queue',
+                                  child: Column(
+                                    children: [
+                                      _MobileOverlayHeader(
+                                        title: 'Queue',
+                                        onClose: () =>
+                                            _back(moreDestinations),
+                                      ),
+                                      Expanded(
+                                        child: WaveQueuePanel(
                                           onClose: () =>
                                               _back(moreDestinations),
+                                          embedded: true,
                                         ),
-                                        Expanded(
-                                          child: WaveQueuePanel(
-                                            onClose: () =>
-                                                _back(moreDestinations),
-                                            embedded: true,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               if (!online && !_offlineNoticeDismissed)
