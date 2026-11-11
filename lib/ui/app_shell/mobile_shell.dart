@@ -138,7 +138,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
 
   int? _branchForPath(String path) {
     final clean = path.split('?').first;
-    if (clean == '/home' || clean == '/home-layout') return 0;
+    if (clean == '/home') return 0;
     if (clean == '/stats') return 1;
     if (clean == '/search') return 2;
     if (clean == '/liked') return 3;
@@ -166,7 +166,11 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
       });
       return;
     }
-    setState(() => _showMore = false);
+    if (_showMore) {
+      // Back from the More list just closes it.
+      setState(() => _showMore = false);
+      return;
+    }
     if (context.canPop()) {
       context.pop();
     } else if (more.any((d) => d.path == _route)) {
@@ -234,8 +238,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                 _route.startsWith('${d.path}/'));
         // Tab roots have nothing to go back to; every other page does.
         final showBack = !nowPlaying &&
-            !_showMore &&
-            !tabs.any((d) => d.path == _route);
+            (_showMore || !tabs.any((d) => d.path == _route));
 
         final systemMedia = MediaQuery.of(context);
         return MediaQuery(
@@ -1437,15 +1440,6 @@ class _MorePage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            WaveTouch.floatInset,
-            WaveSpacing.x2,
-            WaveTouch.floatInset,
-            WaveSpacing.x4,
-          ),
-          child: _BackChip(onBack: onBack),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             WaveSpacing.x12,
