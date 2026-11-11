@@ -138,6 +138,10 @@ FeedEmptyReason resolveEmptyReason({
 int feedDaySeed(DateTime now) =>
     DateTime(now.year, now.month, now.day)
         .millisecondsSinceEpoch;
+
+/// Bumped by the Home refresh button so a manual refresh reshuffles the
+/// rotation instead of rebuilding the identical feed for the rest of the day.
+int feedRefreshSalt = 0;
 /// Canonical artist key for taste math: lowercase, collapsed space,
 /// featured-credit and collaboration suffixes stripped (`feat./ft./featuring/with/x/&/vs` +
 /// parenthesised variants), topic channels and junk mapped to ''. Pure — unit tested.
@@ -747,7 +751,7 @@ class FeedRepository {
       // fresh order tomorrow. The old unseeded ±8 jitter could never
       // cross affinity gaps, so every boot rendered the same heads
       // until new scrobbles arrived.
-      final rotation = Random(feedDaySeed(DateTime.now()));
+      final rotation = Random(feedDaySeed(DateTime.now()) + feedRefreshSalt);
       // Normalized affinity keeps every term comparable: affinity
       // 0–50, position 0–60 by boost, playback bonus ±, jitter 0–12.
       // Previously affinity×60 (0–300pts) buried the boost terms.
@@ -1243,7 +1247,7 @@ class FeedRepository {
         addSeed(t.name, t.artist, '', t.artworkUrl);
       }
       if (pool.isEmpty) return null;
-      final rotation = Random(feedDaySeed(DateTime.now()));
+      final rotation = Random(feedDaySeed(DateTime.now()) + feedRefreshSalt);
       final seed = pool[rotation.nextInt(pool.length)];
       var seedId = seed.videoId;
       var seedArt = seed.art;

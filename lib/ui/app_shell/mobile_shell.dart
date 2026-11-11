@@ -389,8 +389,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                               // iPad keeps queue / equalizer / download in
                               // the Now Playing top bar; on a compact phone
                               // that bar has no room, so the tray carries them.
-                              showUtilities:
-                                  Platform.isIOS && viewSize.shortestSide < 600,
+                              showUtilities: false,
                               onQueue: () => setState(() {
                                 _showQueue = !_showQueue;
                                 _showEqualizer = false;
@@ -1069,30 +1068,6 @@ class _MobileTransportDock extends ConsumerWidget {
   }
 }
 
-String _mobileStreamDetails(ResolvedStream? stream) {
-  if (stream == null) return '';
-  final badge = stream.qualityBadge.trim();
-  final codec = stream.audioCodec.trim();
-  final badgeUpper = badge.toUpperCase();
-  final codecUpper = codec.toUpperCase();
-  String? codecDetail;
-  if (codec.isNotEmpty && codecUpper != badgeUpper) {
-    if (badgeUpper.isNotEmpty && codecUpper.contains(badgeUpper)) {
-      final remainder = codec
-          .replaceFirst(RegExp(RegExp.escape(badge), caseSensitive: false), '')
-          .replaceFirst(RegExp(r'^[\s·\-]+'), '')
-          .trim();
-      if (remainder.isNotEmpty) codecDetail = remainder;
-    } else if (badgeUpper.isEmpty || !badgeUpper.contains(codecUpper)) {
-      codecDetail = codec;
-    }
-  }
-  return [
-    if (badge.isNotEmpty) badge,
-    ?codecDetail,
-  ].join(' · ');
-}
-
 /// Floating mini-player: artwork, title / artist, play-pause and next, with a
 /// hairline progress along the bottom edge. Tap opens Now Playing; swiping
 /// left or right skips to the next or previous track. Everything else (like,
@@ -1110,12 +1085,10 @@ class _MobileMiniPlayer extends ConsumerWidget {
         current: state.current,
         isPlaying: state.isPlaying,
         isBuffering: state.isBuffering,
-        stream: state.stream,
       )),
     );
     final track = player.current;
     if (track == null) return const SizedBox.shrink();
-    final streamDetails = _mobileStreamDetails(player.stream);
     final playback = ref.read(playbackServiceProvider.notifier);
     final artworkTint =
         ref.watch(artworkSeedProvider(track.artworkUrl)).valueOrNull;
@@ -1181,13 +1154,6 @@ class _MobileMiniPlayer extends ConsumerWidget {
                                         color: waveTextSecondary(context),
                                       ),
                                     ),
-                                    if (streamDetails.isNotEmpty)
-                                      _WaveAutoScrollText(
-                                        text: streamDetails,
-                                        style: WaveTouchType.tabLabel.copyWith(
-                                          color: waveTextTertiary(context),
-                                        ),
-                                      ),
                                   ],
                                 ),
                               ),
@@ -1195,6 +1161,13 @@ class _MobileMiniPlayer extends ConsumerWidget {
                           ),
                         ),
                       ),
+                    ),
+                    WaveTouchIconButton(
+                      icon: WaveIcons.previous,
+                      label: 'Previous track',
+                      iconSize: WaveTouch.iconPrimary,
+                      color: waveTextPrimary(context),
+                      onPressed: playback.previous,
                     ),
                     WaveTouchIconButton(
                       icon: player.isBuffering

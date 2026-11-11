@@ -56,6 +56,16 @@ class WaveHomePage extends ConsumerWidget {
     return 'Good evening';
   }
 
+  /// Reshuffles the daily rotation and reloads every Home source.
+  static void _refreshHome(WidgetRef ref) {
+    feedRefreshSalt++;
+    ref.invalidate(feedProvider);
+    ref.invalidate(ytHomeShelvesProvider);
+    ref.invalidate(newAlbumsProvider);
+    ref.invalidate(personalMixProvider);
+    ref.invalidate(friendsActivityProvider);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(feedProvider);
@@ -92,15 +102,13 @@ class WaveHomePage extends ConsumerWidget {
               child: _Header(
                 greeting: _greeting,
                 date: date,
-                onRefresh: () {
-                  ref.invalidate(feedProvider);
-                  ref.invalidate(ytHomeShelvesProvider);
-                },
+                onRefresh: () => _refreshHome(ref),
               ),
             ),
           ),
         ),
         feed.when(
+          skipLoadingOnRefresh: false,
           loading: () => SliverPadding(
             padding: EdgeInsets.fromLTRB(side, 18, side, 32),
             sliver: const SliverToBoxAdapter(child: _HomeSkeleton()),
@@ -111,7 +119,7 @@ class WaveHomePage extends ConsumerWidget {
               child: WaveError(
                 title: 'Could not load your feed',
                 message: '$e',
-                onRetry: () => ref.invalidate(feedProvider),
+                onRetry: () => _refreshHome(ref),
               ),
             ),
           ),
@@ -194,7 +202,7 @@ class WaveHomePage extends ConsumerWidget {
                         case FeedEmptyReason.noTaste:
                           context.go('/search');
                         default:
-                          ref.invalidate(feedProvider);
+                          _refreshHome(ref);
                       }
                     },
                   ),
