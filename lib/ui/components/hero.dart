@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:fluent_ui/fluent_ui.dart';
 
 import '../navigation/flight.dart';
@@ -61,7 +63,7 @@ class WaveCollectionHero extends StatelessWidget {
       child: WaveArtwork(
         url: artworkUrl,
         size: artworkSize,
-        radius: WaveRadius.artwork,
+        radius: Platform.isIOS ? WaveRadius.hero : WaveRadius.artwork,
         label: title,
       ),
     );
@@ -81,7 +83,7 @@ class WaveCollectionHero extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: WaveType.pageTitle,
+              style: Platform.isIOS ? WaveTouchType.title : WaveType.pageTitle,
             ),
             const SizedBox(height: 4),
             Text(
@@ -242,6 +244,37 @@ class WavePageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = waveIsDark(context);
+    if (Platform.isIOS) {
+      // Touch large-title header: no overline kicker, one strong title.
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: WaveTouchType.largeTitle
+                      .copyWith(color: waveTextPrimary(context)),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: WaveTouchType.rowMeta
+                        .copyWith(color: waveTextSecondary(context)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ?action,
+        ],
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
