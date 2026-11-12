@@ -2765,7 +2765,14 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   /// backend before YouTube. Shared by the resolver and the retry
   /// gate below so they never disagree.
   bool _wouldTryLossless(PlayableTrack track, bool forceYoutube) {
+    // A catalog-selected YouTube Music result already has an exact recording
+    // identity. Do not replace that specific video with a title/artist-only
+    // addon search result: same-title releases can resolve to a different
+    // recording even when their metadata looks similar. Addons remain the
+    // resolver for tracks without a catalog videoId (for example Last.fm
+    // imports and local queue entries).
     return !forceYoutube &&
+        track.videoId.isEmpty &&
         !_losslessBypass.contains(track.queueKey) &&
         _prefs.preferLossless &&
         _prefs.losslessQuality != AudioQualityTiers.youtubeOnly &&
