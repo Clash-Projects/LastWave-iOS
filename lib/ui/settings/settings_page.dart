@@ -306,7 +306,7 @@ class _SectionBody extends ConsumerWidget {
           child: LibrarySettings(onUpdate: onUpdate),
         );
       case 'appearance':
-        return _Appearance(onUpdate: onUpdate);
+        return const _Appearance();
       case 'lyrics':
         return _Lyrics(onUpdate: onUpdate);
       case 'lastfm':
@@ -751,8 +751,7 @@ class _Audio extends ConsumerWidget {
 }
 
 class _Appearance extends ConsumerWidget {
-  final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
-  const _Appearance({required this.onUpdate});
+  const _Appearance();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
