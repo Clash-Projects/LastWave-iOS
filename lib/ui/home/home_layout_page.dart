@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/material.dart' show ReorderableListView;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +20,12 @@ class WaveHomeLayoutPage extends ConsumerWidget {
     final notifier = ref.read(homeShelfLayoutProvider.notifier);
     final order = layout.order;
     return Padding(
-      padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 22, waveGutter(context, 28), 20),
+      padding: EdgeInsets.fromLTRB(
+        waveGutter(context, 28),
+        22 + WaveChromeInsets.of(context).top,
+        waveGutter(context, 28),
+        20 + WaveChromeInsets.of(context).bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

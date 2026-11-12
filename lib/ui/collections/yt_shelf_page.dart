@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -118,6 +119,7 @@ class WaveYtShelfPage extends ConsumerWidget {
     return WaveEntranceGroup(
       child: CustomScrollView(
         slivers: [
+        const WaveChromeSliver.top(),
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 22, waveGutter(context, 28), 16),
@@ -181,7 +183,8 @@ class WaveYtShelfPage extends ConsumerWidget {
               ),
             ),
           ),
-        ],
+        const WaveChromeSliver.bottom(),
+      ],
       ),
     );
   }

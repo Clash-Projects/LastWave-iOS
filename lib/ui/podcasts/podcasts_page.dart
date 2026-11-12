@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -433,6 +434,7 @@ class _WavePodcastsPageState extends ConsumerState<WavePodcastsPage> {
         return ListView(
           padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
           children: [
+        const WaveChromeSpacer.top(),
             WaveCollectionHero(
               overline: 'Listen',
               title: 'Podcasts',
@@ -483,7 +485,8 @@ class _WavePodcastsPageState extends ConsumerState<WavePodcastsPage> {
                   _episodeRail(context, ref, shelf.episodes, wide: true),
                 const SizedBox(height: 22),
               ],
-          ],
+        const WaveChromeSpacer.bottom(),
+      ],
         );
       },
     );
@@ -583,6 +586,7 @@ class _WavePodcastShowPageState extends ConsumerState<WavePodcastShowPage> {
         return ListView(
           padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
           children: [
+        const WaveChromeSpacer.top(),
             WaveCollectionHero(
               overline: 'Podcast',
               title: page.show.title,
@@ -643,7 +647,8 @@ class _WavePodcastShowPageState extends ConsumerState<WavePodcastShowPage> {
                 onPressed: _loadingMore ? null : () => _more(token),
               ),
             ],
-          ],
+        const WaveChromeSpacer.bottom(),
+      ],
         );
       },
     );

@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:io' show Platform;
 
 import 'dart:async';
@@ -282,6 +283,7 @@ class _WaveSearchPageState extends ConsumerState<WaveSearchPage> {
         physics: const ClampingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(side, 22, side, 32),
         children: [
+        const WaveChromeSpacer.top(),
           WaveEntrance(
             rise: 10,
             child: const WavePageHeader(
@@ -399,7 +401,8 @@ decoration: waveInputDecoration(),
               filter: _filter,
             ),
           ],
-        ],
+        const WaveChromeSpacer.bottom(),
+      ],
       ),
     );
   }

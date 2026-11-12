@@ -13,6 +13,7 @@ import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/audio_output/output_controller.dart';
 import '../components/artwork.dart';
 import '../components/ambient.dart' show artworkSeedProvider;
+import '../components/chrome_insets.dart';
 import '../components/touch_kit.dart';
 import '../navigation/destinations.dart';
 import '../queue/queue_panel.dart';
@@ -101,6 +102,33 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   bool _showQueue = false;
   bool _offlineNoticeDismissed = false;
   String get _route => waveRoutePath(widget.location);
+
+  // Floating chrome is measured, not guessed: text scale, the back chip and
+  // an absent mini-player all change its height.
+  final GlobalKey _topChromeKey = GlobalKey();
+  final GlobalKey _bottomChromeKey = GlobalKey();
+  double _topChromeHeight = 0;
+  double _bottomChromeHeight = 0;
+
+  void _syncChromeHeights() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      double heightOf(GlobalKey key) {
+        final box = key.currentContext?.findRenderObject();
+        return box is RenderBox && box.hasSize ? box.size.height : 0;
+      }
+
+      final top = heightOf(_topChromeKey);
+      final bottom = heightOf(_bottomChromeKey);
+      if ((top - _topChromeHeight).abs() > 0.5 ||
+          (bottom - _bottomChromeHeight).abs() > 0.5) {
+        setState(() {
+          _topChromeHeight = top;
+          _bottomChromeHeight = bottom;
+        });
+      }
+    });
+  }
 
   @override
   void didUpdateWidget(WaveMobileShell oldWidget) {
@@ -239,6 +267,78 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             (_showMore || !tabs.any((d) => d.path == _route));
 
         final systemMedia = MediaQuery.of(context);
+        final safe = systemMedia.padding;
+        _syncChromeHeights();
+
+        // Top chrome: iPad = navigation capsule; iPhone = mini-player (+ back
+        // chip). Bottom chrome: iPad = mini-player; iPhone = tab bar.
+        // Now Playing has its own top bar and a control tray at the bottom.
+        final topChrome = <Widget>[
+          if (tablet && !nowPlaying)
+            _TabletTopBar(
+              destinations: tabs,
+              activePath: activePath,
+              moreActive: moreActive,
+              showBack: showBack,
+              showLabels: constraints.maxWidth >= 1000,
+              onGo: _go,
+              onMore: () => setState(() => _showMore = !_showMore),
+              onBack: () => _back(moreDestinations),
+            ),
+          if (!tablet && !nowPlaying)
+            _DockFrame(
+              atTop: true,
+              child: _MobileMiniPlayer(onOpen: _openNowPlaying),
+            ),
+          if (!tablet && !nowPlaying && showBack)
+            _BackHeader(onBack: () => _back(moreDestinations)),
+        ];
+        final bottomChrome = nowPlaying
+            ? _DockFrame(
+                child: _MobileTransportDock(
+                  // The Now Playing top bar carries queue / equalizer /
+                  // download on every screen size.
+                  showUtilities: false,
+                  onQueue: () => setState(() {
+                    _showQueue = !_showQueue;
+                    _showEqualizer = false;
+                  }),
+                  onEqualizer: () => setState(() {
+                    _showEqualizer = !_showEqualizer;
+                    _showQueue = false;
+                  }),
+                  queueActive: _showQueue,
+                  equalizerActive: _showEqualizer,
+                ),
+              )
+            : tablet
+                ? _DockFrame(child: _MobileMiniPlayer(onOpen: _openNowPlaying))
+                : _DockFrame(
+                    child: _PhoneTabBar(
+                      destinations: tabs,
+                      activePath: activePath,
+                      moreActive: moreActive,
+                      onGo: _go,
+                      onMore: () => setState(() => _showMore = !_showMore),
+                    ),
+                  );
+
+        // Insets the page keeps clear at each end so content can scroll
+        // *under* the glass. Now Playing is a fixed stage: it simply sits
+        // between its own top bar and the tray.
+        final chromeInsets = nowPlaying
+            ? EdgeInsets.zero
+            : EdgeInsets.only(
+                top: safe.top + _topChromeHeight,
+                bottom: safe.bottom + _bottomChromeHeight,
+              );
+        final pagePadding = nowPlaying
+            ? EdgeInsets.only(
+                top: safe.top,
+                bottom: safe.bottom + _bottomChromeHeight,
+              )
+            : EdgeInsets.zero;
+
         return MediaQuery(
           data: systemMedia.copyWith(
             textScaler: TextScaler.linear(systemTextScale * interfaceScale),
@@ -250,29 +350,22 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
               fit: StackFit.expand,
               children: [
                 _AmbientArtworkBackdrop(showArtworkGlow: !nowPlaying),
-                SafeArea(
-                  child: Column(
-                      children: [
-                        if (tablet && !nowPlaying)
-                          _TabletTopBar(
-                            destinations: tabs,
-                            activePath: activePath,
-                            moreActive: moreActive,
-                            showBack: showBack,
-                            showLabels: constraints.maxWidth >= 1000,
-                            onGo: _go,
-                            onMore: () =>
-                                setState(() => _showMore = !_showMore),
-                            onBack: () => _back(moreDestinations),
-                          ),
-                        if (!tablet && showBack)
-                          _BackHeader(
-                            onBack: () => _back(moreDestinations),
-                          ),
-                        Expanded(
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
+                // The page fills the whole screen; the bars float above it.
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: safe.left,
+                      right: safe.right,
+                    ).add(pagePadding),
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      removeBottom: true,
+                      child: WaveChromeInsets(
+                        insets: chromeInsets,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
                               // Overlays hide the page by taking it off stage (state
                               // kept) instead of painting an opaque box, so the
                               // full-screen gradient behind them is never cut.
@@ -283,11 +376,14 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                               ),
                               if (_showMore && !nowPlaying)
                                 Positioned.fill(
-                                  child: _MorePage(
-                                    destinations: moreDestinations,
-                                    onGo: _go,
-                                    onBack: () =>
-                                        setState(() => _showMore = false),
+                                  child: Padding(
+                                    padding: chromeInsets,
+                                    child: _MorePage(
+                                      destinations: moreDestinations,
+                                      onGo: _go,
+                                      onBack: () =>
+                                          setState(() => _showMore = false),
+                                    ),
                                   ),
                                 ),
                               if (_showEqualizer && nowPlaying)
@@ -382,51 +478,37 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
+                          ],
                         ),
-                        if (nowPlaying)
-                          _DockFrame(
-                            child: _MobileTransportDock(
-                              // iPad keeps queue / equalizer / download in
-                              // the Now Playing top bar; on a compact phone
-                              // that bar has no room, so the tray carries them.
-                              showUtilities: false,
-                              onQueue: () => setState(() {
-                                _showQueue = !_showQueue;
-                                _showEqualizer = false;
-                              }),
-                              onEqualizer: () => setState(() {
-                                _showEqualizer = !_showEqualizer;
-                                _showQueue = false;
-                              }),
-                              queueActive: _showQueue,
-                              equalizerActive: _showEqualizer,
-                            ),
-                          )
-                        else
-                          _DockFrame(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _MobileMiniPlayer(onOpen: _openNowPlaying),
-                                if (!tablet) ...[
-                                  const SizedBox(height: WaveTouch.floatGap),
-                                  _PhoneTabBar(
-                                    destinations: tabs,
-                                    activePath: activePath,
-                                    moreActive: moreActive,
-                                    onGo: _go,
-                                    onMore: () => setState(
-                                      () => _showMore = !_showMore,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
+                  ),
+                ),
+                if (topChrome.isNotEmpty)
+                  Positioned(
+                    top: 0,
+                    left: safe.left,
+                    right: safe.right,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: safe.top),
+                      child: Column(
+                        key: _topChromeKey,
+                        mainAxisSize: MainAxisSize.min,
+                        children: topChrome,
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  bottom: 0,
+                  left: safe.left,
+                  right: safe.right,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: safe.bottom),
+                    child: KeyedSubtree(
+                      key: _bottomChromeKey,
+                      child: bottomChrome,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -442,16 +524,20 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
 class _DockFrame extends StatelessWidget {
   final Widget child;
 
-  const _DockFrame({required this.child});
+  /// Top-anchored chrome (the iPhone mini-player) gets its gap above instead
+  /// of below.
+  final bool atTop;
+
+  const _DockFrame({required this.child, this.atTop = false});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         WaveTouch.floatInset,
-        0,
+        atTop ? WaveTouch.floatGap : 0,
         WaveTouch.floatInset,
-        WaveTouch.floatGap,
+        atTop ? 0 : WaveTouch.floatGap,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -517,7 +603,6 @@ class _BackChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = waveIsDark(context);
     return Semantics(
       button: true,
       label: 'Back',
@@ -525,22 +610,18 @@ class _BackChip extends StatelessWidget {
       child: WavePressable(
         onTap: onBack,
         haptic: true,
-        child: Container(
-          width: WaveTouch.hit,
-          height: WaveTouch.hit,
-          decoration: BoxDecoration(
-            color: waveSurface(context).withValues(alpha: 0.78),
-            borderRadius: WaveRadius.menuRadius,
-            border: Border.all(
-              color: (dark ? Colors.white : Colors.black)
-                  .withValues(alpha: dark ? 0.09 : 0.08),
-            ),
-          ),
-          child: Center(
-            child: Icon(
-              WaveIcons.back,
-              size: WaveTouch.iconSecondary,
-              color: waveTextPrimary(context),
+        child: WaveFloatingSurface(
+          fillAlpha: 0.52,
+          borderRadius: WaveRadius.menuRadius,
+          child: SizedBox(
+            width: WaveTouch.hit,
+            height: WaveTouch.hit,
+            child: Center(
+              child: Icon(
+                WaveIcons.back,
+                size: WaveTouch.iconSecondary,
+                color: waveTextPrimary(context),
+              ),
             ),
           ),
         ),
@@ -624,8 +705,9 @@ class _PhoneTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WaveFloatingSurface(
+      fillAlpha: 0.52,
       child: SizedBox(
-        height: WaveTouch.tabBarHeight,
+        height: 54,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: WaveSpacing.x2),
           child: Row(
@@ -686,8 +768,8 @@ class _PhoneTab extends StatelessWidget {
           duration: waveMotion(context, WaveMotion.normal),
           curve: WaveMotion.standard,
           margin: const EdgeInsets.symmetric(
-            horizontal: WaveSpacing.x2,
-            vertical: WaveSpacing.x4,
+            horizontal: 1,
+            vertical: 4,
           ),
           decoration: BoxDecoration(
             color: selected ? waveWash(context, 0.10) : Colors.transparent,
@@ -696,15 +778,20 @@ class _PhoneTab extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: WaveTouch.iconPrimary - 2, color: color),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: WaveTouchType.tabLabel.copyWith(
-                  color: color,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 2),
+              // Scales down instead of clipping, so every label survives
+              // the narrowest iPhones and large text sizes.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: WaveTouchType.tabLabel.copyWith(
+                    fontSize: 9.5,
+                    color: color,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -767,6 +854,7 @@ class _TabletTopBar extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: WaveFloatingSurface(
+                  fillAlpha: 0.52,
                   borderRadius: BorderRadius.circular(WaveRadius.hero),
                   child: Padding(
                     padding: const EdgeInsets.all(WaveSpacing.x2),
@@ -1117,6 +1205,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
         child: WaveFloatingSurface(
           artworkTint: artworkTint,
           base: waveSurfaceRaised(context),
+          fillAlpha: 0.52,
           child: SizedBox(
             height: WaveTouch.miniPlayerHeight,
             child: Stack(

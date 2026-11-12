@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -122,6 +123,7 @@ class WaveAlbumsPage extends ConsumerWidget {
         return WaveEntranceGroup(
           child: CustomScrollView(
             slivers: [
+        const WaveChromeSliver.top(),
             SliverToBoxAdapter(
               child: Padding(
                 padding:
@@ -160,7 +162,8 @@ class WaveAlbumsPage extends ConsumerWidget {
                 ),
               ),
             ),
-          ],
+        const WaveChromeSliver.bottom(),
+      ],
           ),
         );
       },

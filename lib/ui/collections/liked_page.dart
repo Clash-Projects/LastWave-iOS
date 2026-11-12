@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -149,6 +150,7 @@ class _WaveLikedPageState
       return ListView(
         padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 32),
         children: [
+        const WaveChromeSpacer.top(),
           ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: WaveDensity.contentMax,
@@ -171,12 +173,14 @@ class _WaveLikedPageState
               ],
             ),
           ),
-        ],
+        const WaveChromeSpacer.bottom(),
+      ],
       );
     }
     return WaveEntranceGroup(
       child: CustomScrollView(
         slivers: [
+        const WaveChromeSliver.top(),
         SliverToBoxAdapter(
           child: Padding(
             padding:
@@ -312,6 +316,7 @@ class _WaveLikedPageState
         const SliverToBoxAdapter(
           child: SizedBox(height: 24),
         ),
+        const WaveChromeSliver.bottom(),
       ],
       ),
     );

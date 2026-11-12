@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:async';
 
 import 'package:fluent_ui/fluent_ui.dart';
@@ -141,6 +142,7 @@ class _WaveProfilePageState
     return ListView(
       padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
       children: [
+        const WaveChromeSpacer.top(),
         ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: WaveDensity.contentMax,
@@ -252,6 +254,7 @@ class _WaveProfilePageState
             ],
           ),
         ),
+        const WaveChromeSpacer.bottom(),
       ],
     );
   }
@@ -631,6 +634,7 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
     return ListView(
       padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
       children: [
+        const WaveChromeSpacer.top(),
         ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: WaveDensity.contentMax,
@@ -783,6 +787,7 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
             ],
           ),
         ),
+        const WaveChromeSpacer.bottom(),
       ],
     );
   }

@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import '../components/text_selection.dart';
 import '../components/buttons.dart';
 import '../components/inputs.dart';
@@ -176,6 +177,7 @@ class _WaveSettingsPageState extends ConsumerState<WaveSettingsPage> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
+        const WaveChromeSpacer.top(),
                 SettingsSearchBox(onPick: _jump),
                 const SizedBox(height: 16),
 const WavePageHeader(
@@ -211,7 +213,8 @@ const WavePageHeader(
                     child: _SectionBody(section: _section, onUpdate: _update),
                   ),
                 ),
-              ],
+        const WaveChromeSpacer.bottom(),
+      ],
             );
         }
         return Row(
@@ -222,7 +225,12 @@ const WavePageHeader(
               child: SingleChildScrollView(
                   controller: _railScrollController,
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 20, 12, 20),
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    20 + WaveChromeInsets.of(context).top,
+                    12,
+                    20 + WaveChromeInsets.of(context).bottom,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -250,6 +258,7 @@ const Text('Settings', style: WaveType.pageTitle),
                   physics: const ClampingScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 24),
                   children: [
+        const WaveChromeSpacer.top(),
                     SettingsSearchBox(onPick: _jump),
                     const SizedBox(height: 20),
                     ConstrainedBox(
@@ -264,7 +273,8 @@ const Text('Settings', style: WaveType.pageTitle),
                         ),
                       ),
                     ),
-                  ],
+        const WaveChromeSpacer.bottom(),
+      ],
                 ),
             ),
           ],
@@ -2730,8 +2740,8 @@ class _Sources extends ConsumerWidget {
       id: 'sources.addons',
       title: 'Addon sources',
       subtitle: urls.isEmpty
-          ? 'No addon configured — using the built-in lossless backend'
-          : 'Addons serve the lossless tier instead of the built-in backend',
+          ? 'No addon configured — playback uses YouTube only. Add an addon URL to enable the lossless tier.'
+          : 'Addons serve the lossless tier; tracks they cannot match play from YouTube',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -536,12 +537,14 @@ class WaveNewReleasesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
+        const WaveChromeSliver.top(),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
           sliver: const SliverToBoxAdapter(
             child: HomeNewReleasesSection(),
           ),
         ),
+        const WaveChromeSliver.bottom(),
       ],
     );
   }

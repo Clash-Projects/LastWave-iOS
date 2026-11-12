@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -97,6 +98,7 @@ class _WavePlaylistsPageState
       child: ListView(
         padding: EdgeInsets.fromLTRB(side, 20, side, 24),
         children: [
+        const WaveChromeSpacer.top(),
         SizedBox(
           width: double.infinity,
           child: Column(
@@ -200,6 +202,7 @@ class _WavePlaylistsPageState
             ],
           ),
         ),
+        const WaveChromeSpacer.bottom(),
       ],
       ),
     );

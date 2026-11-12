@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -79,6 +80,7 @@ class _BodyState extends ConsumerState<_Body> {
     return WaveEntranceGroup(
       child: CustomScrollView(
         slivers: [
+        const WaveChromeSliver.top(),
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 0),
@@ -166,7 +168,8 @@ class _BodyState extends ConsumerState<_Body> {
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
+        const WaveChromeSliver.bottom(),
+      ],
       ),
     );
   }

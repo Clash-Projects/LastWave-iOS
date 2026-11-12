@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show listEquals;
@@ -94,6 +95,7 @@ class WaveHomePage extends ConsumerWidget {
           start: feed.hasValue,
           child: CustomScrollView(
             slivers: [
+        const WaveChromeSliver.top(),
         SliverPadding(
           padding: const EdgeInsets.only(top: 12),
           sliver: SliverToBoxAdapter(
@@ -212,7 +214,8 @@ class WaveHomePage extends ConsumerWidget {
             return _feedSlivers(context, ref, data, side);
           },
         ),
-            ],
+        const WaveChromeSliver.bottom(),
+      ],
           ),
         ),
       ),

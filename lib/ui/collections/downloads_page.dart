@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -94,6 +95,7 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
     return WaveEntranceGroup(
       child: CustomScrollView(
         slivers: [
+        const WaveChromeSliver.top(),
         SliverToBoxAdapter(
           child: Padding(
             padding:
@@ -231,7 +233,8 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
         const SliverToBoxAdapter(
           child: SizedBox(height: 24),
         ),
-        ],
+        const WaveChromeSliver.bottom(),
+      ],
       ),
     );
   }

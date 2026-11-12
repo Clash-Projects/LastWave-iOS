@@ -38,14 +38,16 @@ class _MobileCookieLoginDialog extends StatefulWidget {
 }
 
 class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
-  // YouTube Music rejects the default WKWebView/Safari identity on some iOS
-  // releases. Present a current desktop Chrome-compatible identity while
-  // retaining WebKit's native cookie store for session capture. This is a
-  // compatibility hint only; it does not replace the underlying WebKit engine.
+  // Google refuses embedded sign-in when the browser identity and the engine
+  // disagree (the previous Chrome/AppleWebKit-537 string on a WebKit view is
+  // exactly that mismatch) or when the UA lacks a Safari token, which is how
+  // a bare WKWebView looks. This is the genuine iPadOS "desktop site" Safari
+  // identity: WebKit says it is Safari, so the claims are consistent. The
+  // real WebKit cookie store is still what we read the session from.
   static const _youtubeUserAgent =
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-      'AppleWebKit/537.36 (KHTML, like Gecko) '
-      'Chrome/154.0.0.0 Safari/537.36';
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) '
+      'Version/18.1 Safari/605.1.15';
 
   static const _pollInterval = Duration(seconds: 2);
 
@@ -134,7 +136,7 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
   }
 
   /// Reuses the page-state diagnostics from YtWebLogin in the iOS WKWebView.
-  /// No User-Agent spoofing is applied: Google must see the real WebKit client.
+  /// The UA is the genuine Safari identity for WebKit (see [_youtubeUserAgent]).
   Future<void> _inspectYouTubePage(InAppWebViewController controller) async {
     if (!_isYouTube || !mounted) return;
     try {
@@ -321,8 +323,12 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final height = (size.height * 0.68).clamp(260.0, 680.0).toDouble();
-    final width = (size.width * 0.88).clamp(260.0, 680.0).toDouble();
+    // Phones: use nearly the whole screen — Google's sign-in forms and the
+    // keyboard do not fit a small dialog.
+    final phone = Platform.isIOS && size.shortestSide < 600;
+    final height =
+        (size.height * (phone ? 0.78 : 0.68)).clamp(260.0, 680.0 + (phone ? 200 : 0)).toDouble();
+    final width = (size.width * (phone ? 0.96 : 0.88)).clamp(260.0, 680.0).toDouble();
     final title = _isYouTube ? 'Sign in to YouTube Music' : 'Sign in to Spotify';
 
     return ContentDialog(

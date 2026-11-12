@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -724,6 +725,7 @@ class _WaveArtistPageState extends ConsumerState<WaveArtistPage> {
           child: ListView(
           padding: EdgeInsets.fromLTRB(side, 24, side, 32),
           children: [
+        const WaveChromeSpacer.top(),
             ConstrainedBox(
               constraints: const BoxConstraints(
                   maxWidth: WaveDensity.contentMax),
@@ -1007,7 +1009,8 @@ class _WaveArtistPageState extends ConsumerState<WaveArtistPage> {
                 ],
               ),
             ),
-          ],
+        const WaveChromeSpacer.bottom(),
+      ],
           ),
         );
   }

@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
@@ -91,6 +92,7 @@ class WaveHistoryPage extends ConsumerWidget {
         return WaveEntranceGroup(
           child: CustomScrollView(
             slivers: [
+        const WaveChromeSliver.top(),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -266,7 +268,8 @@ class WaveHistoryPage extends ConsumerWidget {
             const SliverToBoxAdapter(
               child: SizedBox(height: 24),
             ),
-            ],
+        const WaveChromeSliver.bottom(),
+      ],
           ),
         );
       },

@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -188,6 +189,7 @@ class _WavePlaylistDetailPageState
     return WaveEntranceGroup(
       child: CustomScrollView(
       slivers: [
+        const WaveChromeSliver.top(),
         SliverToBoxAdapter(
           child: Padding(
             padding:
@@ -454,7 +456,8 @@ class _WavePlaylistDetailPageState
         const SliverToBoxAdapter(
           child: SizedBox(height: 24),
         ),
-        ],
+        const WaveChromeSliver.bottom(),
+      ],
       ),
     );
   }

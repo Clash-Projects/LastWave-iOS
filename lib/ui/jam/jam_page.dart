@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:async';
 
 import 'package:fluent_ui/fluent_ui.dart';
@@ -153,7 +154,12 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
     );
     final active = jam.phase == JamPhase.active;
     return Padding(
-      padding: EdgeInsets.fromLTRB(waveGutter(context, 28), 24, waveGutter(context, 28), 24),
+      padding: EdgeInsets.fromLTRB(
+        waveGutter(context, 28),
+        24 + WaveChromeInsets.of(context).top,
+        waveGutter(context, 28),
+        24 + WaveChromeInsets.of(context).bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

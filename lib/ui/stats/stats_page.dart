@@ -1,3 +1,4 @@
+import '../components/chrome_insets.dart';
 import 'dart:io' show Platform;
 
 import 'dart:math' as math;
@@ -66,6 +67,7 @@ class WaveStatsPage extends ConsumerWidget {
       start: statsAsync.hasValue,
       child: CustomScrollView(
         slivers: [
+        const WaveChromeSliver.top(),
           SliverPadding(
             padding: EdgeInsets.fromLTRB(side, 22, side, 0),
             sliver: SliverToBoxAdapter(
@@ -139,7 +141,8 @@ class WaveStatsPage extends ConsumerWidget {
               );
             },
           ),
-        ],
+        const WaveChromeSliver.bottom(),
+      ],
       ),
     );
   }
