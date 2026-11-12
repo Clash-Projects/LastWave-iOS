@@ -141,8 +141,10 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     _idleMirror.state = true;
   }
 
-  // Dark theme for the Artwork Aura stage, memoized on the accent so page
-  // rebuilds don't hand FluentTheme a new data object each time.
+  // Artwork Aura is a deliberately dark, cinematic stage even when the app
+  // chrome is in Light mode. Keep its accent light too: inheriting Light
+  // mode's black accent made active controls and the play disc disappear
+  // against this dark stage.
   FluentThemeData? _stageTheme;
   Color? _stageAccent;
 
@@ -157,10 +159,13 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     ref.listen<int>(nowPlayingActivityProvider, (_, _) => _resetIdleTimer());
     final apple = ref.watch(ambientStyleProvider) == AmbientStyle.artworkAura;
     if (!apple) return _buildPage(context);
-    final accent = waveAccent(context);
-    if (_stageTheme == null || _stageAccent != accent) {
-      _stageAccent = accent;
-      _stageTheme = buildWaveFluentTheme(accent: accent, isLight: false);
+    const stageAccent = WaveColors.defaultAccent;
+    if (_stageTheme == null || _stageAccent != stageAccent) {
+      _stageAccent = stageAccent;
+      _stageTheme = buildWaveFluentTheme(
+        accent: stageAccent,
+        isLight: false,
+      );
     }
     return FluentTheme(
       data: _stageTheme!,
@@ -1302,6 +1307,9 @@ class _TrackSwap extends StatelessWidget {
 
 const _metadataShadow = [Shadow(color: Color(0x59000000), blurRadius: 10)];
 
+List<Shadow> _metadataShadows(BuildContext context) =>
+    waveIsDark(context) ? _metadataShadow : const <Shadow>[];
+
 /// Split the stream spec into a tier ("HI-RES") and codec detail
 /// ("FLAC") without repeating the tier inside the codec.
 ({String tier, String detail})? _streamQualityParts(ResolvedStream stream) {
@@ -1369,19 +1377,20 @@ class _TrackMetadataSection extends ConsumerWidget {
     // or start-aligned stack it always had.
     final touch = Platform.isIOS;
     final centered = alignCenter && !touch;
+    final metadataShadows = _metadataShadows(context);
 
     final artistStyle = touch
         ? WaveTouchType.rowTitle.copyWith(
             fontWeight: FontWeight.w500,
             letterSpacing: 0.1,
-            shadows: _metadataShadow,
+            shadows: metadataShadows,
           )
         : WaveType.meta.copyWith(
             fontSize: 14,
             height: 1.45,
             fontWeight: FontWeight.w500,
             letterSpacing: 0.1,
-            shadows: _metadataShadow,
+            shadows: metadataShadows,
           );
 
     final titleBlock = Column(
@@ -1409,8 +1418,8 @@ class _TrackMetadataSection extends ConsumerWidget {
               height: 1.12,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
-              color: Colors.white,
-              shadows: _metadataShadow,
+              color: waveTextPrimary(context),
+              shadows: metadataShadows,
             ),
           ),
         ),
@@ -1419,21 +1428,21 @@ class _TrackMetadataSection extends ConsumerWidget {
           artist: track.artist,
           textAlign: centered ? TextAlign.center : TextAlign.start,
           style: artistStyle.copyWith(
-            color: Colors.white.withValues(alpha: 0.86),
+            color: waveTextSecondary(context),
           ),
           extraTrailingSpans: [
             if (showDistinctAlbum) ...[
               TextSpan(
                 text: '  ·  ',
                 style: artistStyle.copyWith(
-                  color: Colors.white.withValues(alpha: 0.30),
+                  color: waveTextTertiary(context),
                   fontWeight: FontWeight.w400,
                 ),
               ),
               TextSpan(
                 text: track.album,
                 style: artistStyle.copyWith(
-                  color: Colors.white.withValues(alpha: 0.56),
+                  color: waveTextTertiary(context),
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -1524,6 +1533,7 @@ class _QualitySpecLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final metadataShadows = _metadataShadows(context);
     return Align(
       alignment: centered ? Alignment.center : Alignment.centerLeft,
       child: Row(
@@ -1536,8 +1546,8 @@ class _QualitySpecLine extends StatelessWidget {
               fontSize: 9.5,
               letterSpacing: 1.05,
               fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.94),
-              shadows: _metadataShadow,
+              color: waveTextPrimary(context),
+              shadows: metadataShadows,
             ),
           ),
           if (quality.detail.isNotEmpty) ...[
@@ -1546,8 +1556,8 @@ class _QualitySpecLine extends StatelessWidget {
               '·',
               style: WaveType.label.copyWith(
                 fontSize: 10.5,
-                color: Colors.white.withValues(alpha: 0.32),
-                shadows: _metadataShadow,
+                color: waveTextTertiary(context),
+                shadows: metadataShadows,
               ),
             ),
             const SizedBox(width: 7),
@@ -1557,8 +1567,8 @@ class _QualitySpecLine extends StatelessWidget {
                 fontSize: 10.5,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.1,
-                color: Colors.white.withValues(alpha: 0.68),
-                shadows: _metadataShadow,
+                color: waveTextSecondary(context),
+                shadows: metadataShadows,
               ),
             ),
           ],
@@ -1591,10 +1601,11 @@ class _UpNextRowState extends ConsumerState<_UpNextRow> {
     if (!hasNext) return const SizedBox.shrink();
 
     final nextTrack = queue[index + 1];
+    final metadataShadows = _metadataShadows(context);
     final nextStyle = WaveType.meta.copyWith(
       fontSize: 11.5,
-      color: Colors.white.withValues(alpha: 0.62),
-      shadows: _metadataShadow,
+      color: waveTextSecondary(context),
+      shadows: metadataShadows,
     );
 
     final nextLabel = Text.rich(
@@ -1605,14 +1616,14 @@ class _UpNextRowState extends ConsumerState<_UpNextRow> {
             style: WaveType.trackTitle.copyWith(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.92),
-              shadows: _metadataShadow,
+              color: waveTextPrimary(context),
+              shadows: metadataShadows,
             ),
           ),
           TextSpan(
             text: '  ·  ',
             style: nextStyle.copyWith(
-              color: Colors.white.withValues(alpha: 0.30),
+              color: waveTextTertiary(context),
             ),
           ),
           TextSpan(text: nextTrack.artist, style: nextStyle),
@@ -1653,7 +1664,7 @@ class _UpNextRowState extends ConsumerState<_UpNextRow> {
             size: 11,
             color: _hovered
                 ? waveAccent(context)
-                : Colors.white.withValues(alpha: 0.42),
+                : waveTextTertiary(context),
           ),
         ),
       ],
@@ -1669,7 +1680,7 @@ class _UpNextRowState extends ConsumerState<_UpNextRow> {
           Container(
             width: 28,
             height: 1,
-            color: Colors.white.withValues(alpha: 0.16),
+            color: waveDivider(context),
           ),
           const SizedBox(height: 4),
           MouseRegion(
@@ -1685,7 +1696,7 @@ class _UpNextRowState extends ConsumerState<_UpNextRow> {
                 curve: WaveMotion.standard,
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: _hovered ? 0.06 : 0.0),
+                  color: _hovered ? waveWash(context, 0.06) : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: content,
