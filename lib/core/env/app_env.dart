@@ -8,9 +8,7 @@ import 'secrets.g.dart' as secrets;
 /// (`dart tool/obfuscate_secrets.dart` reads the gitignored `.env`
 /// and generates `secrets.g.dart`), mirroring LastWave-native's
 /// `obfuscateSecret()` / `decodeSecretBytes` scheme with the same
-/// mask. They are decoded only in memory at runtime — every user of
-/// the app gets addon/lyrics access with no keys of their own, and
-/// no plaintext secret ships in the binary.
+/// mask. They are decoded only in memory at runtime.
 ///
 /// Last.fm is BYOK: the user enters their own API key + secret
 /// (stored in Prefs, see `Prefs.isLastFmConfigured`) — no bundled
@@ -22,6 +20,12 @@ class AppEnv {
 
   /// Same mask as LastWave-native `SECRET_MASK`.
   static const _mask = [0x5A, 0x3F, 0x7E, 0x1B, 0x92, 0x4C, 0xA1, 0x6D];
+
+  /// Public LastWave addon protocol fallback. This matches the default
+  /// LASTWAVE_SECRET used by the published LastWave addon worker. A
+  /// build-provided ADDON_CLIENT_SECRET always takes precedence.
+  static const _fallbackAddonClientSecret =
+      '36d96a751b12ee481c281a8a8e64c482d0c1634a22061ab72f40175017818b85';
 
   static String _decode(List<int> data) {
     if (data.isEmpty) return '';
@@ -36,10 +40,13 @@ class AppEnv {
     }
   }
 
-  /// Addon one-way-lock secret (HMAC-SHA256 request proofs). Baked in
-  /// like the other keys: never logged, never sent except as a keyed
-  /// proof. Empty = addon calls fail closed server-side (404).
-  static String get addonClientSecret => _decode(secrets.kAddonClientSecret);
+  /// Addon one-way-lock secret (HMAC-SHA256 request proofs). Use the
+  /// generated build-specific secret when present; otherwise use the
+  /// published protocol fallback. The value is never logged.
+  static String get addonClientSecret {
+    final configured = _decode(secrets.kAddonClientSecret);
+    return configured.isNotEmpty ? configured : _fallbackAddonClientSecret;
+  }
 
   /// About-screen catalog list. Never includes URLs or keys.
   /// (Settings → Sources) are the only lossless catalog now.
