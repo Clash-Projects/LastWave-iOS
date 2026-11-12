@@ -1027,27 +1027,16 @@ class AddonApi implements LosslessSource {
     // budget and never retries.
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        // Android parses the response body independently of its HTTP
-        // Content-Type. Some addon hosts send JSON with text/plain, which
-        // Dio's typed Map response can reject before the stream parser sees
-        // it. Keep this dynamic and normalize the body exactly once below.
-        final res = await _dio.get<dynamic>(
+        final res = await _dio.get<Map<String, dynamic>>(
           '${root}stream/$trackId',
           queryParameters: {
             'quality': serverQuality,
             'atmos': wantAtmos ? 'auto' : 'none',
           },
-          options: Options(
-            headers: _signHeaders('GET', root, path),
-            responseType: ResponseType.plain,
-          ),
+          options: Options(headers: _signHeaders('GET', root, path)),
         ).timeout(timeout);
         _recordQuota(root, res.headers);
-        data = decodeStreamPayload(res.data);
-        TraceCrumb.write('resolve stage=stream-http-ok '
-            'tier=$serverQuality status=${res.statusCode ?? 0} '
-            'type=${_safeContentType(res.headers.value(Headers.contentTypeHeader) ?? 'unknown')} '
-            'shape=${_safePayloadShape(data)}');
+        data = res.data ?? const {};
         break;
       } on TimeoutException {
         TraceCrumb.write('resolve stage=stream-timeout tier=$serverQuality '
@@ -1055,29 +1044,20 @@ class AddonApi implements LosslessSource {
         return null;
       } on DioException catch (e) {
         _recordQuota(root, e.response?.headers);
-        final status = e.response?.statusCode ?? 0;
-        final contentType =
-            e.response?.headers.value(Headers.contentTypeHeader) ?? 'unknown';
-        // Never log response bodies, request URLs, signatures, or tokens.
-        // Status + content type distinguishes auth/routing/server failures
-        // from a successful response that the payload parser cannot use.
-        TraceCrumb.write('resolve stage=stream-http-error '
-            'tier=$serverQuality status=$status '
-            'type=${_safeContentType(contentType)} '
-            'kind=${e.type.name}');
-        if (status == 429) {
+        if (e.response?.statusCode == 429) {
           throw AddonQuotaException.fromResponse(e.response);
         }
         if (attempt == 0) {
+          // One quick retry: a transient mint failure clears on the
+          // second request, and the host answers in ~0.5s. The old
+          // fixed 600ms wait was pure dead time on the cold path.
           TraceCrumb.write('resolve stage=stream-retry tier=$serverQuality '
               'after_ms=150');
           await Future.delayed(const Duration(milliseconds: 150));
           continue;
         }
         return null;
-      } catch (e) {
-        TraceCrumb.write('resolve stage=stream-client-error '
-            'tier=$serverQuality kind=${e.runtimeType}');
+      } catch (_) {
         if (attempt == 0) {
           TraceCrumb.write('resolve stage=stream-retry tier=$serverQuality '
               'after_ms=150');
@@ -1099,71 +1079,6 @@ class AddonApi implements LosslessSource {
       title: title,
       artist: artist,
     );
-  }
-
-  /// Android reads the raw response body and decodes JSON regardless of
-  /// Content-Type. Match that behavior for JSON returned as application/json
-  /// or text/plain, and accept either direct or wrapped stream objects.
-  @visibleForTesting
-  static Map<String, dynamic> decodeStreamPayload(Object? raw) {
-    Object? decoded = raw;
-    if (decoded is String) {
-      try {
-        decoded = jsonDecode(decoded);
-      } on FormatException {
-        return const {};
-      }
-    }
-    if (decoded is! Map) return const {};
-    final response = Map<String, dynamic>.from(decoded);
-    final nested = response['stream'] ?? response['data'];
-    if (nested is! Map) return response;
-    return <String, dynamic>{
-      ...response,
-      ...Map<String, dynamic>.from(nested),
-    };
-  }
-
-  /// Backwards-compatible map-only helper retained for existing callers/tests.
-  @visibleForTesting
-  static Map<String, dynamic> unwrapStreamPayload(
-          Map<String, dynamic> response) =>
-      decodeStreamPayload(response);
-
-  /// Android's addon models tolerate numbers encoded as JSON strings.
-  /// Keep the iOS parser equally tolerant so optional metadata cannot discard
-  /// an otherwise playable URL.
-  static int? _payloadInt(Object? value) {
-    if (value is num) return value.toInt();
-    if (value == null) return null;
-    final text = value.toString().trim();
-    final direct = int.tryParse(text);
-    if (direct != null) return direct;
-    return double.tryParse(text)?.toInt();
-  }
-
-  /// Safe, bounded response metadata for diagnosing addon compatibility.
-  /// Values are deliberately excluded: stream URLs can contain signatures.
-  static String _safeContentType(String value) {
-    final mediaType = value.split(';').first.trim().toLowerCase();
-    if (mediaType.isEmpty) return 'unknown';
-    final safe = mediaType.replaceAll(RegExp(r'[^a-z0-9.+/-]'), '');
-    return safe.substring(0, safe.length > 64 ? 64 : safe.length);
-  }
-
-  static String _safePayloadShape(Map<String, dynamic> data) {
-    const streamFields = {
-      'url', 'dataUrl', 'directUrl', 'streamUrl', 'downloadUrl',
-      'mediaUrl', 'manifestXml', 'hybrid'
-    };
-    final present = data.keys
-        .where((key) => streamFields.contains(key))
-        .toList()
-      ..sort();
-    final nested = data['data'];
-    final nestedType =
-        nested is Map ? 'map' : nested == null ? 'none' : 'other';
-    return 'keys=${present.join(',')} nested_data=$nestedType';
   }
 
   void _recordQuota(String root, Headers? headers) {
@@ -1259,25 +1174,22 @@ class AddonApi implements LosslessSource {
 
     final hiRes = serverQuality == 'hi_res';
     final mp3 = serverQuality == 'high';
-    // Addon implementations are not consistent about JSON scalar types:
-    // Android's wire model accepts quoted numbers as well as numeric values.
-    // Avoid a runtime cast here turning an otherwise valid stream into a miss.
     final bitDepth = isStreamAtmos
         ? 16
-        : (_payloadInt(data['bitDepth']) ??
-            _payloadInt(data['bit_depth']) ??
-            (hiRes ? 24 : 16));
+        : ((data['bitDepth'] as num?)?.toInt() ?? (hiRes ? 24 : 16));
     // Server speaks Hz (e.g. 48000); the model is kHz. Anything above
     // 1000 must be Hz — without this the sheet shows "48000.0 kHz"
     // and the bitrate explodes by the same 1000× (depth×rate×2).
     final sampleRate = isStreamAtmos
         ? 48.0
         : khzFromServerSampleRate(data['sampleRate'], hiRes: hiRes);
-    final bitrateKbps = (_payloadInt(data['bitrate']) ??
-            _payloadInt(data['bit_rate']) ??
-            0)
-        .clamp(0, 100000)
-        .toInt();
+    final bitrateKbps = isStreamAtmos
+        ? ((data['bitrate'] as num?)?.toInt() ?? 768)
+        : mp3
+            ? 320
+            : hiRes
+                ? (bitDepth * sampleRate * 2).toInt()
+                : 1411;
     final codec = isStreamAtmos
         ? 'DOLBY ATMOS'
         : mp3
@@ -1395,14 +1307,7 @@ class AddonApi implements LosslessSource {
       (u) => !u.startsWith('data:'),
       orElse: () => '',
     );
-    if (direct.isEmpty) {
-      TraceCrumb.write('resolve stage=stream-unrecognized-payload $mlabel '
-          'keys=${data.keys.map((e) => e.toString()).toList()..sort()} '
-          'manifest=${manifestXml.isNotEmpty} '
-          'inline_data=${urls.any((u) => u.startsWith('data:'))} '
-          'hybrid=${data['hybrid'] is Map}');
-      return null;
-    }
+    if (direct.isEmpty) return null;
     // Remote .mpd goes straight to libmpv (signed, headerless per
     // protocol); progressive files likewise.
     final lower = direct.split('?').first.toLowerCase();
