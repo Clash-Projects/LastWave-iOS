@@ -1130,6 +1130,18 @@ class AddonApi implements LosslessSource {
           Map<String, dynamic> response) =>
       decodeStreamPayload(response);
 
+  /// Android's addon models tolerate numbers encoded as JSON strings.
+  /// Keep the iOS parser equally tolerant so optional metadata cannot discard
+  /// an otherwise playable URL.
+  static int? _payloadInt(Object? value) {
+    if (value is num) return value.toInt();
+    if (value == null) return null;
+    final text = value.toString().trim();
+    final direct = int.tryParse(text);
+    if (direct != null) return direct;
+    return double.tryParse(text)?.toInt();
+  }
+
   /// Safe, bounded response metadata for diagnosing addon compatibility.
   /// Values are deliberately excluded: stream URLs can contain signatures.
   static String _safeContentType(String value) {
@@ -1247,16 +1259,23 @@ class AddonApi implements LosslessSource {
 
     final hiRes = serverQuality == 'hi_res';
     final mp3 = serverQuality == 'high';
+    // Addon implementations are not consistent about JSON scalar types:
+    // Android's wire model accepts quoted numbers as well as numeric values.
+    // Avoid a runtime cast here turning an otherwise valid stream into a miss.
     final bitDepth = isStreamAtmos
         ? 16
-        : ((data['bitDepth'] as num?)?.toInt() ?? (hiRes ? 24 : 16));
+        : (_payloadInt(data['bitDepth']) ??
+            _payloadInt(data['bit_depth']) ??
+            (hiRes ? 24 : 16));
     // Server speaks Hz (e.g. 48000); the model is kHz. Anything above
     // 1000 must be Hz — without this the sheet shows "48000.0 kHz"
     // and the bitrate explodes by the same 1000× (depth×rate×2).
     final sampleRate = isStreamAtmos
         ? 48.0
         : khzFromServerSampleRate(data['sampleRate'], hiRes: hiRes);
-    final bitrateKbps = ((data['bitrate'] as num?)?.toInt() ?? 0)
+    final bitrateKbps = (_payloadInt(data['bitrate']) ??
+            _payloadInt(data['bit_rate']) ??
+            0)
         .clamp(0, 100000)
         .toInt();
     final codec = isStreamAtmos
