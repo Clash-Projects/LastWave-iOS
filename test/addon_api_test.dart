@@ -291,6 +291,49 @@ void main() {
     });
   });
 
+  group('addon stream response envelopes', () {
+    test('accepts a direct stream payload unchanged', () {
+      final payload = <String, dynamic>{
+        'url': 'https://cdn.example/song.flac',
+        'codec': 'flac',
+      };
+      expect(AddonApi.unwrapStreamPayload(payload), payload);
+    });
+
+    test('unwraps stream envelope and preserves outer metadata', () {
+      final payload = AddonApi.unwrapStreamPayload({
+        'requestId': 'safe-metadata',
+        'stream': {
+          'url': 'https://cdn.example/song.flac',
+          'codec': 'flac',
+        },
+      });
+      expect(payload['requestId'], 'safe-metadata');
+      expect(payload['url'], 'https://cdn.example/song.flac');
+      expect(payload['codec'], 'flac');
+    });
+
+    test('unwraps data envelope and lets stream fields override outer fields', () {
+      final payload = AddonApi.unwrapStreamPayload({
+        'url': 'https://cdn.example/placeholder.mp3',
+        'data': {
+          'url': 'https://cdn.example/song.flac',
+          'codec': 'flac',
+        },
+      });
+      expect(payload['url'], 'https://cdn.example/song.flac');
+      expect(payload['codec'], 'flac');
+    });
+
+    test('prefers stream envelope when both wrapper keys are present', () {
+      final payload = AddonApi.unwrapStreamPayload({
+        'stream': {'url': 'https://cdn.example/song.flac'},
+        'data': {'url': 'https://cdn.example/other.flac'},
+      });
+      expect(payload['url'], 'https://cdn.example/song.flac');
+    });
+  });
+
   group('AddonManifest', () {
     test('usable requires id/name/search/stream', () {
       expect(
