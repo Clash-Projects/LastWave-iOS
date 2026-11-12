@@ -10,7 +10,8 @@ import '../../features/settings/theme_controller.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/audio_output/output_controller.dart';
-import '../components/ambient.dart' show artworkSeedProvider;
+import '../components/ambient.dart'
+    show AmbientStyle, ambientStyleProvider, artworkSeedProvider;
 import '../components/chrome_insets.dart';
 import '../components/touch_kit.dart';
 import '../navigation/destinations.dart';
@@ -18,6 +19,7 @@ import '../queue/queue_panel.dart';
 import '../now_playing/now_playing_page.dart' show NowPlayingBackdrop;
 import '../components/buttons.dart' show LWVolumeSlider, WaveButton;
 import '../now_playing/immersive.dart' show nowPlayingOverlayRequestProvider;
+import '../theme/fluent_theme.dart';
 import '../theme/haze.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
@@ -98,6 +100,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   bool _showEqualizer = false;
   bool _showQueue = false;
   bool _offlineNoticeDismissed = false;
+  FluentThemeData? _artworkPlayerTheme;
   String get _route => waveRoutePath(widget.location);
 
   // Floating chrome is measured, not guessed: text scale, the back chip and
@@ -221,7 +224,10 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         setState(() => _offlineNoticeDismissed = false);
       }
     });
-    return LayoutBuilder(
+    final artworkPlayerStage = _route.startsWith('/now') &&
+        ref.watch(ambientStyleProvider) == AmbientStyle.artworkAura;
+
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         // Window width matters: Split View and Stage Manager can be narrower
         // than the iPad's physical display.
@@ -503,6 +509,21 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
           ),
         );
       },
+    );
+
+    if (!artworkPlayerStage) return content;
+
+    // Apply the cinematic dark-stage theme to the WHOLE mobile shell while
+    // Now Playing is open. The page, backdrop and floating transport controls
+    // used to inherit different themes, leaving black Light-mode accents on
+    // the dark stage and a pale tray over dark artwork.
+    _artworkPlayerTheme ??= buildWaveFluentTheme(
+      accent: WaveColors.defaultAccent,
+      isLight: false,
+    );
+    return FluentTheme(
+      data: _artworkPlayerTheme!,
+      child: content,
     );
   }
 }
