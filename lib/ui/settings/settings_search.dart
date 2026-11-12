@@ -213,13 +213,6 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     keywords: 'addon url source lossless catalog provider server',
   ),
   SettingsSearchEntry(
-    id: 'appearance.wavy_seekbar',
-    section: 'appearance',
-    title: 'Wavy seekbar',
-    subtitle: 'Playback timeline appearance',
-    keywords: 'wavy seekbar timeline waveform playback appearance',
-  ),
-  SettingsSearchEntry(
     id: 'about.main',
     section: 'about',
     title: 'About LastWave',

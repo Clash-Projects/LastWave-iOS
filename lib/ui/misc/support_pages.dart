@@ -692,7 +692,6 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
                       value: _count.toDouble(),
                       min: 5,
                       max: 35,
-                      divisions: 30,
                       onChanged: _lengthLocked
                           ? null
                           : (v) => setState(() => _length = v.round()),

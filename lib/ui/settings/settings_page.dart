@@ -2929,8 +2929,8 @@ class _PlaybackState extends ConsumerState<_Playback> {
                     value: currentSeconds.clamp(3.0, 12.0),
                     min: 3.0,
                     max: 12.0,
-                    divisions: 9,
-                    onChanged: (v) => setState(() => _dragSeconds = v),
+                    onChanged: (v) =>
+                        setState(() => _dragSeconds = v.roundToDouble()),
                     onChangeEnd: (v) async {
                       setState(() => _dragSeconds = null);
                       final secs = v.round().clamp(3, 12);
@@ -3280,8 +3280,8 @@ class _TimedMixSettingsState extends ConsumerState<_TimedMixSettings> {
               value: seconds.clamp(12.0, 18.0),
               min: 12,
               max: 18,
-              divisions: 6,
-              onChanged: (v) => setState(() => _dragSeconds = v),
+              onChanged: (v) =>
+                  setState(() => _dragSeconds = v.roundToDouble()),
               onChangeEnd: (v) async {
                 setState(() => _dragSeconds = null);
                 await widget.onUpdate(
