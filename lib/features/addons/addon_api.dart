@@ -1036,7 +1036,11 @@ class AddonApi implements LosslessSource {
           options: Options(headers: _signHeaders('GET', root, path)),
         ).timeout(timeout);
         _recordQuota(root, res.headers);
-        data = res.data ?? const {};
+        // Android's AddonClient accepts both the direct stream object and
+        // the common { "stream": {...} } / { "data": {...} } envelopes.
+        // Search already handles wrapped results; stream resolution must do
+        // the same or every valid mint is mistaken for an empty response.
+        data = unwrapStreamPayload(res.data ?? const {});
         TraceCrumb.write('resolve stage=stream-http-ok '
             'tier=$serverQuality status=${res.statusCode ?? 0} '
             'type=${_safeContentType(res.headers.value(Headers.contentTypeHeader) ?? 'unknown')} '
@@ -1092,6 +1096,21 @@ class AddonApi implements LosslessSource {
       title: title,
       artist: artist,
     );
+  }
+
+  /// Normalize the two response envelopes supported by the native client.
+  /// Some addon servers return the stream object directly; others wrap it in
+  /// `stream` or `data`. Preserve outer fields as metadata fallbacks while
+  /// allowing the inner stream fields to take precedence.
+  @visibleForTesting
+  static Map<String, dynamic> unwrapStreamPayload(
+      Map<String, dynamic> response) {
+    final nested = response['stream'] ?? response['data'];
+    if (nested is! Map) return response;
+    return <String, dynamic>{
+      ...response,
+      ...Map<String, dynamic>.from(nested),
+    };
   }
 
   /// Safe, bounded response metadata for diagnosing addon compatibility.
