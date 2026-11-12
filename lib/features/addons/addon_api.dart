@@ -1027,20 +1027,23 @@ class AddonApi implements LosslessSource {
     // budget and never retries.
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final res = await _dio.get<Map<String, dynamic>>(
+        // Android parses the response body independently of its HTTP
+        // Content-Type. Some addon hosts send JSON with text/plain, which
+        // Dio's typed Map response can reject before the stream parser sees
+        // it. Keep this dynamic and normalize the body exactly once below.
+        final res = await _dio.get<dynamic>(
           '${root}stream/$trackId',
           queryParameters: {
             'quality': serverQuality,
             'atmos': wantAtmos ? 'auto' : 'none',
           },
-          options: Options(headers: _signHeaders('GET', root, path)),
+          options: Options(
+            headers: _signHeaders('GET', root, path),
+            responseType: ResponseType.plain,
+          ),
         ).timeout(timeout);
         _recordQuota(root, res.headers);
-        // Android's AddonClient accepts both the direct stream object and
-        // the common { "stream": {...} } / { "data": {...} } envelopes.
-        // Search already handles wrapped results; stream resolution must do
-        // the same or every valid mint is mistaken for an empty response.
-        data = unwrapStreamPayload(res.data ?? const {});
+        data = decodeStreamPayload(res.data);
         TraceCrumb.write('resolve stage=stream-http-ok '
             'tier=$serverQuality status=${res.statusCode ?? 0} '
             'type=${_safeContentType(res.headers.value(Headers.contentTypeHeader) ?? 'unknown')} '
@@ -1098,13 +1101,21 @@ class AddonApi implements LosslessSource {
     );
   }
 
-  /// Normalize the two response envelopes supported by the native client.
-  /// Some addon servers return the stream object directly; others wrap it in
-  /// `stream` or `data`. Preserve outer fields as metadata fallbacks while
-  /// allowing the inner stream fields to take precedence.
+  /// Android reads the raw response body and decodes JSON regardless of
+  /// Content-Type. Match that behavior for JSON returned as application/json
+  /// or text/plain, and accept either direct or wrapped stream objects.
   @visibleForTesting
-  static Map<String, dynamic> unwrapStreamPayload(
-      Map<String, dynamic> response) {
+  static Map<String, dynamic> decodeStreamPayload(Object? raw) {
+    Object? decoded = raw;
+    if (decoded is String) {
+      try {
+        decoded = jsonDecode(decoded);
+      } on FormatException {
+        return const {};
+      }
+    }
+    if (decoded is! Map) return const {};
+    final response = Map<String, dynamic>.from(decoded);
     final nested = response['stream'] ?? response['data'];
     if (nested is! Map) return response;
     return <String, dynamic>{
@@ -1112,6 +1123,12 @@ class AddonApi implements LosslessSource {
       ...Map<String, dynamic>.from(nested),
     };
   }
+
+  /// Backwards-compatible map-only helper retained for existing callers/tests.
+  @visibleForTesting
+  static Map<String, dynamic> unwrapStreamPayload(
+          Map<String, dynamic> response) =>
+      decodeStreamPayload(response);
 
   /// Safe, bounded response metadata for diagnosing addon compatibility.
   /// Values are deliberately excluded: stream URLs can contain signatures.
