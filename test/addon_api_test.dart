@@ -1119,6 +1119,36 @@ void main() {
       expect(rec.searchQualities, ['lossless']);
     });
   });
+  group('addon stream metadata scalar compatibility', () {
+    test('quoted bit depth and bitrate do not reject a valid stream', () async {
+      if (AppEnv.addonClientSecret.isEmpty) {
+        markTestSkipped('addon secret not configured in this env');
+        return;
+      }
+      final dio = Dio();
+      dio.httpClientAdapter = _FlakyAdapter(
+        streamFailures: 0,
+        searchPayload: {
+          'tracks': [
+            {'id': 't1', 'title': 'Song', 'artist': 'Singer'},
+          ],
+        },
+        streamPayload: {
+          'url': 'https://cdn.test/song.flac',
+          'bitDepth': '16',
+          'sampleRate': '44100',
+          'bitrate': '1411',
+        },
+      );
+      final api = AddonApi(['https://x.test/a/${_hex('f')}/'], dio);
+      final stream = await api.resolveStream(title: 'Song', artist: 'Singer');
+      expect(stream, isNotNull);
+      expect(stream!.url, 'https://cdn.test/song.flac');
+      expect(stream.bitDepth, 16);
+      expect(stream.bitrateKbps, 1411);
+    });
+  });
+
   group('resolve latency contracts', () {
     test('a matching first query does not fan out', () async {
       if (AppEnv.addonClientSecret.isEmpty) {
