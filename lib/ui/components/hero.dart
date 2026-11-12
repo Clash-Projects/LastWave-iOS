@@ -144,7 +144,11 @@ class WaveCollectionHero extends StatelessWidget {
             math.max(artworkSize, 200.0),
             constraints.maxWidth - 48,
           );
-          return Column(
+          // Full width, so the centred column is centred on the screen and
+          // not shrink-wrapped to the cover and left-aligned.
+          return SizedBox(
+            width: double.infinity,
+            child: Column(
             children: [
               WaveFlightTarget(
                 kind: flightKind ?? '',
@@ -162,6 +166,7 @@ class WaveCollectionHero extends StatelessWidget {
               const SizedBox(height: WaveSpacing.x12),
               textBlock(center: true),
             ],
+            ),
           );
         }
         if (narrow) {
@@ -211,7 +216,11 @@ class WaveFilterBar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 560;
-        return Row(
+        // Always the full row: the field takes all the width the sort and
+        // count leave over.
+        return SizedBox(
+          width: double.infinity,
+          child: Row(
           children: [
             Expanded(
               child: TextBox(
@@ -251,6 +260,7 @@ class WaveFilterBar extends StatelessWidget {
               sortSlot!,
             ],
           ],
+          ),
         );
       },
     );

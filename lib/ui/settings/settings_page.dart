@@ -2410,14 +2410,25 @@ class _Sources extends ConsumerWidget {
     final pasted = await showDialog<String>(
       context: context,
       builder: (context) => ContentDialog(
+        // Wide enough for a pasted URL; the default 368pt made it a tall,
+        // narrow box.
+        constraints: const BoxConstraints(maxWidth: 560),
         title: const Text('Add addon'),
-        content: TextBox(
-        selectionControls: waveTextSelectionControls,
-        contextMenuBuilder: waveTextContextMenuBuilder,
-decoration: waveInputDecoration(),
-          controller: controller,
-          placeholder: 'https://…/a/<token>/ or https://…',
-          maxLines: 2,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextBox(
+              selectionControls: waveTextSelectionControls,
+              contextMenuBuilder: waveTextContextMenuBuilder,
+              decoration: waveInputDecoration(),
+              controller: controller,
+              placeholder: 'https://…/a/<token>/ or https://…',
+              keyboardType: TextInputType.url,
+              minLines: 1,
+              maxLines: 2,
+            ),
+          ],
         ),
         actions: [
           WaveButton(
