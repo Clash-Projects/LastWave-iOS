@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - LastWave-iOS
+      - ui/redesign-on-ios
   pull_request:
     branches:
       - main
