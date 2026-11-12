@@ -334,6 +334,30 @@ void main() {
     });
   });
 
+  group('addon stream response decoding', () {
+    test('decodes JSON string returned as text/plain', () {
+      final payload = AddonApi.decodeStreamPayload(
+        '{"url":"https://cdn.example/song.flac","codec":"flac"}',
+      );
+      expect(payload['url'], 'https://cdn.example/song.flac');
+      expect(payload['codec'], 'flac');
+    });
+
+    test('decodes nested stream JSON string', () {
+      final payload = AddonApi.decodeStreamPayload(
+        '{"requestId":"x","stream":{"url":"https://cdn.example/song.flac"}}',
+      );
+      expect(payload['requestId'], 'x');
+      expect(payload['url'], 'https://cdn.example/song.flac');
+    });
+
+    test('rejects non-JSON and non-object bodies safely', () {
+      expect(AddonApi.decodeStreamPayload('not json'), isEmpty);
+      expect(AddonApi.decodeStreamPayload('[]'), isEmpty);
+      expect(AddonApi.decodeStreamPayload(null), isEmpty);
+    });
+  });
+
   group('AddonManifest', () {
     test('usable requires id/name/search/stream', () {
       expect(
