@@ -18,7 +18,6 @@ import '../navigation/destinations.dart';
 import '../queue/queue_panel.dart';
 import '../now_playing/now_playing_page.dart' show NowPlayingBackdrop;
 import '../components/buttons.dart' show LWVolumeSlider, WaveButton;
-import '../player_dock/player_dock.dart' show WaveTimeline;
 import '../now_playing/immersive.dart' show nowPlayingOverlayRequestProvider;
 import '../theme/haze.dart';
 import '../theme/tokens.dart';
@@ -234,16 +233,8 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final online = ref.watch(networkMonitorProvider);
         final activePath = waveActivePath(widget.location);
         final theme = ref.watch(themeControllerProvider);
-        final scaleSetting = ref.watch(
-          prefsProvider.select((prefs) => prefs.interfaceScale),
-        );
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
-        final interfaceScale = switch (scaleSetting) {
-          'compact' => 0.92,
-          'large' => 1.08,
-          'standard' => 1.0,
-          _ => tablet ? 1.0 : 0.97,
-        };
+        final interfaceScale = tablet ? 1.0 : 0.97;
         final material = switch (theme.hazeMaterial) {
           'haze' => WaveMaterialMode.haze,
           'solid' => WaveMaterialMode.solid,
@@ -999,8 +990,6 @@ class _MobileTransportDock extends ConsumerWidget {
     );
     final playback = ref.read(playbackServiceProvider.notifier);
     final output = ref.read(audioOutputProvider.notifier);
-    final wavySeekbar =
-        ref.watch(prefsProvider.select((prefs) => prefs.wavySeekbar));
     final duration = snapshot.duration;
     final hasDuration = duration > Duration.zero;
     final volume = snapshot.volume.clamp(0.0, 1.0).toDouble();
@@ -1024,23 +1013,7 @@ class _MobileTransportDock extends ConsumerWidget {
           children: [
             SizedBox(
               height: 24,
-              child: wavySeekbar
-                  ? WaveTimeline(
-                      progress: snapshot.position,
-                      buffered: snapshot.buffered,
-                      total: duration,
-                      showThumb: hasDuration,
-                      onSeek: hasDuration ? playback.seek : null,
-                      baseColor:
-                          waveTextSecondary(context).withValues(alpha: 0.12),
-                      bufferedColor:
-                          waveTextSecondary(context).withValues(alpha: 0.18),
-                      progressColor: waveTextPrimary(context),
-                      thumbColor: waveTextPrimary(context),
-                      thumbGlowColor:
-                          waveAccent(context).withValues(alpha: 0.25),
-                    )
-                  : avp.ProgressBar(
+              child: avp.ProgressBar(
                       progress: snapshot.position,
                       buffered: snapshot.buffered,
                       total:
@@ -1296,23 +1269,6 @@ class _MiniProgressLine extends ConsumerWidget {
         duration: state.duration,
       )),
     );
-    final wavySeekbar =
-        ref.watch(prefsProvider.select((prefs) => prefs.wavySeekbar));
-    if (wavySeekbar) {
-      // Same wavy timeline as the full player, display-only.
-      return WaveTimeline(
-        progress: progress.position,
-        buffered: progress.buffered,
-        total: progress.duration,
-        showThumb: false,
-        onSeek: null,
-        baseColor: waveTextSecondary(context).withValues(alpha: 0.12),
-        bufferedColor: waveTextSecondary(context).withValues(alpha: 0.18),
-        progressColor: waveTextPrimary(context),
-        thumbColor: waveTextPrimary(context),
-        thumbGlowColor: waveAccent(context).withValues(alpha: 0.25),
-      );
-    }
     final durationMs = progress.duration.inMilliseconds;
     final ratio = durationMs > 0
         ? (progress.position.inMilliseconds / durationMs)
