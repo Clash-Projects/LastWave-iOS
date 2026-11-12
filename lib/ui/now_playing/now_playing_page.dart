@@ -68,12 +68,14 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   // the toggle on must re-arm for the current track.
   String _prefetchedMotionKey = '';
   // Captured up front: `ref` is not safe to read while the element unmounts.
-  late final StateController<bool> _idleMirror =
-      ref.read(nowPlayingControlsIdleProvider.notifier);
+  // Read eagerly in initState: a lazy `late final` is first touched in
+  // dispose() on iOS (idle timer never runs there) and `ref` throws then.
+  late final StateController<bool> _idleMirror;
 
   @override
   void initState() {
     super.initState();
+    _idleMirror = ref.read(nowPlayingControlsIdleProvider.notifier);
     _resetIdleTimer();
   }
 

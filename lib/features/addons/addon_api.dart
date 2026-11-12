@@ -1123,7 +1123,15 @@ class AddonApi implements LosslessSource {
       data['downloadUrl'],
       data['mediaUrl'],
     ].map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
-    if (urls.any(isDecoyUrl)) return null;
+    if (urls.any(isDecoyUrl)) {
+      // The server hands unauthenticated callers a decoy payload (HTTP 200,
+      // every URL key filled). Say so, and whether the request was signed.
+      TraceCrumb.write('resolve stage=stream-decoy tier=$serverQuality '
+          'signed=${_secret.isNotEmpty && tokenOfRoot(root).isNotEmpty} '
+          'secret_set=${_secret.isNotEmpty} '
+          'token_in_url=${tokenOfRoot(root).isNotEmpty}');
+      return null;
+    }
     final manifestXml = data['manifestXml']?.toString() ?? '';
     if (manifestXml.contains('pranks-cdn') ||
         manifestXml.contains('definatelynagato')) {
