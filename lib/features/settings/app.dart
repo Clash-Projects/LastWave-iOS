@@ -23,7 +23,6 @@ import '../library/yt_library_sync.dart';
 import '../mpris/mpris_service.dart';
 import '../smtc/smtc_service.dart';
 import '../presence/discord_presence_service.dart';
-import 'accent.dart';
 import 'theme_controller.dart';
 
 /// LastWave desktop application root.
