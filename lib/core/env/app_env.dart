@@ -43,6 +43,11 @@ class AppEnv {
   /// Addon one-way-lock secret (HMAC-SHA256 request proofs). Use the
   /// generated build-specific secret when present; otherwise use the
   /// published protocol fallback. The value is never logged.
+  /// 'build' when a CI/.env secret was baked in, 'fallback' otherwise.
+  /// Diagnostics only; never the value.
+  static String get addonSecretSource =>
+      _decode(secrets.kAddonClientSecret).isNotEmpty ? 'build' : 'fallback';
+
   static String get addonClientSecret {
     final configured = _decode(secrets.kAddonClientSecret);
     return configured.isNotEmpty ? configured : _fallbackAddonClientSecret;

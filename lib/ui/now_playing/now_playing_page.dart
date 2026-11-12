@@ -158,7 +158,8 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     // where `ref.listen` is not allowed.
     ref.listen<int>(nowPlayingActivityProvider, (_, _) => _resetIdleTimer());
     final apple = ref.watch(ambientStyleProvider) == AmbientStyle.artworkAura;
-    if (!apple) return _buildPage(context);
+    // Light mode keeps the app theme; the dark stage is for Dark only.
+    if (!apple || !waveIsDark(context)) return _buildPage(context);
     const stageAccent = WaveColors.defaultAccent;
     if (_stageTheme == null || _stageAccent != stageAccent) {
       _stageAccent = stageAccent;
@@ -498,6 +499,7 @@ class _TopActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final phone = Platform.isIOS && MediaQuery.sizeOf(context).width < 680;
     return Container(
       height: _kTopBarHeight,
       padding: EdgeInsets.symmetric(horizontal: Platform.isIOS ? 10 : 24),
@@ -599,6 +601,8 @@ class _TopActionsBar extends StatelessWidget {
               ),
             ),
           ),
+          // Phone layouts centre the pill; tablets and desktop keep it right.
+          if (phone) const Spacer(),
         ],
       ),
     );
@@ -1765,6 +1769,11 @@ class _NowAmbient extends ConsumerWidget {
 
     final dynamicArtwork = ref.read(prefsProvider).dynamicNowPlaying;
     final visible = ref.watch(windowVisibleProvider);
+    final dark = waveIsDark(context);
+    // Scrim base: black on the dark stage, white in Light mode so the
+    // artwork reads as a pale wash and the theme's dark text stays legible.
+    final scrim = dark ? 0x000000 : 0xFFFFFF;
+    Color a(int alpha) => Color((alpha << 24) | scrim);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -1785,18 +1794,18 @@ class _NowAmbient extends ConsumerWidget {
             ),
           ),
         ),
-        const ColoredBox(color: Color(0x99000000)),
-        const DecoratedBox(
+        ColoredBox(color: a(dark ? 0x99 : 0xB8)),
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(0x33000000),
-                Color(0x55000000),
-                Color(0xB8000000),
+                a(dark ? 0x33 : 0x40),
+                a(dark ? 0x55 : 0x66),
+                a(dark ? 0xB8 : 0xCC),
               ],
-              stops: [0.0, 0.48, 1.0],
+              stops: const [0.0, 0.48, 1.0],
             ),
           ),
         ),

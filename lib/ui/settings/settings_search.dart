@@ -82,7 +82,7 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     id: 'audio.loudness',
     section: 'audio',
     title: 'Loudness',
-    subtitle: 'Track or album normalization',
+    subtitle: 'Keep volume even between songs',
     keywords: 'loudness replaygain normalization volume',
   ),
   SettingsSearchEntry(

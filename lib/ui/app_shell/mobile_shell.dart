@@ -224,7 +224,9 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         setState(() => _offlineNoticeDismissed = false);
       }
     });
+    // The dark stage applies in Dark mode only; Light mode keeps its theme.
     final artworkPlayerStage = _route.startsWith('/now') &&
+        waveIsDark(context) &&
         ref.watch(ambientStyleProvider) == AmbientStyle.artworkAura;
 
     final content = LayoutBuilder(

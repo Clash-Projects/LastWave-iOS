@@ -46,7 +46,6 @@ import '../theme/tokens.dart';
 import '../theme/brand_icons.dart';
 import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/equalizer/headphone_profiles.dart';
-import '../../features/player/loudness.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/presence/discord_presence_service.dart';
 import '../../features/updates/update_service.dart';
@@ -249,7 +248,6 @@ const Text('Settings', style: WaveType.pageTitle),
                   ),
                 ),
             ),
-            Container(width: 1, color: waveDivider(context)),
             Expanded(
               child: ListView(
                   controller: _contentScrollController,
@@ -687,28 +685,19 @@ class _Audio extends ConsumerWidget {
         const SizedBox(height: 8),
         _Group(
           id: 'audio.loudness',
-          title: 'Loudness',
-          subtitle: LoudnessMath.settingsSubtitle(prefs.loudnessMode),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Normalization', style: WaveType.trackTitle),
-              const SizedBox(height: 6),
-              WaveSelect<String>(
-                value: prefs.loudnessMode,
-                options: const [
-                  WaveSelectOption(value: 'off', label: 'Off'),
-                  WaveSelectOption(value: 'track', label: 'Track'),
-                  WaveSelectOption(value: 'album', label: 'Album'),
-                ],
-                onChanged: (mode) async {
-                  await onUpdate((p) => p.setLoudnessMode(mode));
-                  await ref
-                      .read(playbackServiceProvider.notifier)
-                      .applyAudioPrefs();
-                },
-              ),
-            ],
+          title: 'Normalization',
+          subtitle: 'Keep volume even between songs',
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ToggleSwitch(
+              checked: prefs.loudnessMode != 'off',
+              onChanged: (on) async {
+                await onUpdate((p) => p.setLoudnessMode(on ? 'track' : 'off'));
+                await ref
+                    .read(playbackServiceProvider.notifier)
+                    .applyAudioPrefs();
+              },
+            ),
           ),
         ),
         const SizedBox(height: 8),

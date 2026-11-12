@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show HttpDate;
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
@@ -1062,6 +1063,7 @@ class AddonApi implements LosslessSource {
           options: Options(headers: _signHeaders('GET', root, path)),
         ).timeout(timeout);
         _recordQuota(root, res.headers);
+        _noteServerClock(res.headers);
         // Match LastWave-Native: stream responses may be flat or wrapped
         // in {stream: {...}} / {data: {...}}. Keep outer metadata too.
         data = unwrapStreamPayload(res.data ?? const {});
@@ -1107,6 +1109,18 @@ class AddonApi implements LosslessSource {
       title: title,
       artist: artist,
     );
+  }
+
+  /// Device clock minus the server's `Date` header, in seconds. Requests
+  /// outside +-120s are rejected, so a skewed clock looks like a bad proof.
+  int? _lastClockSkewSec;
+  void _noteServerClock(Headers headers) {
+    try {
+      final raw = headers.value('date');
+      if (raw == null) return;
+      final server = HttpDate.parse(raw);
+      _lastClockSkewSec = DateTime.now().toUtc().difference(server).inSeconds;
+    } catch (_) {}
   }
 
   void _recordQuota(String root, Headers? headers) {
@@ -1157,6 +1171,8 @@ class AddonApi implements LosslessSource {
       TraceCrumb.write('resolve stage=stream-decoy tier=$serverQuality '
           'signed=${_secret.isNotEmpty && tokenOfRoot(root).isNotEmpty} '
           'secret_set=${_secret.isNotEmpty} '
+          'secret_src=${AppEnv.addonSecretSource} '
+          'clock_skew_s=${_lastClockSkewSec ?? 'unknown'} '
           'token_in_url=${tokenOfRoot(root).isNotEmpty}');
       return null;
     }
