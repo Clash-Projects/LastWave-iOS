@@ -11,7 +11,6 @@ import '../../features/settings/theme_controller.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/audio_output/output_controller.dart';
-import '../components/artwork.dart';
 import '../components/ambient.dart' show artworkSeedProvider;
 import '../components/chrome_insets.dart';
 import '../components/touch_kit.dart';
@@ -379,10 +378,9 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                                   child: Padding(
                                     padding: chromeInsets,
                                     child: _MorePage(
+                                      tablet: tablet,
                                       destinations: moreDestinations,
                                       onGo: _go,
-                                      onBack: () =>
-                                          setState(() => _showMore = false),
                                     ),
                                   ),
                                 ),
@@ -1014,10 +1012,7 @@ class _MobileTransportDock extends ConsumerWidget {
     // artwork and its stage gradient already sit behind this floating tray;
     // an additional artwork/white wash made the controls read as a separate
     // olive card instead of part of the same ambient surface.
-    return WaveFloatingSurface(
-      base: waveSurfaceRaised(context),
-      fillAlpha: 0.30,
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.fromLTRB(
           WaveSpacing.x12,
           WaveSpacing.x8,
@@ -1159,7 +1154,6 @@ class _MobileTransportDock extends ConsumerWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -1186,9 +1180,6 @@ class _MobileMiniPlayer extends ConsumerWidget {
     final track = player.current;
     if (track == null) return const SizedBox.shrink();
     final playback = ref.read(playbackServiceProvider.notifier);
-    final artworkTint =
-        ref.watch(artworkSeedProvider(track.artworkUrl)).valueOrNull;
-
     return Semantics(
       container: true,
       label: 'Now playing: ${track.title} by ${track.artist}',
@@ -1203,9 +1194,8 @@ class _MobileMiniPlayer extends ConsumerWidget {
           }
         },
         child: WaveFloatingSurface(
-          artworkTint: artworkTint,
           base: waveSurfaceRaised(context),
-          fillAlpha: 0.52,
+            fillAlpha: 0.52,
           child: SizedBox(
             height: WaveTouch.miniPlayerHeight,
             child: Stack(
@@ -1218,22 +1208,11 @@ class _MobileMiniPlayer extends ConsumerWidget {
                         onTap: onOpen,
                         pressedScale: 0.98,
                         child: Padding(
-                          padding: const EdgeInsets.only(
-                            left: WaveSpacing.x4,
-                            right: WaveSpacing.x2,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: WaveSpacing.x12,
                           ),
                           child: Row(
                             children: [
-                              WaveArtwork(
-                                url: track.artworkUrl,
-                                videoId: track.videoId,
-                                size: WaveTouch.miniArtwork,
-                                radius: WaveRadius.controls,
-                                label: track.title,
-                                title: track.title,
-                                artist: track.artist,
-                              ),
-                              const SizedBox(width: WaveSpacing.x8),
                               Expanded(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1518,92 +1497,96 @@ class _WaveAutoScrollTextState extends State<_WaveAutoScrollText> {
 /// Library destinations that don't earn a tab: a large-title list of
 /// shared-material rows.
 class _MorePage extends StatelessWidget {
+  final bool tablet;
   final List<WaveDestination> destinations;
   final void Function(String) onGo;
-  final VoidCallback onBack;
 
   const _MorePage({
+    required this.tablet,
     required this.destinations,
     required this.onGo,
-    required this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dark = waveIsDark(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final rows = Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
+        for (final destination in destinations)
+          Padding(
+            padding: const EdgeInsets.only(bottom: WaveSpacing.x4),
+            child: Semantics(
+              button: true,
+              label: destination.label,
+              excludeSemantics: true,
+              child: WavePressable(
+                onTap: () => onGo(destination.path),
+                pressedScale: 0.98,
+                child: WaveFloatingSurface(
+                  base: waveSurfaceRaised(context),
+                  fillAlpha: 0.30,
+                  borderRadius: WaveRadius.floatingRadius,
+                  child: SizedBox(
+                    height: 60,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: WaveSpacing.x12,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            destination.icon,
+                            size: WaveTouch.iconSecondary,
+                            color: waveTextPrimary(context),
+                          ),
+                          const SizedBox(width: WaveSpacing.x12),
+                          Expanded(
+                            child: Text(
+                              destination.label,
+                              style: WaveTouchType.rowTitle.copyWith(
+                                color: waveTextPrimary(context),
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            WaveIcons.chevronRight,
+                            size: 16,
+                            color: waveTextTertiary(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, viewport) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          WaveSpacing.x12,
+          WaveSpacing.x2,
+          WaveSpacing.x12,
+          WaveSpacing.x20,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: viewport.maxHeight),
           child: Align(
-            alignment: Alignment.topCenter,
+            alignment: tablet ? Alignment.center : Alignment.topCenter,
             child: ConstrainedBox(
               constraints:
                   const BoxConstraints(maxWidth: WaveTouch.floatMaxWidth),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  WaveSpacing.x12,
-                  WaveSpacing.x2,
-                  WaveSpacing.x12,
-                  WaveSpacing.x20,
-                ),
-                children: [
-                  for (final destination in destinations)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: WaveSpacing.x4),
-                      child: Semantics(
-                        button: true,
-                        label: destination.label,
-                        excludeSemantics: true,
-                        child: WavePressable(
-                          onTap: () => onGo(destination.path),
-                          pressedScale: 0.98,
-                          child: Container(
-                            height: 60,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: WaveSpacing.x12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: waveSurface(context),
-                              borderRadius: WaveRadius.floatingRadius,
-                              border: Border.all(
-                                color: (dark ? Colors.white : Colors.black)
-                                    .withValues(alpha: dark ? 0.07 : 0.08),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  destination.icon,
-                                  size: WaveTouch.iconSecondary,
-                                  color: waveTextPrimary(context),
-                                ),
-                                const SizedBox(width: WaveSpacing.x12),
-                                Expanded(
-                                  child: Text(
-                                    destination.label,
-                                    style: WaveTouchType.rowTitle.copyWith(
-                                      color: waveTextPrimary(context),
-                                    ),
-                                  ),
-                                ),
-                                Icon(
-                                  WaveIcons.chevronRight,
-                                  size: 16,
-                                  color: waveTextTertiary(context),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              child: SizedBox(
+                width: double.infinity,
+                child: rows,
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
