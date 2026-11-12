@@ -1052,6 +1052,48 @@ void main() {
       expect(rec.searchQualities, ['lossless']);
     });
   });
+  group('addon stream response compatibility', () {
+    test('unwraps stream/data envelopes and preserves outer metadata', () {
+      final payload = AddonApi.unwrapStreamPayload({
+        'requestId': 'r1',
+        'data': {
+          'stream': {
+            'url': 'https://cdn.test/song.flac',
+            'bitDepth': '24',
+          },
+        },
+      });
+      expect(payload['requestId'], 'r1');
+      expect(payload['url'], 'https://cdn.test/song.flac');
+      expect(payload['bitDepth'], '24');
+    });
+
+    test('resolves a nested data stream envelope end-to-end', () async {
+      final dio = Dio();
+      dio.httpClientAdapter = _FlakyAdapter(
+        streamFailures: 0,
+        searchPayload: {
+          'tracks': [
+            {'id': 't1', 'title': 'Song', 'artist': 'Singer'},
+          ],
+        },
+        streamPayload: {
+          'data': {
+            'url': 'https://cdn.test/nested-song.flac',
+            'bitDepth': '24',
+            'sampleRate': '96000',
+          },
+        },
+      );
+      final api = AddonApi(['https://x.test/a/${_hex('f')}/'], dio);
+      final stream = await api.resolveStream(title: 'Song', artist: 'Singer');
+      expect(stream, isNotNull);
+      expect(stream!.url, 'https://cdn.test/nested-song.flac');
+      expect(stream.bitDepth, 24);
+      expect(stream.samplingRateKhz, 96.0);
+    });
+  });
+
   group('addon stream metadata scalar compatibility', () {
     test('quoted bit depth and bitrate do not reject a valid stream', () async {
       if (AppEnv.addonClientSecret.isEmpty) {
