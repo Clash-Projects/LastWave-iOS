@@ -1021,8 +1021,8 @@ class _MobileTransportDock extends ConsumerWidget {
                       onSeek: hasDuration ? playback.seek : null,
                       barHeight: 4,
                       thumbRadius: hasDuration ? 6 : 0,
-                      thumbColor: waveTextPrimary(context),
-                      progressBarColor: waveTextPrimary(context),
+                      thumbColor: waveAccent(context),
+                      progressBarColor: waveAccent(context),
                       bufferedBarColor:
                           waveTextSecondary(context).withValues(alpha: 0.22),
                       baseBarColor:
@@ -1286,7 +1286,7 @@ class _MiniProgressLine extends ConsumerWidget {
         widthFactor: ratio,
         child: Container(
           decoration: BoxDecoration(
-            color: waveTextPrimary(context),
+            color: waveAccent(context),
             borderRadius: WaveRadius.tinyRadius,
           ),
         ),
