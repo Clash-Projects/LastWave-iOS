@@ -1455,20 +1455,6 @@ class _MorePage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            WaveSpacing.x12,
-            WaveSpacing.x2,
-            WaveSpacing.x12,
-            WaveSpacing.x8,
-          ),
-          child: Text(
-            'More',
-            style: WaveTouchType.largeTitle.copyWith(
-              color: waveTextPrimary(context),
-            ),
-          ),
-        ),
         Expanded(
           child: Align(
             alignment: Alignment.topCenter,
