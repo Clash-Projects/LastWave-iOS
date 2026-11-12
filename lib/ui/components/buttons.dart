@@ -892,7 +892,7 @@ class _WaveSliderBaseState extends State<_WaveSliderBase> {
     // A level you cannot see is not a control: at 100% the fill is the whole
     // track, so a knob that only appeared on hover left a plain hairline
     // between two glyphs. Any non-zero value keeps its knob; hover grows it.
-    final thumbSize = active ? 10.0 : 8.0;
+    final thumbSize = active ? 12.0 : 10.0;
     final showThumb = active || widget.value > 0.001;
     final slider = MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -945,7 +945,7 @@ class _WaveSliderBaseState extends State<_WaveSliderBase> {
             return KeyEventResult.ignored;
           },
           child: SizedBox(
-            height: 16,
+            height: 18,
             child: Center(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -960,12 +960,12 @@ class _WaveSliderBaseState extends State<_WaveSliderBase> {
                       .clamp(0.0, maxThumbLeft)
                       .toDouble();
                   return SizedBox(
-                    height: 10,
+                    height: 12,
                     child: Stack(
                       alignment: Alignment.centerLeft,
                       children: [
                         Container(
-                          height: 3,
+                          height: 4,
                           width: width,
                           decoration: BoxDecoration(
                             color: base.withValues(alpha: 0.14),
@@ -974,7 +974,7 @@ class _WaveSliderBaseState extends State<_WaveSliderBase> {
                           ),
                         ),
                         Container(
-                          height: 3,
+                          height: 4,
                           width: fillWidth,
                           decoration: BoxDecoration(
                             color: fill,
