@@ -173,10 +173,8 @@ class _LastWaveAppState extends ConsumerState<LastWaveApp> {
     // Bridges Jam room events to the player; idle until a room is joined.
     ref.watch(jamSyncProvider);
     final theme = ref.watch(themeControllerProvider);
-    // Accent source (custom / LastWave neutral / system / artwork) is
-    // resolved in one place; anything that can't answer falls back to the
-    // custom pick there.
-    final accent = ref.watch(accentResolutionProvider).color;
+    // The accent is fixed by appearance: white in Dark, black in Light.
+    final accent = theme.accent;
 
     // Custom theme: one generated palette, published as the dark or the
     // light theme depending on how bright its base is.
