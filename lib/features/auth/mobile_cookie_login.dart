@@ -11,6 +11,10 @@ import '../spotify/spotify_web_login.dart';
 
 enum MobileCookieLoginProvider { youtubeMusic, spotify }
 
+/// Returned when Google blocks the embedded sign-in and the user selects
+/// the existing verified cookies.txt import flow in Settings.
+const mobileCookieLoginImportRequested = 'lastwave:ytm-import-cookies';
+
 /// Presents the service's own sign-in page in an app-owned WKWebView.
 ///
 /// The cookie store is read through the native WebView cookie manager. Raw
@@ -407,6 +411,14 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
         ),
       ),
       actions: [
+        if (_isYouTube &&
+            (_status.toLowerCase().contains('blocked') ||
+                _status.toLowerCase().contains('unsupported')))
+          WaveButton(
+            onPressed: () =>
+                Navigator.of(context).pop(mobileCookieLoginImportRequested),
+            child: const Text('Import cookies.txt'),
+          ),
         WaveButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
