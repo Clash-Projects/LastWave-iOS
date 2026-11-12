@@ -63,7 +63,7 @@ SliderThemeData _waveSliderTheme({
     trackHeight: const WidgetStatePropertyAll(4.0),
     activeColor: WidgetStatePropertyAll(accent),
     inactiveColor: WidgetStatePropertyAll(
-      isLight ? const Color(0xFFDADADA) : const Color(0xFF3D3D3D),
+      isLight ? const Color(0xFFC6C6C1) : const Color(0xFF3D3D3D),
     ),
     labelBackgroundColor: accent,
     labelForegroundColor: onAccentFor(accent),
