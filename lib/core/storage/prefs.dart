@@ -327,12 +327,13 @@ class Prefs {
   bool get amoled => _sp.getBool('lw_amoled') ?? false;
   Future<void> setAmoled(bool v) => _sp.setBool('lw_amoled', v);
 
-  /// 'dark' (Midnight), 'light' (White) or 'custom'
-  /// (surfaces generated from [customThemeBase]).
-  String get themeMode => _sp.getString('lw_theme_mode') ?? 'dark';
-  Future<void> setThemeMode(String v) => _sp.setString('lw_theme_mode', v);
-  bool get isLight => false;
-  bool get isCustomTheme => themeMode == 'custom';
+  /// The app supports two fixed appearances: dark graphite and light pearl.
+  String get themeMode =>
+      _sp.getString('lw_theme_mode') == 'light' ? 'light' : 'dark';
+  Future<void> setThemeMode(String v) =>
+      _sp.setString('lw_theme_mode', v == 'light' ? 'light' : 'dark');
+  bool get isLight => themeMode == 'light';
+  bool get isCustomTheme => false;
 
   /// Base colour (ARGB) of the Custom theme. Default: the Ocean preset.
   int get customThemeBase => _sp.getInt('lw_custom_theme_base') ?? 0xFF1A2A44;
@@ -380,23 +381,6 @@ class Prefs {
     await _sp.setString('lw_accent_source', v);
     await _sp.setString('lw_accent_mode', v);
   }
-
-  String get interfaceScale {
-    final value = _sp.getString('lw_interface_scale') ?? 'auto';
-    return const {'auto', 'compact', 'standard', 'large'}.contains(value)
-        ? value
-        : 'auto';
-  }
-
-  Future<void> setInterfaceScale(String value) => _sp.setString(
-        'lw_interface_scale',
-        const {'auto', 'compact', 'standard', 'large'}.contains(value)
-            ? value
-            : 'auto',
-      );
-
-  bool get wavySeekbar => _sp.getBool('lw_wavy_seekbar') ?? false;
-  Future<void> setWavySeekbar(bool v) => _sp.setBool('lw_wavy_seekbar', v);
 
   // -- Scrobbler --------------------------------------------------------------
   bool get scrobblerEnabled => _sp.getBool('lw_scrobbler_enabled') ?? false;
