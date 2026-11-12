@@ -58,7 +58,7 @@ class WaveColors {
   // Page: soft neutral canvas · nav: slightly shaded · content: near-white
   // · cards: soft white · raised controls/flyouts: pure white.
   static const lightBackground = Color(0xFFF3F3F1);
-  static const lightNavBackground = Color(0xFFEAEAE7);
+  static const lightNavBackground = Color(0xFFEDEDEB);
   static const lightContent = Color(0xFFF8F8F6);
   static const lightSurface = Color(0xFFFCFCFA);
   static const lightSurfaceRaised = Color(0xFFFFFFFF);
