@@ -48,6 +48,9 @@ class AppEnv {
   static String get addonSecretSource =>
       _decode(secrets.kAddonClientSecret).isNotEmpty ? 'build' : 'fallback';
 
+  /// The published protocol default, used when the build secret is refused.
+  static String get addonFallbackSecret => _fallbackAddonClientSecret;
+
   static String get addonClientSecret {
     final configured = _decode(secrets.kAddonClientSecret);
     return configured.isNotEmpty ? configured : _fallbackAddonClientSecret;
