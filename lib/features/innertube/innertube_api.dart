@@ -4917,6 +4917,85 @@ class InnerTubeMusicApi {
     return null;
   }
 
+  /// Another upload of the same song, for when the exact recording cannot
+  /// be streamed (age-restricted / region-locked official video).
+  ///
+  /// Looks at the Videos category and skips official music videos, which
+  /// are the ones that carry those restrictions. A candidate must carry
+  /// every word of the title and be credited to the artist (in its title
+  /// or channel), and agree on duration within 15 seconds when both are
+  /// known. Plain uploads, audio uploads and lyric videos are preferred
+  /// in that order of likelihood by the score below.
+  Future<YouTubeMusicTrack?> findAlternateUploadOrNull(
+    String title,
+    String artist, {
+    int expectedDurationSeconds = 0,
+    Set<String> excludedVideoIds = const {},
+  }) async {
+    if (title.trim().isEmpty) return null;
+    final primary = primaryArtistForMatch(artist);
+    final who = primary.isNotEmpty ? primary : artist;
+    final titleTokens = _tokens(coreSongTitle(title, artist).isNotEmpty
+        ? coreSongTitle(title, artist)
+        : title);
+    final artistTokens = _tokens(who);
+    final wantedVariants = _tokens(title).intersection(_variantWords);
+    if (titleTokens.isEmpty) return null;
+    const musicVideoWords = {'official', 'mv', 'clip', 'vevo'};
+    try {
+      final results = await searchVideos('$title $who', limit: 30)
+          .timeout(const Duration(seconds: 6));
+      YouTubeMusicTrack? best;
+      var bestScore = -1 << 30;
+      for (final c in results) {
+        if (c.videoId.isEmpty || excludedVideoIds.contains(c.videoId)) {
+          continue;
+        }
+        final candTitle = c.title.toLowerCase();
+        final candTokens = _tokens(c.title);
+        // Official music videos are what failed; never swap one for another.
+        if (candTitle.contains('music video') ||
+            candTitle.contains('official video') ||
+            candTokens.intersection(musicVideoWords).isNotEmpty) {
+          continue;
+        }
+        if (!candTokens.containsAll(titleTokens)) continue;
+        final hay = _tokens('${c.title} ${c.artist}');
+        if (artistTokens.isNotEmpty &&
+            artistTokens.intersection(hay).isEmpty) {
+          continue;
+        }
+        if (expectedDurationSeconds > 0 &&
+            c.durationSeconds > 0 &&
+            (c.durationSeconds - expectedDurationSeconds).abs() > 15) {
+          continue;
+        }
+        if (wantedVariants.isEmpty &&
+            candTokens.intersection(_variantWords).isNotEmpty) {
+          continue;
+        }
+        var score = 0;
+        if (candTitle.contains('audio')) score += 40;
+        if (candTitle.contains('lyric')) score += 20;
+        score += similarity(c.title, title) ~/ 2;
+        if (expectedDurationSeconds > 0 && c.durationSeconds > 0) {
+          score -= (c.durationSeconds - expectedDurationSeconds).abs();
+        }
+        if (score > bestScore) {
+          best = c;
+          bestScore = score;
+        }
+      }
+      if (best != null) {
+        PlayDiag.log('alternate upload "$title" -> "${best.title}" '
+            '[${best.videoId}] by "${best.artist}"');
+      }
+      return best;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<YouTubeMusicTrack?> findBestEffortMatchOrNull(
     String title,
     String artist, {

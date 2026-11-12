@@ -2643,7 +2643,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
             error: _exactStreamFailed.contains(track.queueKey)
                 ? 'This recording could not be streamed (it may be '
                     'age-restricted or need a signed-in YouTube account). '
-                    'No alternate version was played.'
+                    'No other upload of this song could be found.'
                 : 'No verified YouTube Music recording matched this track. '
                     'No alternate recording was played.',
           );
@@ -2887,6 +2887,31 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       // whichever same-titled upload ranks first (a different one per run),
       // so report the failure instead (age-restricted and region-locked
       // videos land here).
+      // The one exception is a plain upload of the same song (not the
+      // official music video, which is what usually carries the lock).
+      try {
+        final alt = await _tube
+            .findAlternateUploadOrNull(
+              track.title,
+              track.artist,
+              expectedDurationSeconds: track.duration.inSeconds,
+              excludedVideoIds: excluded,
+            )
+            .timeout(const Duration(seconds: 8), onTimeout: () => null);
+        if (alt != null && alt.videoId.isNotEmpty) {
+          final altStream = await _tube.resolveAudioStream(alt.videoId,
+              forceRefresh: forceRefresh,
+              preferSmallest: _preferSmallestYoutube);
+          _logTiming('youtube key=${track.queueKey} path=alternate-upload '
+              'hit=${altStream != null}');
+          if (altStream != null) {
+            _exactStreamFailed.remove(track.queueKey);
+            _rememberWatchtime(alt.videoId, altStream);
+            return altStream;
+          }
+          _tube.reportPlaybackFailure(alt.videoId);
+        }
+      } catch (_) {}
       _exactStreamFailed.add(track.queueKey);
       return null;
     }
