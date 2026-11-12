@@ -886,8 +886,7 @@ class _WaveSliderBaseState extends State<_WaveSliderBase> {
   Widget build(BuildContext context) {
     final dark = waveIsDark(context);
     final base = dark ? Colors.white : Colors.black;
-    final fill =
-        dark ? WaveColors.textPrimary : WaveColors.lightTextPrimary;
+    final fill = dark ? Colors.white : Colors.black;
     final active = _hover || _dragging || _focus.hasFocus;
     // A level you cannot see is not a control: at 100% the fill is the whole
     // track, so a knob that only appeared on hover left a plain hairline
