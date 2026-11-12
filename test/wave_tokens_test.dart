@@ -72,8 +72,10 @@ void main() {
   group('light text ladder', () {
     const surfaces = {
       'background': WaveColors.lightBackground,
+      'navigation': WaveColors.lightNavBackground,
       'content': WaveColors.lightContent,
       'surface': WaveColors.lightSurface,
+      'raised': WaveColors.lightSurfaceRaised,
       'overlay': WaveColors.lightOverlay,
     };
 
@@ -95,6 +97,31 @@ void main() {
           reason: 'meta tier on ${entry.key}',
         );
       }
+    });
+  });
+
+  group('pearl surface ladder', () {
+    test('separates page, navigation, content, cards and raised controls', () {
+      expect(
+        _luminance(WaveColors.lightNavBackground),
+        lessThan(_luminance(WaveColors.lightBackground)),
+      );
+      expect(
+        _luminance(WaveColors.lightContent),
+        greaterThan(_luminance(WaveColors.lightBackground)),
+      );
+      expect(
+        _luminance(WaveColors.lightSurface),
+        greaterThan(_luminance(WaveColors.lightContent)),
+      );
+      expect(
+        _luminance(WaveColors.lightSurfaceRaised),
+        greaterThan(_luminance(WaveColors.lightSurface)),
+      );
+      expect(
+        _luminance(WaveColors.lightOverlay),
+        lessThan(_luminance(WaveColors.lightContent)),
+      );
     });
   });
 
