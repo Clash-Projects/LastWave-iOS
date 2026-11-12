@@ -56,8 +56,7 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
   static const _pollInterval = Duration(seconds: 2);
 
   Timer? _poller;
-  BuildContext? _popupContext;
-  String? _pendingCookie;
+  bool _completed = false;
   String? _reissuedYouTubeUrl;
   String _currentUrl = '';
   bool _loading = true;
@@ -176,7 +175,7 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
   }
 
   Future<void> _captureSession() async {
-    if (_checkingCookies || !mounted || _pendingCookie != null) return;
+    if (_checkingCookies || !mounted || _completed) return;
     final host = Uri.tryParse(_currentUrl)?.host.toLowerCase() ?? '';
 
     if (_isYouTube) {
@@ -244,84 +243,10 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
   }
 
   void _completeWithCookie(String cookie) {
-    if (!mounted || _pendingCookie != null) return;
+    if (!mounted || _completed) return;
+    _completed = true;
     _poller?.cancel();
-    final popupContext = _popupContext;
-    if (popupContext != null && popupContext.mounted) {
-      _pendingCookie = cookie;
-      Navigator.of(popupContext).pop();
-      return;
-    }
     Navigator.of(context).pop(cookie);
-  }
-
-  /// Websites occasionally open a separate login/consent window. Render
-  /// that WKWebView as a nested dialog while keeping it in the same
-  /// WebKit cookie store as the parent sign-in window.
-  Future<bool?> _openPopup(CreateWindowAction action) async {
-    if (!mounted || action.request.url == null) return false;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (popupContext) {
-        _popupContext = popupContext;
-        final size = MediaQuery.sizeOf(popupContext);
-        final popupHeight = (size.height * 0.62).clamp(240.0, 620.0).toDouble();
-        return ContentDialog(
-          constraints: BoxConstraints(
-            maxWidth: 680,
-            maxHeight: (size.height * 0.86).clamp(340.0, 760.0).toDouble(),
-          ),
-          title: const Text('Continue sign-in'),
-          content: SizedBox(
-            width: (size.width * 0.86).clamp(240.0, 640.0).toDouble(),
-            height: popupHeight,
-            child: ClipRRect(
-              borderRadius: WaveRadius.controlsRadius,
-              child: InAppWebView(
-                windowId: action.windowId,
-                initialSettings: InAppWebViewSettings(
-                  javaScriptEnabled: true,
-                  domStorageEnabled: true,
-                  preferredContentMode: _isYouTube
-                            ? UserPreferredContentMode.DESKTOP
-                            : UserPreferredContentMode.RECOMMENDED,
-                  userAgent: _isYouTube ? _youtubeUserAgent : null,
-                  useShouldOverrideUrlLoading: _isYouTube && Platform.isIOS,
-                  supportMultipleWindows: false,
-                  javaScriptCanOpenWindowsAutomatically: false,
-                ),
-                shouldOverrideUrlLoading: (controller, navigationAction) =>
-                    _handleYouTubeUniversalLink(controller, navigationAction),
-                onLoadStart: (controller, url) => _updateUrl(url, controller),
-                onLoadStop: (controller, url) => _updateUrl(url, controller),
-                onUpdateVisitedHistory: (controller, url, _) => _updateUrl(url, controller),
-                onCloseWindow: (_) {
-                  if (popupContext.mounted) {
-                    Navigator.of(popupContext).maybePop();
-                  }
-                },
-              ),
-            ),
-          ),
-          actions: [
-            WaveButton(
-              onPressed: () => Navigator.of(popupContext).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-
-    _popupContext = null;
-    final captured = _pendingCookie;
-    _pendingCookie = null;
-    if (captured != null && mounted) {
-      Navigator.of(context).pop(captured);
-    }
-    return true;
   }
 
   @override
@@ -376,13 +301,12 @@ class _MobileCookieLoginDialogState extends State<_MobileCookieLoginDialog> {
                         supportZoom: true,
                         allowsInlineMediaPlayback: true,
                         mediaPlaybackRequiresUserGesture: false,
-                        supportMultipleWindows: true,
-                        javaScriptCanOpenWindowsAutomatically: true,
+                        supportMultipleWindows: false,
+                        javaScriptCanOpenWindowsAutomatically: false,
                       ),
                       shouldOverrideUrlLoading: (controller, navigationAction) =>
                           _handleYouTubeUniversalLink(controller, navigationAction),
                       onLoadStart: (controller, url) => _updateUrl(url, controller),
-                      onCreateWindow: (_, action) => _openPopup(action),
                       onLoadStop: (controller, url) => _updateUrl(url, controller),
                       onUpdateVisitedHistory: (controller, url, _) => _updateUrl(url, controller),
                       onProgressChanged: (_, progress) {
