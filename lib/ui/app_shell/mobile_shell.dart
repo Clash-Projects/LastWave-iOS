@@ -922,23 +922,13 @@ class _MobileTransportDock extends ConsumerWidget {
       color: waveTextSecondary(context),
     );
 
-    final tint = snapshot.current == null
-        ? null
-        : ref.watch(artworkSeedProvider(snapshot.current!.artworkUrl)).valueOrNull;
-    final dark = waveIsDark(context);
-    // See-through glass with a soft artwork-coloured gradient, matching the
-    // stage behind it instead of a flat dark slab.
+    // Use the same frosted surface recipe as NowPlayingBackdrop. The
+    // artwork and its stage gradient already sit behind this floating tray;
+    // an additional artwork/white wash made the controls read as a separate
+    // olive card instead of part of the same ambient surface.
     return WaveFloatingSurface(
-      artworkTint: tint,
+      base: waveSurfaceRaised(context),
       fillAlpha: 0.30,
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          (tint ?? waveAccent(context)).withValues(alpha: dark ? 0.20 : 0.12),
-          Colors.white.withValues(alpha: dark ? 0.03 : 0.10),
-        ],
-      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           WaveSpacing.x12,
