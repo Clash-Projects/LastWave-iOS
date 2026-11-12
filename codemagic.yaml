@@ -40,7 +40,7 @@ workflows:
           rm -f .env
 
       - name: Generate and configure iPadOS host
-        script: bash tool/prepare_ipados.sh
+        script: bash tool/prepare_ios.sh
 
       - name: Resolve Flutter dependencies
         script: flutter pub get
