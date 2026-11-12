@@ -54,21 +54,21 @@ class WaveColors {
   static const warn = Color(0xFFE0A030);
   static const danger = Color(0xFFE0506A);
 
-  // Light — Windows 11 neutral, NOT beige.
-  // Base app: #F3F3F3 Mica-like · nav: #ECECEC tinted · content: #F9F9F9
-  // clean · player: #FFFFFF elevated · flyouts: white acrylic.
-  static const lightBackground = Color(0xFFFFFFFF);
-  static const lightNavBackground = Color(0xFFF8F8F8);
-  static const lightContent = Color(0xFFFFFFFF);
-  static const lightSurface = Color(0xFFFFFFFF);
-  static const lightSurfaceRaised = Color(0xFFF8F8F8);
-  static const lightOverlay = Color(0xFFF1F1F1);
-  static const lightOutline = Color(0xFFE5E5E5);
-  static const lightOutlineSoft = Color(0xFFE5E5E5);
+  // Light — restrained pearl neutrals, not a stack of identical whites.
+  // Page: soft neutral canvas · nav: slightly shaded · content: near-white
+  // · cards: soft white · raised controls/flyouts: pure white.
+  static const lightBackground = Color(0xFFF3F3F1);
+  static const lightNavBackground = Color(0xFFEAEAE7);
+  static const lightContent = Color(0xFFF8F8F6);
+  static const lightSurface = Color(0xFFFCFCFA);
+  static const lightSurfaceRaised = Color(0xFFFFFFFF);
+  static const lightOverlay = Color(0xFFEEEEEB);
+  static const lightOutline = Color(0xFFDADAD5);
+  static const lightOutlineSoft = Color(0xFFE5E5E0);
   static const lightTextPrimary = Color(0xFF1B1A19);
   static const lightTextSecondary = Color(0xFF605E5C);
 
-  /// Meta tier — 4.8:1 on white (was `#8A8886`, 3.5:1). See [textTertiary].
+  /// Meta tier — remains above 4:1 on the pearl canvas and hover surface.
   static const lightTextTertiary = Color(0xFF74726F);
 
   // AMOLED — pure-black Midnight variant (user pref `lw_amoled`). Only
