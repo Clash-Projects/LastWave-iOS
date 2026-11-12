@@ -1037,6 +1037,10 @@ class AddonApi implements LosslessSource {
         ).timeout(timeout);
         _recordQuota(root, res.headers);
         data = res.data ?? const {};
+        TraceCrumb.write('resolve stage=stream-http-ok '
+            'tier=$serverQuality status=${res.statusCode ?? 0} '
+            'type=${_safeContentType(res.headers.value(Headers.contentTypeHeader) ?? 'unknown')} '
+            'shape=${_safePayloadShape(data)}');
         break;
       } on TimeoutException {
         TraceCrumb.write('resolve stage=stream-timeout tier=$serverQuality '
@@ -1044,20 +1048,29 @@ class AddonApi implements LosslessSource {
         return null;
       } on DioException catch (e) {
         _recordQuota(root, e.response?.headers);
-        if (e.response?.statusCode == 429) {
+        final status = e.response?.statusCode ?? 0;
+        final contentType =
+            e.response?.headers.value(Headers.contentTypeHeader) ?? 'unknown';
+        // Never log response bodies, request URLs, signatures, or tokens.
+        // Status + content type distinguishes auth/routing/server failures
+        // from a successful response that the payload parser cannot use.
+        TraceCrumb.write('resolve stage=stream-http-error '
+            'tier=$serverQuality status=$status '
+            'type=${_safeContentType(contentType)} '
+            'kind=${e.type.name}');
+        if (status == 429) {
           throw AddonQuotaException.fromResponse(e.response);
         }
         if (attempt == 0) {
-          // One quick retry: a transient mint failure clears on the
-          // second request, and the host answers in ~0.5s. The old
-          // fixed 600ms wait was pure dead time on the cold path.
           TraceCrumb.write('resolve stage=stream-retry tier=$serverQuality '
               'after_ms=150');
           await Future.delayed(const Duration(milliseconds: 150));
           continue;
         }
         return null;
-      } catch (_) {
+      } catch (e) {
+        TraceCrumb.write('resolve stage=stream-client-error '
+            'tier=$serverQuality kind=${e.runtimeType}');
         if (attempt == 0) {
           TraceCrumb.write('resolve stage=stream-retry tier=$serverQuality '
               'after_ms=150');
@@ -1079,6 +1092,31 @@ class AddonApi implements LosslessSource {
       title: title,
       artist: artist,
     );
+  }
+
+  /// Safe, bounded response metadata for diagnosing addon compatibility.
+  /// Values are deliberately excluded: stream URLs can contain signatures.
+  static String _safeContentType(String value) {
+    final mediaType = value.split(';').first.trim().toLowerCase();
+    if (mediaType.isEmpty) return 'unknown';
+    return mediaType.replaceAll(RegExp(r'[^a-z0-9.+/-]'), '').take(64);
+  }
+
+  static String _safePayloadShape(Map<String, dynamic> data) {
+    const streamFields = {
+      'url', 'dataUrl', 'directUrl', 'streamUrl', 'downloadUrl',
+      'mediaUrl', 'manifestXml', 'hybrid'
+    };
+    final present = data.keys
+        .where((key) => streamFields.contains(key))
+        .toList()
+      ..sort();
+    final nested = data['data'];
+    final nestedShape = nested is Map
+        ? ' nested_keys=${nested.keys.map((e) => e.toString()).where((e) => streamFields.contains(e)).toList()..sort()}'
+        : '';
+    return 'keys=${present.join(',')}'
+        ' nested_data=${nested is Map ? 'map' : nested == null ? 'none' : nested.runtimeType}';
   }
 
   void _recordQuota(String root, Headers? headers) {
@@ -1303,7 +1341,14 @@ class AddonApi implements LosslessSource {
       (u) => !u.startsWith('data:'),
       orElse: () => '',
     );
-    if (direct.isEmpty) return null;
+    if (direct.isEmpty) {
+      TraceCrumb.write('resolve stage=stream-unrecognized-payload $mlabel '
+          'keys=${data.keys.map((e) => e.toString()).toList()..sort()} '
+          'manifest=${manifestXml.isNotEmpty} '
+          'inline_data=${urls.any((u) => u.startsWith('data:'))} '
+          'hybrid=${data['hybrid'] is Map}');
+      return null;
+    }
     // Remote .mpd goes straight to libmpv (signed, headerless per
     // protocol); progressive files likewise.
     final lower = direct.split('?').first.toLowerCase();
