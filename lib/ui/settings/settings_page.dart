@@ -16,7 +16,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../features/auth/google_oauth.dart';
 
 import '../../app/session_actions.dart';
 import '../../core/app_info.dart';
@@ -39,7 +38,6 @@ import '../../features/spotify/spotify_auth.dart';
 import '../../features/home/home_providers.dart';
 import '../../features/lastfm/auth_repository.dart';
 import '../auth/lastfm_key_guide.dart';
-import '../../features/settings/accent.dart';
 import '../../features/settings/theme_controller.dart';
 import '../../features/audio_output/output_controller.dart';
 import '../../features/audio_output/output_path_sheet.dart';
@@ -360,57 +358,6 @@ class _SectionSwap extends StatelessWidget {
             FadeTransition(opacity: animation, child: child),
         child: child,
       ),
-    );
-  }
-}
-
-/// Live read of the resolved accent: swatch + where it came from.
-///
-/// Makes a source that cannot answer visible instead of silent — "system"
-/// on a desktop that exposes no accent, or an artwork tint on a cover with
-/// no hue, both keep the custom colour and say so here.
-class _AccentPreview extends StatelessWidget {
-  final AccentResolution resolution;
-  const _AccentPreview({required this.resolution});
-
-  @override
-  Widget build(BuildContext context) {
-    final argb = resolution.color.toARGB32();
-    final hex =
-        '#${argb.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
-    final text = Platform.isIOS &&
-            resolution.source == AccentSource.system
-        ? 'System accent unavailable on iOS — using custom colour · $hex'
-        : switch (resolution.source) {
-            AccentSource.custom => 'Custom colour · $hex',
-            AccentSource.system =>
-              resolution.resolved
-                  ? 'Desktop accent · $hex'
-                  : 'This desktop exposes no accent — using custom colour',
-            AccentSource.artwork =>
-              resolution.resolved
-                  ? 'Tinted from the current cover · $hex'
-                  : 'No cover hue to tint from — using custom colour',
-          };
-    return Row(
-      children: [
-        Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(
-            color: resolution.color,
-            borderRadius: BorderRadius.circular(WaveRadius.tiny),
-            border: Border.all(color: waveDivider(context)),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: WaveType.meta.copyWith(color: waveTextSecondary(context)),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -803,25 +750,17 @@ class _Audio extends ConsumerWidget {
   }
 }
 
-const _accentPresets = <Color>[
-  Color(0xFFF5F4F0),
-  Color(0xFF4CC2FF),
-  Color(0xFFE03030),
-  Color(0xFF7C4DFF),
-  Color(0xFF2196C6),
-  Color(0xFF6B9E6B),
-  Color(0xFFE0A030),
-  Color(0xFFE0507A),
-];
-
 class _Appearance extends ConsumerWidget {
   final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
   const _Appearance({required this.onUpdate});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(prefsProvider);
     final theme = ref.watch(themeControllerProvider);
+    final controller = ref.read(themeControllerProvider.notifier);
+    final accentName = theme.isLight ? 'Black' : 'White';
+    final modeName = theme.isLight ? 'Light' : 'Dark';
+
     return Column(
       children: [
         _Group(
@@ -829,337 +768,66 @@ class _Appearance extends ConsumerWidget {
           title: 'Theme',
           subtitle: 'Choose the app’s base appearance',
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
                   Expanded(
                     child: ToggleButton(
                       checked: !theme.isLight,
-                      onChanged: (_) => ref
-                          .read(themeControllerProvider.notifier)
-                          .setThemeMode('dark'),
+                      onChanged: (_) => controller.setThemeMode('dark'),
                       child: const Text('Dark'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ToggleButton(
+                      checked: theme.isLight,
+                      onChanged: (_) => controller.setThemeMode('light'),
+                      child: const Text('Light'),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Text('Accent source', style: WaveType.trackTitle),
-              const SizedBox(height: 6),
-              WaveSelect<AccentSource>(
-                value: Platform.isIOS &&
-                        AccentSource.fromId(theme.accentSource) == AccentSource.system
-                    ? AccentSource.custom
-                    : AccentSource.fromId(theme.accentSource),
-                options: [
-                  for (final source in AccentSource.values)
-                    if (!Platform.isIOS || source != AccentSource.system)
-                      WaveSelectOption(value: source, label: source.label),
-                ],
-                onChanged: (v) {
-                  // Re-probe the desktop accent on every re-selection: the
-                  // user may have just changed it in their OS settings.
-                  if (v == AccentSource.system) {
-                    ref.invalidate(systemAccentProvider);
-                  }
-                  onUpdate((p) => p.setAccentSource(v.id));
-                },
-              ),
-              const SizedBox(height: 8),
-              _AccentPreview(resolution: ref.watch(accentResolutionProvider)),
-              const SizedBox(height: 10),
-              const Text('Accent colour', style: WaveType.trackTitle),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  for (final c in _accentPresets)
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        // Picking a swatch implies "custom colour": without
-                        // this the swatches look inert while another accent
-                        // source is active.
-                        onTap: () => onUpdate((p) async {
-                          await p.setAccentColor(c.toARGB32());
-                          await p.setAccentSource(AccentSource.custom.id);
-                        }),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: c,
-                            border: Border.all(
-                              color: theme.accent.toARGB32() == c.toARGB32()
-                                  ? waveAccent(context)
-                                  : waveDivider(context),
-                              width: 2,
-                            ),
-                          ),
-                          child: theme.accent.toARGB32() == c.toARGB32()
-                              ? Icon(
-                                  FluentIcons.check_mark,
-                                  size: 14,
-                                  color: onAccentFor(c),
-                                )
-                              : null,
-                        ),
-                      ),
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: theme.accent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: waveOutline(context)),
                     ),
-                  _PickColorSwatch(
-                    tooltip: 'Pick any accent colour',
-                    current: theme.accent,
-                    selected: !_accentPresets.any(
-                        (c) => c.toARGB32() == theme.accent.toARGB32()),
-                    onPicked: (c) => onUpdate((p) async {
-                      await p.setAccentColor(c.toARGB32());
-                      await p.setAccentSource(AccentSource.custom.id);
-                    }),
-                    dialogTitle: 'Accent colour',
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('$accentName accent', style: WaveType.trackTitle),
+                        Text(
+                          '$accentName is selected automatically in $modeName mode.',
+                          style: WaveType.meta.copyWith(
+                            color: waveTextSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        _Group(
-          id: 'appearance.wavy_seekbar',
-          title: 'Playback appearance',
-          subtitle: 'Customize the timeline shown in the player',
-          child: _SwitchRow(
-            value: prefs.wavySeekbar,
-            onChanged: (v) => onUpdate((p) => p.setWavySeekbar(v)),
-            title: 'Wavy seekbar',
-            subtitle: 'Use the animated waveform-style timeline',
-          ),
-        ),
-        if (Platform.isIOS) ...[
-          _Group(
-            id: 'appearance.interface_scale',
-            title: 'Interface scale',
-            subtitle: 'Automatic adjusts for iPhone and iPad',
-            child: WaveSelect<String>(
-              value: prefs.interfaceScale,
-              options: const [
-                WaveSelectOption(value: 'auto', label: 'Automatic'),
-                WaveSelectOption(value: 'compact', label: 'Compact'),
-                WaveSelectOption(value: 'standard', label: 'Standard'),
-                WaveSelectOption(value: 'large', label: 'Large'),
-              ],
-              onChanged: (value) =>
-                  onUpdate((p) => p.setInterfaceScale(value)),
-            ),
-          ),
-        ],
       ],
     );
   }
 }
+
 /// A 28px colour dot: selected ring + check, same metrics as the accent
 /// swatches.
-class _ColorSwatchButton extends StatelessWidget {
-  final Color color;
-  final bool selected;
-  final String tooltip;
-  final VoidCallback onTap;
-  final Widget? child;
-
-  const _ColorSwatchButton({
-    required this.color,
-    required this.selected,
-    required this.tooltip,
-    required this.onTap,
-    this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LWTooltip(
-      message: tooltip,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-              border: Border.all(
-                color: selected ? waveAccent(context) : waveDivider(context),
-                width: 2,
-              ),
-            ),
-            child: child ??
-                (selected
-                    ? Icon(
-                        FluentIcons.check_mark,
-                        size: 14,
-                        color: onAccentFor(color),
-                      )
-                    : null),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Last swatch in a row: opens the system-style colour picker. Shows the
-/// current colour when it isn't one of the presets.
-class _PickColorSwatch extends StatelessWidget {
-  final String tooltip;
-  final Color current;
-  final bool selected;
-  final String dialogTitle;
-  final ValueChanged<Color> onPicked;
-
-  const _PickColorSwatch({
-    required this.tooltip,
-    required this.current,
-    required this.dialogTitle,
-    required this.onPicked,
-    this.selected = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _ColorSwatchButton(
-      color: selected ? current : waveSurfaceOverlay(context),
-      selected: selected,
-      tooltip: tooltip,
-      onTap: () async {
-        final picked = await showWaveColorPicker(
-          context,
-          title: dialogTitle,
-          initial: current,
-        );
-        if (picked != null) onPicked(picked);
-      },
-      child: selected
-          ? null
-          : Icon(
-              WaveIcons.theme,
-              size: 14,
-              color: waveTextSecondary(context),
-            ),
-    );
-  }
-}
-
-/// Opens the Fluent colour picker on desktop and a larger, touch-friendly
-/// HSL control on iOS. Alpha is fixed at opaque.
-Future<Color?> showWaveColorPicker(
-  BuildContext context, {
-  required String title,
-  required Color initial,
-}) {
-  var picked = initial.withValues(alpha: 1);
-  return showDialog<Color>(
-    context: context,
-    barrierDismissible: true,
-    builder: (dialogContext) => ContentDialog(
-      constraints: BoxConstraints(maxWidth: Platform.isIOS ? 460 : 380),
-      title: Text(title),
-      content: SingleChildScrollView(
-        child: Platform.isIOS
-            ? StatefulBuilder(
-                builder: (context, setState) {
-                  final hsl = HSLColor.fromColor(picked);
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: picked,
-                          borderRadius: WaveRadius.controlsRadius,
-                          border: Border.all(color: waveDivider(context)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Hue · ${hsl.hue.round()}°',
-                        style: WaveType.trackTitle,
-                      ),
-                      Slider(
-                        value: hsl.hue.clamp(0.0, 360.0).toDouble(),
-                        min: 0,
-                        max: 360,
-                        divisions: 360,
-                        onChanged: (value) => setState(() {
-                          picked = HSLColor.fromColor(picked)
-                              .withHue(value)
-                              .toColor();
-                        }),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Saturation · ${(hsl.saturation * 100).round()}%',
-                        style: WaveType.trackTitle,
-                      ),
-                      Slider(
-                        value: hsl.saturation.clamp(0.0, 1.0).toDouble(),
-                        min: 0,
-                        max: 1,
-                        divisions: 100,
-                        onChanged: (value) => setState(() {
-                          picked = HSLColor.fromColor(picked)
-                              .withSaturation(value)
-                              .toColor();
-                        }),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Lightness · ${(hsl.lightness * 100).round()}%',
-                        style: WaveType.trackTitle,
-                      ),
-                      Slider(
-                        value: hsl.lightness.clamp(0.0, 1.0).toDouble(),
-                        min: 0,
-                        max: 1,
-                        divisions: 100,
-                        onChanged: (value) => setState(() {
-                          picked = HSLColor.fromColor(picked)
-                              .withLightness(value)
-                              .toColor();
-                        }),
-                      ),
-                    ],
-                  );
-                },
-              )
-            : StatefulBuilder(
-                builder: (context, setState) => ColorPicker(
-                  color: picked,
-                  onChanged: (c) => setState(() => picked = c.withValues(alpha: 1)),
-                  isAlphaEnabled: false,
-                  isAlphaSliderVisible: false,
-                  isAlphaTextInputVisible: false,
-                  isMoreButtonVisible: false,
-                  isColorChannelTextInputVisible: false,
-                ),
-              ),
-      ),
-      actions: [
-        Button(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(picked),
-          child: const Text('Apply'),
-        ),
-      ],
-    ),
-  );
-}
-
 /// Miniature of the generated theme: rail, page, card, raised and hover
 /// tiles, dock, with real text tokens on top.
 class _Lyrics extends ConsumerWidget {
@@ -1395,8 +1063,7 @@ class _Ytm extends ConsumerWidget {
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          'Sign in with Google using the secure iOS sign-in flow. This confirms your Google account; '
-                          'private YouTube Music library and playback access may still require a separate session.',
+                          'Sign in to YouTube Music. LastWave verifies the session before connecting your library and playback.',
                           style: WaveType.meta,
                         ),
                         const SizedBox(height: 10),
@@ -1405,8 +1072,8 @@ class _Ytm extends ConsumerWidget {
                           runSpacing: 8,
                           children: [
                             WaveFilledButton(
-                              onPressed: () => _ytConnectWithGoogleOAuth(context),
-                              child: const Text('Sign in with Google'),
+                              onPressed: () => _ytConnect(context, ref),
+                              child: const Text('Sign in to YouTube Music'),
                             ),
                             WaveButton(
                               onPressed: () => _ytConnectWithCookies(context, ref),
@@ -1573,50 +1240,6 @@ class _Ytm extends ConsumerWidget {
     );
   }
 
-  /// Uses the official Google Sign-In SDK instead of an embedded WebView.
-  /// OAuth confirms the Google identity but does not mint the private
-  /// YouTube Music InnerTube cookie used by the current library/playback API.
-  Future<void> _ytConnectWithGoogleOAuth(BuildContext context) async {
-    try {
-      final account = await YtGoogleOAuth.signIn();
-      if (!context.mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => ContentDialog(
-          title: const Text('Google account authorized'),
-          content: Text(
-            'Signed in as ${account.email}. Google sign-in is now using the secure iOS flow. '
-            'The current private YouTube Music library and playback integration still needs its own session, '
-            'so this does not yet mark YouTube Music as connected.',
-          ),
-          actions: [
-            WaveFilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => ContentDialog(
-          title: const Text('Google sign-in could not finish'),
-          content: const Text(
-            'Check that the Google OAuth consent screen is configured and this account is allowed to test the app, then try again.',
-          ),
-          actions: [
-            WaveFilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
   /// In-app Google sign-in: opens music.youtube.com in a system
   /// WebView, waits for login, captures cookies automatically, then
   /// runs the shared roster upsert + chooser tail.
@@ -1627,6 +1250,10 @@ class _Ytm extends ConsumerWidget {
         provider: MobileCookieLoginProvider.youtubeMusic,
       );
       if (!context.mounted || header == null || header.isEmpty) return;
+      if (header == mobileCookieLoginImportRequested) {
+        await _ytConnectWithCookies(context, ref);
+        return;
+      }
       await _ytConnectCaptured(
         context,
         ref,
