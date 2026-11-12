@@ -1530,12 +1530,6 @@ class _QualitySpecLine extends StatelessWidget {
         key: const ValueKey('now-playing-quality'),
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            WaveIcons.equalizer,
-            size: 11,
-            color: waveAccent(context).withValues(alpha: 0.62),
-          ),
-          const SizedBox(width: 6),
           Text(
             quality.tier,
             style: WaveType.overline.copyWith(
