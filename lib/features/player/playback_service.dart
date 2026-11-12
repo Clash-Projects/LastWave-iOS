@@ -2719,8 +2719,13 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     );
   }
 
+  // queueKey is title|artist only, so two different recordings with the
+  // same name (album vs single, live, remix, re-upload) share it. The
+  // recording identity (videoId / local path) is part of the cache key so
+  // one can never be served the other's resolved stream. The key still
+  // starts with queueKey| so _invalidatePlayCache keeps matching.
   String _playCacheKey(PlayableTrack track, bool forceYoutube) =>
-      '${track.queueKey}|${forceYoutube ? 'yt' : _prefs.losslessQuality}|${_prefs.preferLossless}';
+      '${track.queueKey}|${track.mediaId}|${forceYoutube ? 'yt' : _prefs.losslessQuality}|${_prefs.preferLossless}';
 
   void _invalidatePlayCache(PlayableTrack track) {
     _playCache.invalidateWhere((key) => key.startsWith('${track.queueKey}|'));
