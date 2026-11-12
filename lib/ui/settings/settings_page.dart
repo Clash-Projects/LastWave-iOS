@@ -433,7 +433,11 @@ class _Group extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
           decoration: BoxDecoration(
-            color: waveSurface(context),
+            // iPhone / iPad: see-through cards so the artwork gradient
+            // behind the page shows through every settings section.
+            color: Platform.isIOS
+                ? waveSurface(context).withValues(alpha: 0.42)
+                : waveSurface(context),
             border: Border.all(color: stroke),
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(WaveRadius.floating),
@@ -457,7 +461,9 @@ class _Group extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: waveSurfaceRaised(context),
+            color: Platform.isIOS
+                ? waveSurfaceRaised(context).withValues(alpha: 0.30)
+                : waveSurfaceRaised(context),
             border: Border(
               left: BorderSide(color: stroke),
               right: BorderSide(color: stroke),
