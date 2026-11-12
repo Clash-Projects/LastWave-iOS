@@ -1099,7 +1099,8 @@ class AddonApi implements LosslessSource {
   static String _safeContentType(String value) {
     final mediaType = value.split(';').first.trim().toLowerCase();
     if (mediaType.isEmpty) return 'unknown';
-    return mediaType.replaceAll(RegExp(r'[^a-z0-9.+/-]'), '').take(64);
+    final safe = mediaType.replaceAll(RegExp(r'[^a-z0-9.+/-]'), '');
+    return safe.substring(0, safe.length > 64 ? 64 : safe.length);
   }
 
   static String _safePayloadShape(Map<String, dynamic> data) {
@@ -1112,11 +1113,9 @@ class AddonApi implements LosslessSource {
         .toList()
       ..sort();
     final nested = data['data'];
-    final nestedShape = nested is Map
-        ? ' nested_keys=${nested.keys.map((e) => e.toString()).where((e) => streamFields.contains(e)).toList()..sort()}'
-        : '';
-    return 'keys=${present.join(',')}'
-        ' nested_data=${nested is Map ? 'map' : nested == null ? 'none' : nested.runtimeType}';
+    final nestedType =
+        nested is Map ? 'map' : nested == null ? 'none' : 'other';
+    return 'keys=${present.join(',')} nested_data=$nestedType';
   }
 
   void _recordQuota(String root, Headers? headers) {
