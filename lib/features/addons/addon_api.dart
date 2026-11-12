@@ -970,6 +970,32 @@ class AddonApi implements LosslessSource {
     return lowerTitle.contains('atmos') || lowerTitle.contains('dolby');
   }
 
+  /// Normalize flat and wrapped stream payloads accepted by Native.
+  /// Nested fields override outer fields, while outer metadata is retained.
+  static Map<String, dynamic> unwrapStreamPayload(
+      Map<String, dynamic> payload) {
+    var merged = <String, dynamic>{...payload};
+    var current = payload;
+    for (var depth = 0; depth < 4; depth++) {
+      final nested = current['stream'] is Map
+          ? current['stream']
+          : current['data'] is Map
+              ? current['data']
+              : null;
+      if (nested is! Map) break;
+      final next = Map<String, dynamic>.from(nested);
+      merged = {...merged, ...next};
+      current = next;
+    }
+    return merged;
+  }
+
+  /// Accept numeric metadata encoded as either JSON numbers or strings.
+  static int? _payloadInt(Object? value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString().trim() ?? '');
+  }
+
   /// Server `sampleRate` is Hz (44100/48000/96000…); normalize to the
   /// kHz the [ResolvedStream] model (and the output sheet) expects.
   /// Missing values fall back per tier. Pure for unit tests.
@@ -1036,7 +1062,9 @@ class AddonApi implements LosslessSource {
           options: Options(headers: _signHeaders('GET', root, path)),
         ).timeout(timeout);
         _recordQuota(root, res.headers);
-        data = res.data ?? const {};
+        // Match LastWave-Native: stream responses may be flat or wrapped
+        // in {stream: {...}} / {data: {...}}. Keep outer metadata too.
+        data = unwrapStreamPayload(res.data ?? const {});
         break;
       } on TimeoutException {
         TraceCrumb.write('resolve stage=stream-timeout tier=$serverQuality '
@@ -1184,7 +1212,7 @@ class AddonApi implements LosslessSource {
     final mp3 = serverQuality == 'high';
     final bitDepth = isStreamAtmos
         ? 16
-        : ((data['bitDepth'] as num?)?.toInt() ?? (hiRes ? 24 : 16));
+        : (_payloadInt(data['bitDepth']) ?? (hiRes ? 24 : 16));
     // Server speaks Hz (e.g. 48000); the model is kHz. Anything above
     // 1000 must be Hz — without this the sheet shows "48000.0 kHz"
     // and the bitrate explodes by the same 1000× (depth×rate×2).
@@ -1192,7 +1220,7 @@ class AddonApi implements LosslessSource {
         ? 48.0
         : khzFromServerSampleRate(data['sampleRate'], hiRes: hiRes);
     final bitrateKbps = isStreamAtmos
-        ? ((data['bitrate'] as num?)?.toInt() ?? 768)
+        ? (_payloadInt(data['bitrate']) ?? 768)
         : mp3
             ? 320
             : hiRes
