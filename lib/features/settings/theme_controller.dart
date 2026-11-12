@@ -1,28 +1,19 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/prefs.dart';
 import '../../ui/theme/tokens.dart';
 
-/// App theme state (accent + Dark appearance + Haze preferences).
+/// App theme state: a fixed monochrome accent plus appearance and Haze settings.
 class ThemeState {
   final Color accent;
   final bool amoled;
-
-  /// Retained for compatibility with existing UI consumers; Dark is the
-  /// only available appearance, so this is always false.
   final bool isLight;
-
-  /// The Custom theme is selected; surfaces come from [customBase].
   final bool isCustom;
   final Color customBase;
   final String hazeMaterial;
   final String hazeIntensity;
   final String accentSource;
-
-  /// Whether the dock timeline uses the optional wave styling.
-  final bool wavySeekbar;
 
   const ThemeState({
     required this.accent,
@@ -33,10 +24,9 @@ class ThemeState {
     this.hazeMaterial = 'automatic',
     this.hazeIntensity = 'medium',
     this.accentSource = 'custom',
-    this.wavySeekbar = false,
   });
 
-  /// Legacy palette slot; Dark uses the graphite surface set.
+  /// Legacy palette slot; the active appearance uses the built-in surface set.
   WaveSurfaces? get customSurfaces => null;
 
   /// Brightness of the two supported base themes.
@@ -46,51 +36,40 @@ class ThemeState {
 class ThemeController extends StateNotifier<ThemeState> {
   final Prefs _prefs;
 
-  /// iPad gets a neutral white accent by default. Explicitly saved accent
-  /// choices are always respected, and iPhone keeps its existing default.
-  static int _defaultAccent(Prefs prefs) {
-    if (prefs.hasAccentColor) return prefs.accentColor;
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final views = WidgetsBinding.instance.platformDispatcher.views;
-      final isIPad = views.any(
-        (view) =>
-            view.physicalSize.shortestSide / view.devicePixelRatio >= 600,
-      );
-      if (isIPad) return WaveColors.defaultAccent.toARGB32();
-    }
-    return prefs.accentColor;
-  }
+  /// Dark always uses white; Light always uses black. Saved legacy custom
+  /// accents are intentionally ignored so the appearance switch has one
+  /// predictable accent in every part of the app.
+  static Color _accentFor(Prefs prefs) => prefs.themeMode == 'light'
+      ? const Color(0xFF000000)
+      : const Color(0xFFFFFFFF);
+
   ThemeController(this._prefs)
       : super(ThemeState(
-          accent: Color(_defaultAccent(_prefs)),
+          accent: _accentFor(_prefs),
           amoled: false,
-          isLight: false,
+          isLight: _prefs.themeMode == 'light',
           isCustom: false,
           customBase: Color(_prefs.customThemeBase),
           hazeMaterial: _prefs.hazeMaterial,
           hazeIntensity: _prefs.hazeIntensity,
           accentSource: _prefs.accentSource,
-          wavySeekbar: _prefs.wavySeekbar,
         ));
 
   void refresh() {
     state = ThemeState(
-      accent: Color(_defaultAccent(_prefs)),
+      accent: _accentFor(_prefs),
       amoled: false,
-      isLight: false,
+      isLight: _prefs.themeMode == 'light',
       isCustom: false,
       customBase: Color(_prefs.customThemeBase),
       hazeMaterial: _prefs.hazeMaterial,
       hazeIntensity: _prefs.hazeIntensity,
       accentSource: _prefs.accentSource,
-      wavySeekbar: _prefs.wavySeekbar,
     );
   }
 
-  /// Dark is the only supported base appearance. Legacy light/custom
-  /// preference values are ignored.
-  Future<void> setThemeMode(String _) async {
-    await _prefs.setThemeMode('dark');
+  Future<void> setThemeMode(String mode) async {
+    await _prefs.setThemeMode(mode == 'light' ? 'light' : 'dark');
     refresh();
   }
 }
