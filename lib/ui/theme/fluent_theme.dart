@@ -52,6 +52,26 @@ ButtonThemeData _waveButtonTheme() {
   );
 }
 
+SliderThemeData _waveSliderTheme({
+  required Color accent,
+  required bool isLight,
+}) {
+  return SliderThemeData(
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+    thumbColor: WidgetStatePropertyAll(accent),
+    thumbRadius: const WidgetStatePropertyAll(6.0),
+    trackHeight: const WidgetStatePropertyAll(4.0),
+    activeColor: WidgetStatePropertyAll(accent),
+    inactiveColor: WidgetStatePropertyAll(
+      isLight ? const Color(0xFFDADADA) : const Color(0xFF3D3D3D),
+    ),
+    labelBackgroundColor: accent,
+    labelForegroundColor: onAccentFor(accent),
+    useThumbBall: true,
+    thumbBallInnerFactor: const WidgetStatePropertyAll(1.0),
+  );
+}
+
 ContentDialogThemeData _waveDialogTheme({required Color surface}) {
   // Touch dialogs share the floating-chrome radius (tab bar, mini-player,
   // sheets) so a dialog reads as part of the same family; desktop keeps the
@@ -110,6 +130,7 @@ FluentThemeData buildWaveFluentTheme({
         glowFactor: 2.0,
       ),
       buttonTheme: buttonTheme,
+      sliderTheme: _waveSliderTheme(accent: safeAccent, isLight: true),
       dialogTheme: _waveDialogTheme(surface: card),
       tooltipTheme: _waveTooltipTheme,
     );
@@ -130,6 +151,7 @@ FluentThemeData buildWaveFluentTheme({
       glowFactor: 2.0,
     ),
     buttonTheme: buttonTheme,
+    sliderTheme: _waveSliderTheme(accent: safeAccent, isLight: false),
     dialogTheme: _waveDialogTheme(surface: surfaces.surfaceRaised),
     tooltipTheme: _waveTooltipTheme,
   );
