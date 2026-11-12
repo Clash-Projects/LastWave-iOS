@@ -12,7 +12,6 @@ import '../../features/jam/jam_client.dart';
 import '../../features/library/playlists.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/audio_output/output_controller.dart';
-import '../../features/settings/theme_controller.dart';
 import '../components/ambient.dart';
 import '../components/artist_line.dart';
 import '../components/artwork.dart';
