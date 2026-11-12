@@ -110,6 +110,9 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   bool _resolving = false;
   int _resolvingIndex = -1;
   int _resolveGeneration = 0;
+  // Tracks whose exact recording (known videoId) could not be streamed.
+  // Strict mode reports these instead of silently playing another upload.
+  final Set<String> _exactStreamFailed = {};
   int _playbackAttempt = 0;
   int _failedGeneration = -1;
   String _activeQueueKey = '';
@@ -2631,13 +2634,18 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         // Strict matching is fail-closed for every catalog: never play a
         // different recording just to keep the queue moving. Keep the
         // requested track selected and expose the missing-match warning.
-        if (_prefs.strictTrackMatching) {
+        if (_prefs.strictTrackMatching ||
+            _exactStreamFailed.contains(track.queueKey)) {
           state = state.copyWith(
             isBuffering: false,
             isPlaying: false,
             clearStream: true,
-            error: 'No verified YouTube Music recording matched this track. '
-                'No alternate recording was played.',
+            error: _exactStreamFailed.contains(track.queueKey)
+                ? 'This recording could not be streamed (it may be '
+                    'age-restricted or need a signed-in YouTube account). '
+                    'No alternate version was played.'
+                : 'No verified YouTube Music recording matched this track. '
+                    'No alternate recording was played.',
           );
           return;
         }
@@ -2865,17 +2873,24 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
             'stream_ms=${directSw.elapsedMilliseconds} '
             'hit=${stream != null}');
         if (stream != null) {
+          _exactStreamFailed.remove(track.queueKey);
           _rememberWatchtime(track.videoId, stream);
           return stream;
         }
       } catch (_) {}
-      // Real failure (e.g. 403): drop the cached URL and try one
-      // limited re-match below instead of fanning out.
+      // Real failure (e.g. 403): drop the cached URL.
       try {
         _tube.reportPlaybackFailure(track.videoId);
       } catch (_) {}
       excluded = {...excluded, track.videoId};
+      // The listener chose this exact recording. A fresh search would play
+      // whichever same-titled upload ranks first (a different one per run),
+      // so report the failure instead (age-restricted and region-locked
+      // videos land here).
+      _exactStreamFailed.add(track.queueKey);
+      return null;
     }
+    _exactStreamFailed.remove(track.queueKey);
     for (var attempt = 0; attempt < 2; attempt++) {
       int matchMs = 0;
       try {
