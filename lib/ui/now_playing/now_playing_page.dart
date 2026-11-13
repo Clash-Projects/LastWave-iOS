@@ -1262,13 +1262,13 @@ class _DesktopDualPane extends StatelessWidget {
                                         // Comments and suggestions have their
                                         // own heading, so keep them below both
                                         // the top action bar and the info tabs.
+                                        padding: EdgeInsets.only(top: topInset),
                                         child: SizedBox(
                                           height: maxHeight,
                                           child: RepaintBoundary(
                                             child: alternatePanel!,
                                           ),
                                         ),
-                                        padding: EdgeInsets.only(top: topInset),
                                       )
                                     : _VisibleTicker(
                                         enabled: lyricsVisible,
