@@ -199,20 +199,32 @@ class ResolvedStream {
         .isAfter(exp.subtract(const Duration(minutes: 2)));
   }
 
-  /// Human-readable format of the bytes being streamed. Codec identifiers
-  /// take precedence over the container MIME type; OPUS wins over AAC when
-  /// both appear in a composite codec string.
+  /// Human-readable format of the bytes being streamed. For AAC/OPUS
+  /// responses, honor whichever codec appears first in the source metadata.
   String get formatLabel {
+    String? orderedAacOrOpus(String value) {
+      final lower = value.toLowerCase();
+      final opusAt = lower.indexOf('opus');
+      final aacAt = [
+        lower.indexOf('mp4a'),
+        lower.indexOf('aac'),
+      ].where((index) => index >= 0).fold<int?>(null, (best, index) =>
+          best == null || index < best ? index : best);
+      if (opusAt < 0 && aacAt == null) return null;
+      if (opusAt >= 0 && (aacAt == null || opusAt < aacAt)) return 'OPUS';
+      return 'AAC';
+    }
+
     final declared = format.trim().toLowerCase();
     if (declared.contains('flac')) return 'FLAC';
-    if (declared.contains('opus')) return 'OPUS';
     if (declared.contains('eac3') ||
         declared.contains('ec-3') ||
         declared.contains('ec3')) {
       return 'E-AC3';
     }
     if (declared.contains('ac-3') || declared.contains('ac3')) return 'AC-3';
-    if (declared.contains('aac') || declared.contains('mp4a')) return 'AAC';
+    final declaredAacOrOpus = orderedAacOrOpus(declared);
+    if (declaredAacOrOpus != null) return declaredAacOrOpus;
     if (declared.contains('mp3')) return 'MP3';
     if (declared.contains('wav')) return 'WAV';
     if (declared.contains('atmos')) return 'DOLBY ATMOS';
@@ -220,7 +232,6 @@ class ResolvedStream {
     final metadata =
         '${audioCodec.toLowerCase()} ${mimeType.toLowerCase()} ${url.toLowerCase()}';
     if (metadata.contains('flac')) return 'FLAC';
-    if (metadata.contains('opus')) return 'OPUS';
     if (metadata.contains('eac3') ||
         metadata.contains('ec-3') ||
         metadata.contains('ec3')) {
@@ -228,11 +239,9 @@ class ResolvedStream {
     }
     if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
     if (metadata.contains('atmos')) return 'DOLBY ATMOS';
-    if (metadata.contains('mp4a') ||
-        metadata.contains('aac') ||
-        mimeType.toLowerCase().contains('audio/mp4')) {
-      return 'AAC';
-    }
+    final metadataAacOrOpus = orderedAacOrOpus(metadata);
+    if (metadataAacOrOpus != null) return metadataAacOrOpus;
+    if (mimeType.toLowerCase().contains('audio/mp4')) return 'AAC';
     if (metadata.contains('mp3') ||
         mimeType.toLowerCase().contains('audio/mpeg')) {
       return 'MP3';
