@@ -9,6 +9,7 @@ import '../../features/player/playback_service.dart';
 import '../components/artwork.dart';
 import '../components/buttons.dart' show LWTooltip;
 import '../components/wave_timeline.dart';
+import '../now_playing/immersive.dart' show nowPlayingVideoModeProvider;
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 
@@ -51,6 +52,9 @@ class _WaveMiniPlayerState extends ConsumerState<WaveMiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(nowPlayingVideoModeProvider)) {
+      return const SizedBox.shrink();
+    }
     final dark = waveIsDark(context);
     final snap = ref.watch(playbackServiceProvider.select((s) => (
           current: s.current,
