@@ -1204,6 +1204,31 @@ class AddonApi implements LosslessSource {
         manifest.contains('definatelynagato');
   }
 
+  static String _streamFormatForPayload({
+    required String codec,
+    required String manifestXml,
+    required List<String> urls,
+    required bool isAtmos,
+    required bool mp3,
+  }) {
+    final metadata = '${codec.toLowerCase()} ${manifestXml.toLowerCase()} '
+        '${urls.join(' ').toLowerCase()}';
+    if (metadata.contains('flac')) return 'FLAC';
+    if (metadata.contains('opus')) return 'OPUS';
+    if (metadata.contains('eac3') ||
+        metadata.contains('ec-3') ||
+        metadata.contains('ec3')) {
+      return 'E-AC3';
+    }
+    if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
+    if (metadata.contains('mp4a') || metadata.contains('aac')) return 'AAC';
+    if (mp3 || metadata.contains('.mp3') || metadata.contains('mpeg')) {
+      return 'MP3';
+    }
+    if (isAtmos) return 'DOLBY ATMOS';
+    return 'FLAC';
+  }
+
   /// Map a stream payload onto [ResolvedStream]. Returns null when
   /// unplayable (miss payload, decoy, empty). Never throws.
   Future<ResolvedStream?> _toResolvedStream(
@@ -1310,6 +1335,13 @@ class AddonApi implements LosslessSource {
             : hiRes
                 ? 'HI-RES FLAC'
                 : 'LOSSLESS';
+    final streamFormat = _streamFormatForPayload(
+      codec: data['codec']?.toString() ?? '',
+      manifestXml: manifestXml,
+      urls: urls,
+      isAtmos: isStreamAtmos,
+      mp3: mp3,
+    );
     final host = Uri.tryParse(root)?.host ?? 'addon';
     final cacheKey = 'addon:$host:$trackId:$serverQuality';
     final expiresAt =
@@ -1345,6 +1377,7 @@ class AddonApi implements LosslessSource {
             mimeType: 'audio/flac',
             bitrateKbps: bitrateKbps,
             audioCodec: codec,
+            format: 'FLAC',
             cacheKey: cacheKey,
             isLossless: true,
             bitDepth: bitDepth,
@@ -1374,6 +1407,7 @@ class AddonApi implements LosslessSource {
           mimeType: 'audio/mp4',
           bitrateKbps: bitrateKbps,
           audioCodec: codec,
+          format: streamFormat,
           cacheKey: cacheKey,
           isLossless: !mp3,
           bitDepth: bitDepth,
@@ -1406,6 +1440,7 @@ class AddonApi implements LosslessSource {
         mimeType: 'audio/mp4',
         bitrateKbps: bitrateKbps,
         audioCodec: codec,
+        format: streamFormat,
         cacheKey: cacheKey,
         isLossless: !mp3,
         bitDepth: bitDepth,
@@ -1454,6 +1489,7 @@ class AddonApi implements LosslessSource {
         mimeType: 'audio/mp4',
         bitrateKbps: bitrateKbps,
         audioCodec: codec,
+        format: streamFormat,
         cacheKey: cacheKey,
         isLossless: !mp3,
         bitDepth: bitDepth,
@@ -1473,6 +1509,7 @@ class AddonApi implements LosslessSource {
       mimeType: mime,
       bitrateKbps: bitrateKbps,
       audioCodec: codec,
+      format: streamFormat,
       cacheKey: cacheKey,
       isLossless: !mp3,
       bitDepth: bitDepth,
