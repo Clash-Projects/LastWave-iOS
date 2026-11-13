@@ -122,7 +122,7 @@ class WaveRelatedSuggestionsPanel extends ConsumerWidget {
         Expanded(
           child: suggestions.when(
             loading: () => const _PanelLoading(label: 'Finding music'),
-            error: (_, __) => const _PanelMessage(
+            error: (_, _) => const _PanelMessage(
               title: 'Suggestions unavailable',
               subtitle: 'YouTube Music did not return related tracks.',
             ),
