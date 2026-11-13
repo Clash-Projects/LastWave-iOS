@@ -304,7 +304,7 @@ class _SectionBody extends ConsumerWidget {
           child: LibrarySettings(onUpdate: onUpdate),
         );
       case 'appearance':
-        return const _Appearance();
+        return _Appearance(onUpdate: onUpdate);
       case 'lyrics':
         return _Lyrics(onUpdate: onUpdate);
       case 'lastfm':
@@ -740,7 +740,8 @@ class _Audio extends ConsumerWidget {
 }
 
 class _Appearance extends ConsumerWidget {
-  const _Appearance();
+  final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
+  const _Appearance({required this.onUpdate});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -807,6 +808,18 @@ class _Appearance extends ConsumerWidget {
                 ],
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _Group(
+          id: 'appearance.wavy_timeline',
+          title: 'Timeline',
+          subtitle: 'Progress bar in the mini player and full screen player',
+          child: _SwitchRow(
+            value: ref.watch(prefsProvider.select((p) => p.wavySeekbar)),
+            onChanged: (v) => onUpdate((p) => p.setWavySeekbar(v)),
+            title: 'Wavy timeline',
+            subtitle: 'Draw the progress bar as a wave.',
           ),
         ),
       ],

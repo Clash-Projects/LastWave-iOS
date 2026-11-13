@@ -162,6 +162,13 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     keywords: 'amoled black dynamic artwork theme tint now playing contrast',
   ),
   SettingsSearchEntry(
+    id: 'appearance.wavy_timeline',
+    section: 'appearance',
+    title: 'Wavy timeline',
+    subtitle: 'Draw the progress bar as a wave',
+    keywords: 'wavy wave seekbar progress bar timeline mini player full screen',
+  ),
+  SettingsSearchEntry(
     id: 'lastfm.connection',
     section: 'lastfm',
     title: 'Last.fm connection',

@@ -382,6 +382,10 @@ class Prefs {
     await _sp.setString('lw_accent_mode', v);
   }
 
+  /// Wave-shaped progress bar in the mini player and full screen player.
+  bool get wavySeekbar => _sp.getBool('lw_wavy_seekbar') ?? false;
+  Future<void> setWavySeekbar(bool v) => _sp.setBool('lw_wavy_seekbar', v);
+
   // -- Scrobbler --------------------------------------------------------------
   bool get scrobblerEnabled => _sp.getBool('lw_scrobbler_enabled') ?? false;
   bool get scrobbleNowPlaying => _sp.getBool('lw_submit_now_playing') ?? true;
