@@ -7,7 +7,7 @@ import '../components/artwork.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 
-final _nowPlayingVideoIdProvider = FutureProvider.autoDispose
+final nowPlayingVideoIdProvider = FutureProvider.autoDispose
     .family<String, PlayableTrack>((ref, track) async {
   if (track.videoId.isNotEmpty) return track.videoId;
   final match = await ref
@@ -33,7 +33,7 @@ class WaveVideoCommentsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoId = ref.watch(_nowPlayingVideoIdProvider(track));
+    final videoId = ref.watch(nowPlayingVideoIdProvider(track));
     if (videoId.isLoading) {
       return const _PanelLoading(label: 'Loading comments');
     }
@@ -94,7 +94,7 @@ class WaveRelatedSuggestionsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoId = ref.watch(_nowPlayingVideoIdProvider(track));
+    final videoId = ref.watch(nowPlayingVideoIdProvider(track));
     if (videoId.isLoading) {
       return const _PanelLoading(label: 'Finding suggestions');
     }

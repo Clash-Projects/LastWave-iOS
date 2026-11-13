@@ -280,6 +280,9 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
       );
     }
 
+    final resolvedVideoId =
+        ref.watch(nowPlayingVideoIdProvider(current)).valueOrNull ??
+            current.videoId;
     final alternatePanelVisible = _commentsVisible || _suggestionsVisible;
     final alternatePanel = _commentsVisible
         ? WaveVideoCommentsPanel(track: current)
@@ -423,8 +426,8 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                       if (_videoMode)
                         Positioned.fill(
                           child: _YoutubeMusicVideoView(
-                            key: ValueKey(current.videoId),
-                            videoId: current.videoId,
+                            key: ValueKey(resolvedVideoId),
+                            videoId: resolvedVideoId,
                           ),
                         )
                       else
@@ -487,7 +490,7 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                                 lyricsVisible: _lyricsVisible,
                                 focusMode: _focusMode,
                                 visualizerEnabled: visualizerEnabled,
-                                hasVideo: current.videoId.isNotEmpty,
+                                hasVideo: resolvedVideoId.isNotEmpty,
                                 videoMode: _videoMode,
                                 onListenToSong: () => _setVideoMode(false),
                                 onWatchVideo: () => _setVideoMode(true),
