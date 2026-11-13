@@ -3,12 +3,10 @@ name: LastWave iOS v1.0.0 unsigned build
 on:
   push:
     branches:
-      - LastWave-iOS
-      - ui/redesign-on-ios
+      - main
   pull_request:
     branches:
       - main
-      - codex/ui-graphite-soundstage
   workflow_dispatch:
 
 permissions:
@@ -84,12 +82,12 @@ jobs:
           fi
           mkdir -p package/Payload
           ditto "$APP_PATH" package/Payload/Runner.app
-          (cd package && /usr/bin/zip -qry ../LastWave-iOS-v1.0.0-unsigned.ipa Payload)
+          (cd package && /usr/bin/zip -qry ../LastWave.ipa Payload)
 
       - name: Upload downloadable unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: LastWave-iOS-v1.0.0-unsigned-IPA
-          path: LastWave-iOS-v1.0.0-unsigned.ipa
+          name: LastWave-iOS
+          path: LastWave.ipa
           if-no-files-found: error
           retention-days: 14
