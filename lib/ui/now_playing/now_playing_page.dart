@@ -690,19 +690,18 @@ class _YoutubeMusicVideoView extends StatelessWidget {
     );
     return ColoredBox(
       color: Colors.black,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1280),
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(uri.toString())),
-              initialSettings: InAppWebViewSettings(
-                javaScriptEnabled: true,
-                allowsInlineMediaPlayback: true,
-                mediaPlaybackRequiresUserGesture: false,
-              ),
-            ),
+      child: SizedBox.expand(
+        child: InAppWebView(
+          initialUrlRequest: URLRequest(
+            url: WebUri(uri.toString()),
+            headers: const {
+              'Referer': 'https://www.youtube.com/',
+            },
+          ),
+          initialSettings: InAppWebViewSettings(
+            javaScriptEnabled: true,
+            allowsInlineMediaPlayback: true,
+            mediaPlaybackRequiresUserGesture: false,
           ),
         ),
       ),
