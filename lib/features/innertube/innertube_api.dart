@@ -6128,6 +6128,7 @@ class InnerTubeMusicApi {
       mimeType: stream.mimeType,
       bitrateKbps: stream.bitrateKbps,
       audioCodec: stream.audioCodec,
+      format: stream.format,
       cacheKey: key,
       requestHeaders: stream.requestHeaders,
       isLossless: stream.isLossless,
