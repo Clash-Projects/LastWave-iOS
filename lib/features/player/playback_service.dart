@@ -432,9 +432,23 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   ])  : _artworkService = artworkService ?? OfficialArtworkService(),
         super(const PlayerSnapshot());
 
+  /// Check the live add-on catalog for a Dolby Atmos version of this track.
+  /// null means the catalog could not be reached; it is not treated as absent.
+  Future<bool?> hasDolbyAtmosVersion({
+    required String title,
+    required String artist,
+  }) {
+    final source = _lossless;
+    if (source is AddonApi) {
+      return source.hasDolbyAtmosVersion(title: title, artist: artist);
+    }
+    return Future<bool?>.value(null);
+  }
+
   /// Replace the configured lossless source without rebuilding the player.
   /// Addon URL changes invalidate losslessApiProvider; the playback service
   /// listens for that update so mpv, its event subscriptions, and the queue
+  /// remain alive while mpv, its event subscriptions, and the queue
   /// remain alive while the source configuration changes.
   void updateLosslessSource(LosslessSource source) {
     if (identical(_lossless, source)) return;
