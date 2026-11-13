@@ -1543,7 +1543,7 @@ class _DockOverflow extends ConsumerWidget {
         if (showQualityItem && stream != null)
           WaveMenuAction(
             leading: const Icon(WaveIcons.gauge, size: 15),
-            label: '${stream.qualityBadge} · ${stream.audioCodec}',
+            label: 'Format · ${stream.formatLabel}',
             onPressed: () => context.go('/settings'),
           ),
         if (showOutputItem)
