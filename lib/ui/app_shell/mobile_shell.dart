@@ -1187,7 +1187,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
     );
     final detail = stream == null
         ? 'Choose the audio stream quality'
-        : '${stream.audioCodec}${stream.bitrateKbps > 0 ? ' · ${stream.bitrateKbps} kbps' : ''}';
+        : 'Streaming format · ${stream.formatLabel}';
     return LWTooltip(
       message: detail,
       child: GestureDetector(
@@ -1199,7 +1199,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
               leading: const Icon(WaveIcons.gauge, size: 15),
               label: stream == null
                   ? 'Audio quality'
-                  : 'Current · ${stream.qualityBadge}',
+                  : 'Current format · ${stream.formatLabel}',
               onPressed: () {},
             ),
             const WaveMenuSeparator(),
@@ -1242,7 +1242,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                stream?.qualityBadge ?? 'QUALITY',
+                stream?.formatLabel ?? 'FORMAT',
                 style: WaveTouchType.caption.copyWith(
                   color: waveTextSecondary(context),
                   fontWeight: FontWeight.w700,
@@ -1263,16 +1263,8 @@ class _MobileAudioQualityButton extends ConsumerWidget {
   }
 }
 
-String _mobileAudioStreamLabel(ResolvedStream? stream) {
-  if (stream == null) return '';
-  final codec = stream.audioCodec.trim().isNotEmpty
-      ? stream.audioCodec.toUpperCase()
-      : stream.mimeType.split('/').last.toUpperCase();
-  final type = stream.isLossless ? 'LOSSLESS · $codec' : codec;
-  return stream.bitrateKbps > 0
-      ? '$type · ${stream.bitrateKbps} kbps'
-      : type;
-}
+String _mobileAudioStreamLabel(ResolvedStream? stream) =>
+    stream?.formatLabel ?? '';
 
 /// Floating mini-player: artwork, title / artist, play-pause and next, with a
 /// hairline progress along the bottom edge. Tap opens Now Playing; swiping
