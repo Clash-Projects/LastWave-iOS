@@ -240,6 +240,8 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final tablet = constraints.maxWidth >= 680 ||
             (viewSize.shortestSide >= 600 && constraints.maxWidth >= 520);
         final nowPlaying = _route.startsWith('/now');
+        final videoMode =
+            nowPlaying && ref.watch(nowPlayingVideoModeProvider);
         final online = ref.watch(networkMonitorProvider);
         final activePath = waveActivePath(widget.location);
         final theme = ref.watch(themeControllerProvider);
@@ -294,23 +296,25 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             _BackHeader(onBack: () => _back(moreDestinations)),
         ];
         final bottomChrome = nowPlaying
-            ? _DockFrame(
-                child: _MobileTransportDock(
-                  // The Now Playing top bar carries queue / equalizer /
-                  // download on every screen size.
-                  showUtilities: false,
-                  onQueue: () => setState(() {
-                    _showQueue = !_showQueue;
-                    _showEqualizer = false;
-                  }),
-                  onEqualizer: () => setState(() {
-                    _showEqualizer = !_showEqualizer;
-                    _showQueue = false;
-                  }),
-                  queueActive: _showQueue,
-                  equalizerActive: _showEqualizer,
-                ),
-              )
+            ? videoMode
+                ? const SizedBox.shrink()
+                : _DockFrame(
+                    child: _MobileTransportDock(
+                      // The Now Playing top bar carries queue / equalizer /
+                      // download on every screen size.
+                      showUtilities: false,
+                      onQueue: () => setState(() {
+                        _showQueue = !_showQueue;
+                        _showEqualizer = false;
+                      }),
+                      onEqualizer: () => setState(() {
+                        _showEqualizer = !_showEqualizer;
+                        _showQueue = false;
+                      }),
+                      queueActive: _showQueue,
+                      equalizerActive: _showEqualizer,
+                    ),
+                  )
             : tablet
                 ? _DockFrame(child: _MobileMiniPlayer(onOpen: _openNowPlaying))
                 : _DockFrame(
@@ -335,7 +339,9 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final pagePadding = nowPlaying
             ? EdgeInsets.only(
                 top: safe.top,
-                bottom: safe.bottom + _bottomChromeHeight,
+                // The embedded video owns the full stage. Do not retain the
+                // transport dock's previously measured height after it hides.
+                bottom: videoMode ? 0 : safe.bottom + _bottomChromeHeight,
               )
             : EdgeInsets.zero;
 

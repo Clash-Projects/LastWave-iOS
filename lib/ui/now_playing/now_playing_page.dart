@@ -678,7 +678,8 @@ class _YoutubeMusicVideoView extends StatelessWidget {
         child: Text('No associated music video is available.'),
       );
     }
-    final uri = Uri.https(
+
+    final embedUrl = Uri.https(
       'www.youtube.com',
       '/embed/$videoId',
       const {
@@ -686,22 +687,65 @@ class _YoutubeMusicVideoView extends StatelessWidget {
         'playsinline': '1',
         'controls': '1',
         'rel': '0',
+        'origin': 'https://github.com',
       },
-    );
+    ).toString();
+
+    // On iOS, WKWebView does not reliably attach a Referer to a top-level
+    // embed URL. YouTube now rejects that request with error 153. Loading a
+    // small HTML host document with a real HTTPS base URL lets WebKit provide
+    // the required Referer on the cross-origin iframe request.
+    final html = '''
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    iframe {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    src="$embedUrl"
+    title="YouTube music video"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+    allowfullscreen>
+  </iframe>
+</body>
+</html>
+''';
+
     return ColoredBox(
       color: Colors.black,
       child: SizedBox.expand(
         child: InAppWebView(
-          initialUrlRequest: URLRequest(
-            url: WebUri(uri.toString()),
-            headers: const {
-              'Referer': 'https://www.youtube.com/',
-            },
+          initialData: InAppWebViewInitialData(
+            data: html,
+            // The public LastWave repository is the app's stable HTTPS
+            // identity until the project has a dedicated website origin.
+            baseUrl: WebUri('https://github.com/sundaywired/LastWave-iOS/'),
           ),
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
             allowsInlineMediaPlayback: true,
             mediaPlaybackRequiresUserGesture: false,
+            supportZoom: false,
           ),
         ),
       ),
@@ -1214,7 +1258,18 @@ class _DesktopDualPane extends StatelessWidget {
                                 offstage: !showRightPanel,
                                 child: alternatePanelVisible &&
                                         alternatePanel != null
-                                    ? RepaintBoundary(child: alternatePanel!)
+                                    ? Padding(
+                                        // Comments and suggestions have their
+                                        // own heading, so keep them below both
+                                        // the top action bar and the info tabs.
+                                        child: SizedBox(
+                                          height: maxHeight,
+                                          child: RepaintBoundary(
+                                            child: alternatePanel!,
+                                          ),
+                                        ),
+                                        padding: EdgeInsets.only(top: topInset),
+                                      )
                                     : _VisibleTicker(
                                         enabled: lyricsVisible,
                                         child: RepaintBoundary(
