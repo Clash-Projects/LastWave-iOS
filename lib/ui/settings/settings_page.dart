@@ -1891,7 +1891,7 @@ Future<void> _ytConnectWithCookies(BuildContext context, WidgetRef ref) async {
                 ),
               ),
               const SizedBox(height: 12),
-              TextBox(
+              TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),
@@ -2418,7 +2418,7 @@ class _Sources extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextBox(
+            TextBox(padding: waveFieldPadding, 
               selectionControls: waveTextSelectionControls,
               contextMenuBuilder: waveTextContextMenuBuilder,
               decoration: waveInputDecoration(),
@@ -3171,7 +3171,7 @@ class _ApiKeysState extends ConsumerState<_ApiKeys> {
           const SizedBox(height: 10),
           const Text('API key', style: WaveType.label),
           const SizedBox(height: 4),
-          TextBox(
+          TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),
@@ -3181,7 +3181,7 @@ decoration: waveInputDecoration(),
           const SizedBox(height: 8),
           const Text('Shared secret', style: WaveType.label),
           const SizedBox(height: 4),
-          TextBox(
+          TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),

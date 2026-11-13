@@ -583,7 +583,7 @@ class _WaveSearchBoxState extends ConsumerState<_WaveSearchBox> {
                 label: 'Search songs, albums and artists',
                 hint: 'Type to see suggestions, Enter to search',
                 textField: true,
-                child: TextBox(
+                child: TextBox(padding: waveFieldPadding, 
                 selectionControls: waveTextSelectionControls,
                 contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(radius: 8),

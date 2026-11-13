@@ -223,7 +223,7 @@ class WaveFilterBar extends StatelessWidget {
           child: Row(
           children: [
             Expanded(
-              child: TextBox(
+              child: TextBox(padding: waveFieldPadding, 
                 decoration: waveInputDecoration(),
                 controller: controller,
                 placeholder: hint,
@@ -242,17 +242,18 @@ class WaveFilterBar extends StatelessWidget {
             ),
             if (countLabel != null && !compact) ...[
               const SizedBox(width: WaveSpacing.x8),
-              Flexible(
-                child: Text(
+              // A plain Text, not Flexible: a Flexible next to the Expanded field
+              // splits the spare width with it and left the field half-width.
+              Text(
                   countLabel!,
                   maxLines: 1,
+                  softWrap: false,
                   overflow: TextOverflow.ellipsis,
                   style: WaveType.meta.copyWith(
                     color: dark
                         ? WaveColors.textTertiary
                         : WaveColors.lightTextTertiary,
                   ),
-                ),
               ),
             ],
             if (sortSlot != null) ...[

@@ -20,6 +20,7 @@ import '../components/menus.dart';
 import '../theme/haze.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
+import '../components/inputs.dart';
 
 /// Coherent desktop music player — ONE object, 80px, three zones.
 ///
@@ -1638,7 +1639,7 @@ class _CustomSleepDialogState extends State<_CustomSleepDialog> {
         children: [
           const Text('Minutes', style: WaveType.trackTitle),
           const SizedBox(height: 6),
-          TextBox(
+          TextBox(padding: waveFieldPadding, 
             controller: _controller,
             placeholder: '45',
             autofocus: true,

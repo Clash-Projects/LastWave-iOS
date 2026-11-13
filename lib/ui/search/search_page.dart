@@ -303,9 +303,7 @@ decoration: waveInputDecoration(),
                 controller: _controller,
                 focusNode: _focus,
                 autofocus: false,
-                padding: Platform.isIOS
-                    ? const EdgeInsets.symmetric(horizontal: 10, vertical: 13)
-                    : const EdgeInsets.all(6),
+                padding: waveFieldPadding,
                 placeholder: 'Songs, artists, albums, users…',
                 prefix: Padding(
                   padding: const EdgeInsets.only(left: 8),

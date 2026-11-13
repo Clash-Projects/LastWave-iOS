@@ -223,7 +223,7 @@ class _PaletteDialogState extends ConsumerState<_PaletteDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextBox(
+              TextBox(padding: waveFieldPadding, 
                 selectionControls: waveTextSelectionControls,
                 contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),

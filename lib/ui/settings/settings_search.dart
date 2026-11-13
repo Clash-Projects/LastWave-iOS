@@ -361,7 +361,7 @@ class _SettingsSearchBoxState extends State<SettingsSearchBox> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextBox(
+        TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 controller: _controller,

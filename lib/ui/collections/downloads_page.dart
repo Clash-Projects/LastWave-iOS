@@ -1,4 +1,5 @@
 import '../components/chrome_insets.dart';
+import '../components/inputs.dart';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -127,10 +128,7 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
                     children: [
                       Expanded(
                         child: TextBox(
-                          padding: Platform.isIOS
-                              ? const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 13)
-                              : const EdgeInsets.all(6),
+                          padding: waveFieldPadding,
                           placeholder: 'Search downloads',
                           prefix: const Padding(
                             padding: EdgeInsets.only(left: 10),

@@ -20,6 +20,7 @@ import '../components/states.dart';
 import '../navigation/wave_nav.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
+import '../components/inputs.dart';
 
 /// Home shelf. Hidden by the parent when the provider is empty or podcasts
 /// are turned off — this widget still renders nothing in that case.
@@ -443,7 +444,7 @@ class _WavePodcastsPageState extends ConsumerState<WavePodcastsPage> {
               fallbackIcon: WaveIcons.podcasts,
             ),
             const SizedBox(height: 16),
-            TextBox(
+            TextBox(padding: waveFieldPadding, 
               controller: _controller,
               placeholder: 'Search podcasts and episodes',
               prefix: const Padding(

@@ -25,7 +25,7 @@ Future<void> showWaveCreatePlaylist(
       title: const Text('New playlist'),
       content: SizedBox(
         height: 48,
-        child: TextBox(
+        child: TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),
@@ -74,7 +74,7 @@ Future<void> showWaveAddToNewPlaylist(
       title: const Text('New playlist'),
       content: SizedBox(
         height: 48,
-        child: TextBox(
+        child: TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),
@@ -193,7 +193,7 @@ Future<void> showWaveRenamePlaylist(
       title: const Text('Rename playlist'),
       content: SizedBox(
         height: 48,
-        child: TextBox(
+        child: TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),
@@ -399,7 +399,7 @@ Future<void> showWaveImportPlaylist(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextBox(
+              TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 decoration: waveInputDecoration(),

@@ -101,7 +101,7 @@ Future<void> spotifyConnectWithCookie(
             ),
           ),
           const SizedBox(height: 10),
-          TextBox(
+          TextBox(padding: waveFieldPadding, 
         selectionControls: waveTextSelectionControls,
         contextMenuBuilder: waveTextContextMenuBuilder,
 controller: controller,

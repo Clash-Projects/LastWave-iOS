@@ -229,7 +229,7 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
                   children: [
                     _Label('Your name'),
                     const SizedBox(height: 6),
-                    TextBox(
+                    TextBox(padding: waveFieldPadding, 
                       controller: _name,
                       placeholder: 'Listener',
                       decoration: waveInputDecoration(),
@@ -348,7 +348,7 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextBox(
+                          child: TextBox(padding: waveFieldPadding, 
                             controller: _code,
                             placeholder: 'ABC123',
                             decoration: waveInputDecoration(),
@@ -775,7 +775,7 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextBox(
+                  child: TextBox(padding: waveFieldPadding, 
                     controller: _chat,
                     focusNode: _chatFocus,
                     placeholder: 'Message',

@@ -23,6 +23,7 @@ import '../components/states.dart';
 import 'friends_page.dart' show localFriendsProvider;
 import '../components/track_row.dart';
 import '../theme/tokens.dart';
+import '../components/inputs.dart';
 
 export 'friends_page.dart' show WaveFriendsPage;
 
@@ -589,7 +590,7 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
       context: context,
       builder: (context) => ContentDialog(
         title: const Text('Save playlist'),
-        content: TextBox(
+        content: TextBox(padding: waveFieldPadding, 
           controller: name,
           placeholder: 'Playlist name',
         ),
@@ -701,17 +702,17 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
               ),
               if (_mode == MixMode.similarTracks) ...[
                 const SizedBox(height: 8),
-                TextBox(controller: _seedTrack, placeholder: 'Song'),
+                TextBox(padding: waveFieldPadding, controller: _seedTrack, placeholder: 'Song'),
                 const SizedBox(height: 8),
-                TextBox(controller: _seedArtist, placeholder: 'Artist'),
+                TextBox(padding: waveFieldPadding, controller: _seedArtist, placeholder: 'Artist'),
               ],
               if (_mode == MixMode.similarArtists) ...[
                 const SizedBox(height: 8),
-                TextBox(controller: _seedArtist, placeholder: 'Artist'),
+                TextBox(padding: waveFieldPadding, controller: _seedArtist, placeholder: 'Artist'),
               ],
               if (_mode == MixMode.tag) ...[
                 const SizedBox(height: 8),
-                TextBox(controller: _tag, placeholder: 'Tag'),
+                TextBox(padding: waveFieldPadding, controller: _tag, placeholder: 'Tag'),
               ],
               const SizedBox(height: 12),
               Wrap(

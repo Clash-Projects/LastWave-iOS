@@ -18,6 +18,7 @@ import '../components/buttons.dart';
 import '../components/states.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
+import '../components/inputs.dart';
 
 /// Friends you added yourself. Last.fm has no public "add friend" call, so
 /// these are kept on this device (kv_store) and shown next to the friends
@@ -161,7 +162,7 @@ class _WaveFriendsPageState extends ConsumerState<WaveFriendsPage> {
               ),
               const Text('Friends', style: WaveType.pageTitle),
               const SizedBox(height: 14),
-              TextBox(
+              TextBox(padding: waveFieldPadding, 
                 controller: _controller,
                 placeholder: 'Search users to add',
                 prefix: const Padding(

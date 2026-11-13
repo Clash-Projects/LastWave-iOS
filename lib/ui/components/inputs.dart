@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:fluent_ui/fluent_ui.dart';
 
 import '../theme/tokens.dart';
@@ -20,3 +22,9 @@ WidgetStateProperty<BoxDecoration> waveInputDecoration({
     BoxDecoration(borderRadius: BorderRadius.circular(radius)),
   );
 }
+
+/// Inner padding every text field uses, so they are all the Search field's
+/// size: roomy and finger-sized on iOS, Fluent's compact default elsewhere.
+EdgeInsetsGeometry get waveFieldPadding => Platform.isIOS
+    ? const EdgeInsets.symmetric(horizontal: 10, vertical: 13)
+    : const EdgeInsets.all(6);
