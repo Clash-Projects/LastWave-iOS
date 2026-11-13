@@ -593,8 +593,7 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
     return FlyoutTarget(
       controller: _flyout,
       child: LWTooltip(
-        message:
-            '${s.audioCodec}${s.bitrateKbps > 0 ? ' · ${s.bitrateKbps} kbps' : ''} — details',
+        message: '${s.formatLabel} — stream format and audio details',
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hover = true),
@@ -612,7 +611,7 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
                   entries: [
                     WaveMenuAction(
                       leading: const Icon(WaveIcons.gauge, size: 15),
-                      label: '${s.qualityBadge} · ${s.audioCodec}',
+                      label: 'Format · ${s.formatLabel}',
                       onPressed: () {},
                     ),
                     const WaveMenuSeparator(),
@@ -642,12 +641,6 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
                           : 'Bit depth · ${s.bitDepth}-bit',
                       onPressed: () {},
                     ),
-                    if (s.bitrateKbps > 0)
-                      WaveMenuAction(
-                        leading: const Icon(WaveIcons.clock, size: 15),
-                        label: 'Bitrate · ${s.bitrateKbps} kbps',
-                        onPressed: () {},
-                      ),
                     const WaveMenuSeparator(),
                     WaveMenuAction(
                       leading: const Icon(WaveIcons.gauge, size: 15),
@@ -696,7 +689,7 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
                     BorderRadius.circular(WaveRadius.controls),
               ),
               child: Text(
-                s.qualityBadge,
+                s.formatLabel,
                 style: WaveType.overline.copyWith(
                   fontSize: 9,
                   color: dark
