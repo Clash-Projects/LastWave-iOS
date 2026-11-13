@@ -1903,6 +1903,9 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         return;
       }
       currentIndex = currentIndex.clamp(0, queue.length - 1);
+      // The old order still holds pre-removal indices; rebuild it for the
+      // shortened queue before anything reads it (same as the other paths).
+      _rebuildShuffleOrder(queue.length, currentIndex);
       state = state.copyWith(
           queue: queue, currentIndex: currentIndex, current: queue[currentIndex]);
       await _resolveAndOpen(currentIndex);
