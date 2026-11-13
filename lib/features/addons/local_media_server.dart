@@ -176,6 +176,45 @@ class LocalMediaServer {
       'lastwave_addon${Platform.pathSeparator}assembled'
       '${Platform.pathSeparator}$safeName.${part ? 'part' : 'm4a'}';
 
+  /// Whether a resolved stream URL belongs to this process's loopback server.
+  static bool isLoopbackStreamUrl(String rawUrl) {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null || uri.scheme.toLowerCase() != 'http') return false;
+    final host = uri.host.toLowerCase();
+    return host == 'localhost' ||
+        (InternetAddress.tryParse(uri.host)?.isLoopback ?? false);
+  }
+
+  /// Reads the finished file behind a loopback playback URL directly from
+  /// disk. Downloads must not use Dio to request 127.0.0.1: the server can be
+  /// closed while its assembled file remains available in this process.
+  Future<Uint8List?> readCompletedStreamBytes(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null || !isLoopbackStreamUrl(rawUrl)) return null;
+    if (_authToken == null ||
+        uri.queryParameters['token'] != _authToken) {
+      return null;
+    }
+    final segments = uri.pathSegments;
+    if (segments.length != 2 ||
+        segments[0] != 'a' ||
+        !segments[1].endsWith('.m4a')) {
+      return null;
+    }
+    final name = segments[1].substring(0, segments[1].length - 4);
+    if (name.isEmpty) return null;
+    final session = _sessions[name];
+    if (session == null) return null;
+    final file = await session._awaitCompleteFile();
+    if (file == null) return null;
+    try {
+      return await file.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+
   /// Per-track fragment-size memos (`layout/<name>.json`).
   static String sizeCachePathFor(String safeName) =>
       '${Directory.systemTemp.path}${Platform.pathSeparator}'
