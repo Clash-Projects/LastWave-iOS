@@ -1919,6 +1919,19 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   Future<void> clearUpcoming() async {
     if (state.currentIndex < 0) return;
     final queue = state.queue.sublist(0, state.currentIndex + 1);
+    // Nothing may follow the current track in shuffle either. Entries
+    // after it in the old order can still point at valid, already played
+    // indices, so "next" would jump back to them. Keep the history up to
+    // and including the current track and drop the rest.
+    if (_shuffleOrder.isNotEmpty) {
+      final pos = _shuffleOrder.indexOf(state.currentIndex);
+      _shuffleOrder = pos < 0
+          ? [state.currentIndex]
+          : _shuffleOrder
+              .sublist(0, pos + 1)
+              .where((i) => i < queue.length)
+              .toList();
+    }
     state = state.copyWith(queue: queue);
     _schedulePersist();
   }
