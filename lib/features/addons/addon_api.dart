@@ -1214,14 +1214,25 @@ class AddonApi implements LosslessSource {
     final metadata = '${codec.toLowerCase()} ${manifestXml.toLowerCase()} '
         '${urls.join(' ').toLowerCase()}';
     if (metadata.contains('flac')) return 'FLAC';
-    if (metadata.contains('opus')) return 'OPUS';
     if (metadata.contains('eac3') ||
         metadata.contains('ec-3') ||
         metadata.contains('ec3')) {
       return 'E-AC3';
     }
     if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
-    if (metadata.contains('mp4a') || metadata.contains('aac')) return 'AAC';
+    final opusAt = metadata.indexOf('opus');
+    final aacCandidates = [
+      metadata.indexOf('mp4a'),
+      metadata.indexOf('aac'),
+    ].where((index) => index >= 0);
+    final aacAt = aacCandidates.isEmpty
+        ? -1
+        : aacCandidates.reduce((a, b) => a < b ? a : b);
+    if (opusAt >= 0 || aacAt >= 0) {
+      return opusAt >= 0 && (aacAt < 0 || opusAt < aacAt)
+          ? 'OPUS'
+          : 'AAC';
+    }
     if (mp3 || metadata.contains('.mp3') || metadata.contains('mpeg')) {
       return 'MP3';
     }
