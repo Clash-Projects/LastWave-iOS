@@ -14,6 +14,7 @@ import '../../core/storage/app_database.dart';
 import '../../core/storage/prefs.dart';
 import '../innertube/innertube_api.dart';
 import '../addons/addon_api.dart';
+import '../addons/local_media_server.dart';
 import '../lossless/lossless_source.dart';
 import '../library/local_audio_tags.dart';
 import '../lyrics/lyrics_models.dart';
@@ -423,6 +424,27 @@ class DownloadManager extends StateNotifier<List<DownloadEntry>> {
       final bytes =
           Uint8List.fromList(await File(stream.url).readAsBytes());
       if (cancelled?.call() == true) throw const DownloadCancelled();
+      return bytes;
+    }
+
+    if (LocalMediaServer.isLoopbackStreamUrl(stream.url)) {
+      final bytes = await LocalMediaServer.instance
+          .readCompletedStreamBytes(stream.url);
+      if (cancelled?.call() == true) throw const DownloadCancelled();
+      if (bytes == null || bytes.isEmpty) {
+        throw StateError(
+          'The local lossless stream could not be assembled for download.',
+        );
+      }
+      _upsert(DownloadEntry(
+        key: key,
+        title: title,
+        artist: artist,
+        album: album,
+        status: DownloadStatus.downloading,
+        progress: 1.0,
+        badge: badge,
+      ));
       return bytes;
     }
     // Stream the response straight to a temporary file instead of asking
