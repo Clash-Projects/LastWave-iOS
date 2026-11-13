@@ -727,7 +727,6 @@ class _TopActionsBar extends StatelessWidget {
 class _FsIconButton extends StatefulWidget {
   final IconData icon;
   final bool active;
-  final bool compact;
   final bool loading;
   final double progress;
   final VoidCallback onTap;
@@ -735,7 +734,6 @@ class _FsIconButton extends StatefulWidget {
   const _FsIconButton({
     required this.icon,
     this.active = false,
-    this.compact = false,
     this.loading = false,
     this.progress = 0,
     required this.onTap,
@@ -766,7 +764,7 @@ class _FsIconButtonState extends State<_FsIconButton> {
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: waveMotion(context, WaveMotion.fast),
-          width: widget.compact ? 32 : Platform.isIOS ? 44 : 36,
+          width: Platform.isIOS ? 44 : 36,
           height: widget.compact ? 32 : Platform.isIOS ? 44 : 36,
           decoration: BoxDecoration(
             color: widget.active
@@ -794,7 +792,7 @@ class _FsIconButtonState extends State<_FsIconButton> {
                   )
                 : Icon(
                     widget.icon,
-                    size: widget.compact ? 15 : Platform.isIOS ? 18 : 16,
+                    size: Platform.isIOS ? 18 : 16,
                     color: color,
                   ),
           ),
