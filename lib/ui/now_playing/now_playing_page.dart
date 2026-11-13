@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart' hide RepeatMode;
 import 'package:flutter/material.dart' show Icons, CircularProgressIndicator;
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,7 @@ import '../../core/artwork/artwork_resolver.dart';
 import '../../core/audio/stream_models.dart';
 import '../../features/lyrics/karaoke_lyrics_view.dart';
 import '../../features/player/playback_service.dart';
+import 'related_media_panel.dart';
 import '../../features/downloads/download_manager.dart';
 import '../../features/library/playlists.dart';
 import '../../features/settings/theme_controller.dart';
@@ -59,6 +61,10 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   // Focus mode: lyrics only, artwork column collapsed, lyrics centered.
   bool _focusMode = false;
   bool _controlsIdle = false;
+  bool _videoMode = false;
+  bool _commentsVisible = false;
+  bool _suggestionsVisible = false;
+  bool _resumeAudioAfterVideo = false;
   Timer? _idleTimer;
   DateTime _lastHoverAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastArmAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -71,11 +77,13 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   // Read eagerly in initState: a lazy `late final` is first touched in
   // dispose() on iOS (idle timer never runs there) and `ref` throws then.
   late final StateController<bool> _idleMirror;
+  late final StateController<bool> _videoModeMirror;
 
   @override
   void initState() {
     super.initState();
     _idleMirror = ref.read(nowPlayingControlsIdleProvider.notifier);
+    _videoModeMirror = ref.read(nowPlayingVideoModeProvider.notifier);
     _resetIdleTimer();
   }
 
@@ -85,8 +93,69 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     // Not while the tree is finalizing: a hidden-dock state must not
     // outlive the page.
     final mirror = _idleMirror;
-    Future.microtask(() => mirror.state = false);
+    final videoMirror = _videoModeMirror;
+    Future.microtask(() {
+      mirror.state = false;
+      videoMirror.state = false;
+    });
     super.dispose();
+  }
+
+
+  Future<void> _setVideoMode(bool enabled) async {
+    if (enabled == _videoMode) return;
+    final playback = ref.read(playbackServiceProvider.notifier);
+    if (enabled) {
+      _resumeAudioAfterVideo = ref.read(playbackServiceProvider).isPlaying;
+      if (mounted) {
+        setState(() {
+          _videoMode = true;
+          _commentsVisible = false;
+          _suggestionsVisible = false;
+        });
+      }
+      _videoModeMirror.state = true;
+      await playback.pause();
+      return;
+    }
+
+    if (mounted) setState(() => _videoMode = false);
+    _videoModeMirror.state = false;
+    final shouldResume = _resumeAudioAfterVideo;
+    _resumeAudioAfterVideo = false;
+    if (shouldResume) await playback.playResume();
+  }
+
+  void _selectInfoTab({required bool comments}) {
+    _resetIdleTimer();
+    setState(() {
+      if (comments) {
+        final next = !_commentsVisible;
+        _commentsVisible = next;
+        _suggestionsVisible = false;
+      } else {
+        final next = !_suggestionsVisible;
+        _suggestionsVisible = next;
+        _commentsVisible = false;
+      }
+      if (_commentsVisible || _suggestionsVisible) _focusMode = false;
+    });
+  }
+
+  Future<void> _playSuggestedTrack(PlayableTrack track) async {
+    _resumeAudioAfterVideo = false;
+    if (_videoMode) {
+      setState(() => _videoMode = false);
+      _videoModeMirror.state = false;
+    }
+    setState(() {
+      _commentsVisible = false;
+      _suggestionsVisible = false;
+    });
+    await ref.read(playbackServiceProvider.notifier).play(
+          track,
+          sourceLabel: 'YouTube Music',
+        );
   }
 
   void _resetIdleTimer() {
@@ -210,6 +279,19 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
         ),
       );
     }
+
+    final resolvedVideoId =
+        ref.watch(nowPlayingVideoIdProvider(current)).valueOrNull ??
+            current.videoId;
+    final alternatePanelVisible = _commentsVisible || _suggestionsVisible;
+    final alternatePanel = _commentsVisible
+        ? WaveVideoCommentsPanel(track: current)
+        : _suggestionsVisible
+            ? WaveRelatedSuggestionsPanel(
+                track: current,
+                onPlayTrack: _playSuggestedTrack,
+              )
+            : null;
 
     if (current.queueKey != _preloadedKey) {
       _preloadedKey = current.queueKey;
@@ -341,24 +423,54 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                   // top bar instead of costing the lyrics a row of their own.
                   return Stack(
                     children: [
-                      Positioned.fill(
-                        child: isWide
-                            ? _DesktopDualPane(
-                                topInset: _kTopBarHeight,
-                                track: current,
-                                lyricsVisible: _lyricsVisible,
-                                focusMode: _focusMode,
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.only(
-                                  top: _kTopBarHeight,
-                                ),
-                                child: _NarrowCenteredPane(
+                      if (_videoMode)
+                        Positioned.fill(
+                          child: _YoutubeMusicVideoView(
+                            key: ValueKey(resolvedVideoId),
+                            videoId: resolvedVideoId,
+                          ),
+                        )
+                      else
+                        Positioned.fill(
+                          child: isWide
+                              ? _DesktopDualPane(
+                                  topInset: _kTopBarHeight + 48,
                                   track: current,
-                                  lyricsVisible: _lyricsVisible,
+                                  lyricsVisible:
+                                      _lyricsVisible && !alternatePanelVisible,
+                                  alternatePanel: alternatePanel,
+                                  alternatePanelVisible: alternatePanelVisible,
+                                  focusMode: _focusMode,
+                                )
+                              : Padding(
+                                  padding: EdgeInsets.only(
+                                    top: _kTopBarHeight + 48,
+                                  ),
+                                  child: _NarrowCenteredPane(
+                                    track: current,
+                                    lyricsVisible:
+                                        _lyricsVisible && !alternatePanelVisible,
+                                    alternatePanel: alternatePanel,
+                                    alternatePanelVisible: alternatePanelVisible,
+                                  ),
                                 ),
-                              ),
-                      ),
+                        ),
+                      if (!_videoMode)
+                        Positioned(
+                          top: _kTopBarHeight + 5,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: _NowPlayingInfoTabs(
+                              commentsActive: _commentsVisible,
+                              suggestionsActive: _suggestionsVisible,
+                              onComments: () =>
+                                  _selectInfoTab(comments: true),
+                              onSuggestions: () =>
+                                  _selectInfoTab(comments: false),
+                            ),
+                          ),
+                        ),
                       Positioned(
                         top: 0,
                         left: 0,
@@ -378,6 +490,10 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                                 lyricsVisible: _lyricsVisible,
                                 focusMode: _focusMode,
                                 visualizerEnabled: visualizerEnabled,
+                                hasVideo: resolvedVideoId.isNotEmpty,
+                                videoMode: _videoMode,
+                                onListenToSong: () => _setVideoMode(false),
+                                onWatchVideo: () => _setVideoMode(true),
                                 downloadInProgress: downloadEntry != null &&
                                     (downloadEntry.status == DownloadStatus.queued ||
                                         downloadEntry.status == DownloadStatus.downloading),
@@ -464,10 +580,144 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
 /// Height of the top action bar (also the lyrics toolbar's row).
 const double _kTopBarHeight = 54;
 
+
+class _NowPlayingInfoTabs extends StatelessWidget {
+  final bool commentsActive;
+  final bool suggestionsActive;
+  final VoidCallback onComments;
+  final VoidCallback onSuggestions;
+
+  const _NowPlayingInfoTabs({
+    required this.commentsActive,
+    required this.suggestionsActive,
+    required this.onComments,
+    required this.onSuggestions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return WaveHaze(
+      level: LwHazeLevel.l2,
+      base: waveSurfaceRaised(context),
+      fillAlpha: 0.46,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: waveDivider(context)),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _InfoTabButton(
+              label: 'Comments',
+              active: commentsActive,
+              onTap: onComments,
+            ),
+            _InfoTabButton(
+              label: 'Suggestions',
+              active: suggestionsActive,
+              onTap: onSuggestions,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoTabButton extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _InfoTabButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = waveAccent(context);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: waveMotion(context, WaveMotion.fast),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? accent.withValues(alpha: 0.16) : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: active ? accent.withValues(alpha: 0.3) : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: WaveType.meta.copyWith(
+            color: active ? accent : waveTextSecondary(context),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _YoutubeMusicVideoView extends StatelessWidget {
+  final String videoId;
+
+  const _YoutubeMusicVideoView({
+    super.key,
+    required this.videoId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (videoId.isEmpty) {
+      return const Center(
+        child: Text('No associated music video is available.'),
+      );
+    }
+    final uri = Uri.https(
+      'www.youtube.com',
+      '/embed/$videoId',
+      const {
+        'autoplay': '1',
+        'playsinline': '1',
+        'controls': '1',
+        'rel': '0',
+      },
+    );
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1280),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(uri.toString())),
+              initialSettings: InAppWebViewSettings(
+                javaScriptEnabled: true,
+                allowsInlineMediaPlayback: true,
+                mediaPlaybackRequiresUserGesture: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TopActionsBar extends StatelessWidget {
   final bool lyricsVisible;
   final bool focusMode;
   final bool visualizerEnabled;
+  final bool hasVideo;
+  final bool videoMode;
+  final VoidCallback onListenToSong;
+  final VoidCallback onWatchVideo;
   final bool downloadInProgress;
   final double downloadProgress;
   final bool downloaded;
@@ -484,6 +734,10 @@ class _TopActionsBar extends StatelessWidget {
     required this.lyricsVisible,
     required this.focusMode,
     required this.visualizerEnabled,
+    required this.hasVideo,
+    required this.videoMode,
+    required this.onListenToSong,
+    required this.onWatchVideo,
     required this.downloadInProgress,
     required this.downloadProgress,
     required this.downloaded,
@@ -530,6 +784,27 @@ class _TopActionsBar extends StatelessWidget {
                 spacing: 4,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (hasVideo) ...[
+                    LWTooltip(
+                      message: 'Listen to song',
+                      child: _FsIconButton(
+                        icon: Icons.headphones_rounded,
+                        active: !videoMode,
+                        compact: true,
+                        onTap: onListenToSong,
+                      ),
+                    ),
+                    LWTooltip(
+                      message: 'Watch music video',
+                      child: _FsIconButton(
+                        icon: Icons.video_library_outlined,
+                        active: videoMode,
+                        compact: true,
+                        onTap: onWatchVideo,
+                      ),
+                    ),
+                    Container(width: 1, height: 22, color: waveDivider(context)),
+                  ],
                   if (Platform.isIOS) ...[
                     LWTooltip(
                       message: downloadInProgress
@@ -612,6 +887,7 @@ class _TopActionsBar extends StatelessWidget {
 class _FsIconButton extends StatefulWidget {
   final IconData icon;
   final bool active;
+  final bool compact;
   final bool loading;
   final double progress;
   final VoidCallback onTap;
@@ -619,6 +895,7 @@ class _FsIconButton extends StatefulWidget {
   const _FsIconButton({
     required this.icon,
     this.active = false,
+    this.compact = false,
     this.loading = false,
     this.progress = 0,
     required this.onTap,
@@ -649,8 +926,8 @@ class _FsIconButtonState extends State<_FsIconButton> {
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: waveMotion(context, WaveMotion.fast),
-          width: Platform.isIOS ? 44 : 36,
-          height: Platform.isIOS ? 44 : 36,
+          width: widget.compact ? 32 : Platform.isIOS ? 44 : 36,
+          height: widget.compact ? 32 : Platform.isIOS ? 44 : 36,
           decoration: BoxDecoration(
             color: widget.active
                 ? accent.withValues(alpha: 0.15)
@@ -677,7 +954,7 @@ class _FsIconButtonState extends State<_FsIconButton> {
                   )
                 : Icon(
                     widget.icon,
-                    size: Platform.isIOS ? 18 : 16,
+                    size: widget.compact ? 15 : Platform.isIOS ? 18 : 16,
                     color: color,
                   ),
           ),
@@ -756,12 +1033,16 @@ class _DesktopDualPane extends StatelessWidget {
   final double topInset;
   final PlayableTrack track;
   final bool lyricsVisible;
+  final Widget? alternatePanel;
+  final bool alternatePanelVisible;
   final bool focusMode;
 
   const _DesktopDualPane({
     required this.topInset,
     required this.track,
     required this.lyricsVisible,
+    this.alternatePanel,
+    this.alternatePanelVisible = false,
     this.focusMode = false,
   });
 
@@ -770,6 +1051,7 @@ class _DesktopDualPane extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
+        final showRightPanel = lyricsVisible || alternatePanelVisible;
         // [maxHeight] is the old body height (under the top bar); the lyrics
         // column is [fullHeight] tall because it also fills the top bar row.
         final maxHeight = math.max(
@@ -781,11 +1063,11 @@ class _DesktopDualPane extends StatelessWidget {
         // Symmetrical desktop dual pane layout:
         // When lyrics are visible, media column and lyrics column have harmonious, balanced
         // widths, leaving identical horizontal margins (emptiness) on both sides.
-        final colWidth = lyricsVisible
+        final colWidth = showRightPanel
             ? math.min(maxWidth * 0.36, maxHeight * 0.48).clamp(340.0, 420.0)
             : math.min(maxWidth * 0.55, maxHeight * 0.52).clamp(360.0, 480.0);
 
-        final gap = lyricsVisible && !focusMode
+        final gap = showRightPanel && !focusMode
             ? (maxWidth * 0.04).clamp(40.0, 64.0)
             : 0.0;
 
@@ -797,7 +1079,7 @@ class _DesktopDualPane extends StatelessWidget {
         );
         final lyricsWidth = focusMode
             ? math.min(760.0, math.max(320.0, maxWidth - 48.0))
-            : lyricsVisible
+            : showRightPanel
             ? math.min(targetLyricsWidth, maxAllowedLyricsWidth)
             : 0.0;
 
@@ -850,7 +1132,7 @@ class _DesktopDualPane extends StatelessWidget {
                             child: RepaintBoundary(
                               child: Column(
                                 mainAxisSize: MainAxisSize.max,
-                                crossAxisAlignment: lyricsVisible
+                                crossAxisAlignment: showRightPanel
                                     ? CrossAxisAlignment.start
                                     : CrossAxisAlignment.center,
                                 children: [
@@ -883,7 +1165,7 @@ class _DesktopDualPane extends StatelessWidget {
                                     child: _TrackMetadataSection(
                                       key: ValueKey(track.queueKey),
                                       track: track,
-                                      alignCenter: !lyricsVisible,
+                                      alignCenter: !showRightPanel,
                                     ),
                                   ),
                                 ],
@@ -921,29 +1203,32 @@ class _DesktopDualPane extends StatelessWidget {
                           const Duration(milliseconds: 350),
                         ),
                         curve: Curves.easeInOutCubic,
-                        opacity: lyricsVisible ? 1.0 : 0.0,
+                        opacity: showRightPanel ? 1.0 : 0.0,
                         child: ExcludeFocus(
-                          excluding: !lyricsVisible,
+                          excluding: !showRightPanel,
                           child: IgnorePointer(
-                            ignoring: !lyricsVisible,
+                            ignoring: !showRightPanel,
                             child: SizedBox(
                               height: fullHeight,
                               width: lyricsWidth,
                               child: Offstage(
-                                offstage: !lyricsVisible,
-                                child: _VisibleTicker(
-                                  enabled: lyricsVisible,
-                                  child: RepaintBoundary(
-                                    child: WaveKaraokeLyricsView(
-                                      track: track,
-                                      compact: false,
-                                      showHeaderControls: true,
-                                      fontSize: 36.0,
-                                      isActive: lyricsVisible,
-                                      toolbarRightInset: toolbarInset,
-                                    ),
-                                  ),
-                                ),
+                                offstage: !showRightPanel,
+                                child: alternatePanelVisible &&
+                                        alternatePanel != null
+                                    ? RepaintBoundary(child: alternatePanel!)
+                                    : _VisibleTicker(
+                                        enabled: lyricsVisible,
+                                        child: RepaintBoundary(
+                                          child: WaveKaraokeLyricsView(
+                                            track: track,
+                                            compact: false,
+                                            showHeaderControls: true,
+                                            fontSize: 36.0,
+                                            isActive: lyricsVisible,
+                                            toolbarRightInset: toolbarInset,
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
@@ -965,8 +1250,15 @@ class _DesktopDualPane extends StatelessWidget {
 class _NarrowCenteredPane extends StatelessWidget {
   final PlayableTrack track;
   final bool lyricsVisible;
+  final Widget? alternatePanel;
+  final bool alternatePanelVisible;
 
-  const _NarrowCenteredPane({required this.track, required this.lyricsVisible});
+  const _NarrowCenteredPane({
+    required this.track,
+    required this.lyricsVisible,
+    this.alternatePanel,
+    this.alternatePanelVisible = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1029,8 +1321,12 @@ class _NarrowCenteredPane extends StatelessWidget {
     );
 
     return IndexedStack(
-      index: lyricsVisible ? 1 : 0,
-      children: [coverArtSubtree, lyricsSubtree],
+      index: alternatePanelVisible ? 2 : lyricsVisible ? 1 : 0,
+      children: [
+        coverArtSubtree,
+        lyricsSubtree,
+        alternatePanel ?? const SizedBox.shrink(),
+      ],
     );
   }
 }

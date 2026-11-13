@@ -132,6 +132,25 @@ class YouTubeMusicTrack {
   });
 }
 
+
+class YouTubeVideoComment {
+  final String id;
+  final String author;
+  final String text;
+  final String publishedText;
+  final String likeCountLabel;
+  final String authorThumbnailUrl;
+
+  const YouTubeVideoComment({
+    required this.id,
+    required this.author,
+    required this.text,
+    this.publishedText = '',
+    this.likeCountLabel = '',
+    this.authorThumbnailUrl = '',
+  });
+}
+
 enum YouTubeEntityKind { artist, album, playlist, mix }
 
 class YouTubeMusicEntity {
@@ -3401,6 +3420,249 @@ class InnerTubeMusicApi {
         .take(limit)
         .toList();
     return results;
+  }
+
+
+  /// Public YouTube comments for a video. This uses YouTube's current
+  /// comments-panel continuation flow; it is intentionally best-effort
+  /// because the endpoint and renderer shapes are undocumented and can
+  /// change. No account cookies are sent.
+  Future<List<YouTubeVideoComment>> fetchVideoComments(
+    String videoId, {
+    int limit = 30,
+  }) async {
+    final id = videoId.trim();
+    if (id.isEmpty || limit <= 0) return const [];
+    try {
+      await _ensureConfig();
+      final client = playerClients.firstWhere((c) => c.name == 'IOS');
+      Future<Map<String, dynamic>> next(Map<String, dynamic> request) {
+        return _post(
+          '$youtubeApi/next?key=${Uri.encodeQueryComponent(client.apiKey)}&prettyPrint=false',
+          body: {
+            'context': _context(
+              client.name,
+              client.version,
+              visitorData: _visitorData,
+              osName: client.osName,
+              osVersion: client.osVersion,
+              deviceMake: client.deviceMake,
+              deviceModel: client.deviceModel,
+            ),
+            ...request,
+          },
+          clientName: client.name,
+          clientVersion: client.version,
+          userAgent: client.userAgent,
+          origin: youtubeOrigin,
+          referer: '$youtubeOrigin/watch?v=$id',
+          callTimeout: const Duration(seconds: 10),
+          maxAttempts: 1,
+        );
+      }
+
+      final initial = await next({
+        'videoId': id,
+        'contentCheckOk': true,
+        'racyCheckOk': true,
+      });
+      final comments = <YouTubeVideoComment>[];
+      final seen = <String>{};
+      _collectVideoComments(initial, comments, seen, limit);
+      if (comments.length >= limit) return comments.take(limit).toList();
+
+      final token = _commentsContinuationToken(initial);
+      if (token.isEmpty) return comments.take(limit).toList();
+      final continuation = await next({'continuation': token});
+      _collectVideoComments(continuation, comments, seen, limit);
+      return comments.take(limit).toList();
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('YtComments: fetch failed for $id (${error.runtimeType})');
+      }
+      return const [];
+    }
+  }
+
+  String _commentsContinuationToken(Object? root) {
+    String findToken(Object? node) {
+      if (node is Map) {
+        final command = node['continuationCommand'];
+        if (command is Map) {
+          final token = command['token']?.toString() ?? '';
+          if (token.isNotEmpty) return token;
+        }
+        for (final key in ['nextContinuationData', 'reloadContinuationData']) {
+          final data = node[key];
+          if (data is Map) {
+            final token = data['continuation']?.toString() ?? '';
+            if (token.isNotEmpty) return token;
+          }
+        }
+        for (final value in node.values) {
+          final found = findToken(value);
+          if (found.isNotEmpty) return found;
+        }
+      } else if (node is List) {
+        for (final value in node) {
+          final found = findToken(value);
+          if (found.isNotEmpty) return found;
+        }
+      }
+      return '';
+    }
+
+    String token = '';
+    void visit(Object? node) {
+      if (token.isNotEmpty) return;
+      if (node is Map) {
+        final panel = node['engagementPanelSectionListRenderer'];
+        if (panel is Map &&
+            panel['panelIdentifier'] == 'engagement-panel-comments-section') {
+          token = findToken(panel);
+          if (token.isNotEmpty) return;
+        }
+        if (node['panelIdentifier'] == 'engagement-panel-comments-section') {
+          token = findToken(node);
+          if (token.isNotEmpty) return;
+        }
+        for (final value in node.values) {
+          visit(value);
+          if (token.isNotEmpty) return;
+        }
+      } else if (node is List) {
+        for (final value in node) {
+          visit(value);
+          if (token.isNotEmpty) return;
+        }
+      }
+    }
+
+    visit(root);
+    return token;
+  }
+
+  void _collectVideoComments(
+    Object? root,
+    List<YouTubeVideoComment> output,
+    Set<String> seen,
+    int limit,
+  ) {
+    void visit(Object? node) {
+      if (output.length >= limit) return;
+      if (node is Map) {
+        final legacy = node['commentRenderer'];
+        if (legacy is Map) {
+          final comment = _legacyVideoComment(legacy);
+          if (comment != null) {
+            final key = comment.id.isNotEmpty
+                ? comment.id
+                : '${comment.author}|${comment.text}';
+            if (seen.add(key)) output.add(comment);
+          }
+        }
+        final modern = node['commentEntityPayload'];
+        if (modern is Map) {
+          final comment = _entityVideoComment(modern);
+          if (comment != null) {
+            final key = comment.id.isNotEmpty
+                ? comment.id
+                : '${comment.author}|${comment.text}';
+            if (seen.add(key)) output.add(comment);
+          }
+        }
+        for (final value in node.values) {
+          visit(value);
+          if (output.length >= limit) return;
+        }
+      } else if (node is List) {
+        for (final value in node) {
+          visit(value);
+          if (output.length >= limit) return;
+        }
+      }
+    }
+
+    visit(root);
+  }
+
+  YouTubeVideoComment? _legacyVideoComment(Map payload) {
+    final author = _ytCommentText(payload['authorText']);
+    final text = _ytCommentText(payload['contentText']);
+    if (text.isEmpty) return null;
+    final thumbnails = (payload['authorThumbnail'] as Map?)?['thumbnails'];
+    var avatar = '';
+    if (thumbnails is List && thumbnails.isNotEmpty) {
+      avatar = (thumbnails.last as Map?)?['url']?.toString() ?? '';
+    }
+    return YouTubeVideoComment(
+      id: payload['commentId']?.toString() ?? '',
+      author: author.isEmpty ? 'YouTube user' : author,
+      text: text,
+      publishedText: _ytCommentText(payload['publishedTimeText']),
+      likeCountLabel: _ytCommentText(payload['voteCount']),
+      authorThumbnailUrl: avatar,
+    );
+  }
+
+  YouTubeVideoComment? _entityVideoComment(Map payload) {
+    final properties = payload['properties'] as Map?;
+    final content = properties?['content'];
+    final text = _ytCommentText(
+      content is Map ? (content['content'] ?? content['text']) : content,
+    );
+    if (text.isEmpty) return null;
+    final author = payload['author'] as Map?;
+    final avatar = author?['avatar'] as Map?;
+    final image = avatar?['image'] as Map?;
+    final sources = image?['sources'];
+    var avatarUrl = '';
+    if (sources is List && sources.isNotEmpty) {
+      avatarUrl = (sources.first as Map?)?['url']?.toString() ?? '';
+    }
+    final toolbar = payload['toolbar'] as Map?;
+    final authorName = _ytCommentText(author?['displayName']);
+    return YouTubeVideoComment(
+      id: properties?['commentId']?.toString() ??
+          properties?['id']?.toString() ??
+          '',
+      author: authorName.isEmpty ? 'YouTube user' : authorName,
+      text: text,
+      publishedText: _ytCommentText(
+        properties?['publishedTimeText'] ?? properties?['publishedTime'],
+      ),
+      likeCountLabel: _ytCommentText(
+        toolbar?['likeCountNotliked'] ?? toolbar?['likeCountLiked'],
+      ),
+      authorThumbnailUrl: avatarUrl,
+    );
+  }
+
+  String _ytCommentText(Object? value) {
+    if (value == null) return '';
+    if (value is String || value is num) return value.toString();
+    if (value is List) {
+      return value.map(_ytCommentText).where((s) => s.isNotEmpty).join();
+    }
+    if (value is Map) {
+      final simple = value['simpleText'];
+      if (simple is String) return simple;
+      final text = value['text'];
+      if (text is String) return text;
+      final runs = value['runs'];
+      if (runs is List) {
+        return runs
+            .map((run) => run is Map ? run['text']?.toString() ?? '' : '')
+            .join();
+      }
+      for (final key in ['content', 'displayName', 'label', 'title']) {
+        if (value.containsKey(key)) {
+          final result = _ytCommentText(value[key]);
+          if (result.isNotEmpty) return result;
+        }
+      }
+    }
+    return '';
   }
 
   /// Rich metadata for a single video ID (player videoDetails,

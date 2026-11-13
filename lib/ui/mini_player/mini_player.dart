@@ -4,9 +4,12 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../core/storage/prefs.dart';
 import '../../features/player/playback_service.dart';
 import '../components/artwork.dart';
 import '../components/buttons.dart' show LWTooltip;
+import '../components/wave_timeline.dart';
+import '../now_playing/immersive.dart' show nowPlayingVideoModeProvider;
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 
@@ -49,6 +52,9 @@ class _WaveMiniPlayerState extends ConsumerState<WaveMiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(nowPlayingVideoModeProvider)) {
+      return const SizedBox.shrink();
+    }
     final dark = waveIsDark(context);
     final snap = ref.watch(playbackServiceProvider.select((s) => (
           current: s.current,
@@ -343,12 +349,39 @@ class _MiniProgress extends ConsumerWidget {
     final dark = waveIsDark(context);
     final clock = ref.watch(playbackServiceProvider.select((s) => (
           position: s.position,
+          buffered: s.buffered,
           duration: s.duration,
         )));
+    final wavySeekbar =
+        ref.watch(prefsProvider.select((prefs) => prefs.wavySeekbar));
     final totalMs = clock.duration.inMilliseconds;
     final progress = totalMs > 0
         ? (clock.position.inMilliseconds / totalMs).clamp(0.0, 1.0)
         : 0.0;
+
+    if (wavySeekbar) {
+      return SizedBox(
+        height: 12,
+        child: WaveTimeline(
+          progress: clock.position,
+          buffered: clock.buffered,
+          total: clock.duration,
+          showThumb: totalMs > 0,
+          onSeek: totalMs > 0
+              ? (target) =>
+                  ref.read(playbackServiceProvider.notifier).seek(target)
+              : null,
+          baseColor:
+              (dark ? Colors.white : Colors.black).withValues(alpha: 0.12),
+          bufferedColor:
+              (dark ? Colors.white : Colors.black).withValues(alpha: 0.18),
+          progressColor: WaveColors.defaultAccent,
+          thumbColor: dark ? Colors.white : Colors.black,
+          thumbGlowColor: WaveColors.defaultAccent.withValues(alpha: 0.25),
+        ),
+      );
+    }
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (details) {

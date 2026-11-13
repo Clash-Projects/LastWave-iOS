@@ -7,12 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/audio/stream_models.dart';
+import '../../core/storage/prefs.dart';
 import '../../features/downloads/download_manager.dart';
 import '../../features/jam/jam_client.dart';
 import '../../features/library/playlists.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/audio_output/output_controller.dart';
 import '../components/ambient.dart';
+import '../now_playing/immersive.dart' show nowPlayingVideoModeProvider;
 import '../components/artist_line.dart';
 import '../components/artwork.dart';
 import '../components/buttons.dart' show LWTooltip, LWVolumeSlider, WaveA11yButton, WaveLink;
@@ -21,6 +23,7 @@ import '../theme/haze.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 import '../components/inputs.dart';
+import '../components/wave_timeline.dart';
 
 /// Coherent desktop music player — ONE object, 80px, three zones.
 ///
@@ -69,6 +72,10 @@ class WavePlayerDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(nowPlayingVideoModeProvider)) {
+      // The YouTube embed owns its transport while the video is visible.
+      return const SizedBox.shrink();
+    }
     final dark = waveIsDark(context);
     // NOTE: position/duration/buffered/volume/speed deliberately excluded
     // here so 1s ticks and volume drags never rebuild the whole dock.
@@ -1074,6 +1081,7 @@ class _DockProgressState extends ConsumerState<_DockProgress> {
     ));
     final dark = waveIsDark(context);
     final accent = waveAccent(context);
+    final wavySeekbar = ref.watch(prefsProvider.select((p) => p.wavySeekbar));
     final clock = ref.watch(playbackServiceProvider.select((s) => (
           position: s.position,
           buffered: s.buffered,
@@ -1170,7 +1178,26 @@ class _DockProgressState extends ConsumerState<_DockProgress> {
                       // Dimmed + thumbless: reads as disabled, not draggable.
                       opacity: jamLive ? 0.45 : 1,
                       child: RepaintBoundary(
-                      child: avp.ProgressBar(
+                      child: wavySeekbar
+                          ? WaveTimeline(
+                              progress: clock.position,
+                              buffered: clock.buffered,
+                              total: clock.duration,
+                              showThumb: hasDuration && !jamLive,
+                              onSeek: jamLive ? null : notifier.seek,
+                              baseColor:
+                                  (dark ? Colors.white : Colors.black)
+                                      .withValues(alpha: 0.12),
+                              bufferedColor:
+                                  (dark ? Colors.white : Colors.black)
+                                      .withValues(alpha: 0.18),
+                              progressColor:
+                                  dark ? Colors.white : Colors.black,
+                              thumbColor: dark ? Colors.white : Colors.black,
+                              thumbGlowColor:
+                                  accent.withValues(alpha: 0.25),
+                            )
+                          : avp.ProgressBar(
                               progress: clock.position,
                               buffered: clock.buffered,
                               total: clock.duration,

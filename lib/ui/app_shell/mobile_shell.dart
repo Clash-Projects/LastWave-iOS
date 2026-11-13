@@ -20,7 +20,8 @@ import '../queue/queue_panel.dart';
 import '../now_playing/now_playing_page.dart' show NowPlayingBackdrop;
 import '../components/buttons.dart' show LWVolumeSlider, WaveButton;
 import '../components/wave_timeline.dart';
-import '../now_playing/immersive.dart' show nowPlayingOverlayRequestProvider;
+import '../now_playing/immersive.dart'
+    show nowPlayingOverlayRequestProvider, nowPlayingVideoModeProvider;
 import '../theme/fluent_theme.dart';
 import '../theme/haze.dart';
 import '../theme/tokens.dart';
@@ -999,6 +1000,8 @@ class _MobileTransportDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final videoMode = ref.watch(nowPlayingVideoModeProvider);
+    if (videoMode) return const SizedBox.shrink();
     final snapshot = ref.watch(
       playbackServiceProvider.select((state) => (
         current: state.current,
@@ -1028,7 +1031,7 @@ class _MobileTransportDock extends ConsumerWidget {
     // an additional artwork/white wash made the controls read as a separate
     // olive card instead of part of the same ambient surface.
     return Padding(
-        padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
           WaveSpacing.x12,
           WaveSpacing.x8,
           WaveSpacing.x12,
@@ -1185,6 +1188,9 @@ class _MobileMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(nowPlayingVideoModeProvider)) {
+      return const SizedBox.shrink();
+    }
     final player = ref.watch(
       playbackServiceProvider.select((state) => (
         current: state.current,

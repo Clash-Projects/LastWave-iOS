@@ -14,6 +14,10 @@ final nowPlayingImmersiveProvider = StateProvider<bool>((_) => false);
 /// controls. Owned by the page; false whenever the page is not mounted.
 final nowPlayingControlsIdleProvider = StateProvider<bool>((_) => false);
 
+/// True while the full-screen player is showing the YouTube music video.
+/// Audio transport surfaces use this to avoid restarting the song underneath it.
+final nowPlayingVideoModeProvider = StateProvider<bool>((_) => false);
+
 /// Bumped by the overlay dock while the pointer is over it. The page's
 /// MouseRegion does not see hovers on the dock (it is a sibling above the
 /// page, not a child), so without this the idle timer would run out under a
