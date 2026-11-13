@@ -221,6 +221,67 @@ class AddonApi implements LosslessSource {
 
   // -- search ---------------------------------------------------------------------
 
+  final Map<String, ({bool available, DateTime checkedAt})> _atmosAvailability = {};
+
+  /// Checks the configured add-on catalog for a faithful Dolby Atmos version.
+  /// Returns null when every catalog request fails, false only after a
+  /// successful search confirms no matching Atmos entry exists.
+  Future<bool?> hasDolbyAtmosVersion({
+    required String title,
+    required String artist,
+  }) async {
+    final key = '${_clean(title)}|${_clean(artist)}';
+    final cached = _atmosAvailability[key];
+    if (cached != null &&
+        DateTime.now().difference(cached.checkedAt) <
+            const Duration(minutes: 10)) {
+      return cached.available;
+    }
+
+    var gotCatalogResponse = false;
+    for (final root in bases) {
+      try {
+        final path = '${Uri.parse(root).path}search';
+        final res = await _dio.get<Map<String, dynamic>>(
+          '${root}search',
+          queryParameters: {
+            'q': '$title $artist',
+            'quality': 'atmos',
+            'atmos': 'auto',
+          },
+          options: Options(headers: _signHeaders('GET', root, path)),
+        ).timeout(const Duration(seconds: 12));
+        gotCatalogResponse = true;
+        final tracks = res.data?['tracks'];
+        if (tracks is! List) continue;
+        for (final raw in tracks.whereType<Map<String, dynamic>>()) {
+          final candidate = AddonTrack.fromJson(raw);
+          if (!candidate.isDolbyAtmos) continue;
+          if (!_artistOk(candidate.artist, artist)) continue;
+          if (!isFaithfulVersion(
+            candidate.title,
+            title: title,
+            artist: artist,
+            allowAtmos: true,
+          )) {
+            continue;
+          }
+          _atmosAvailability[key] =
+              (available: true, checkedAt: DateTime.now());
+          return true;
+        }
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 429) continue;
+      } catch (_) {
+        continue;
+      }
+    }
+    if (!gotCatalogResponse) return null;
+    _atmosAvailability[key] =
+        (available: false, checkedAt: DateTime.now());
+    return false;
+  }
+
   /// Searches one addon base. [quality] is the tier's primary knob
   /// (`hi_res` for 27/7, `lossless` for 6, `high` for 5 — Android
   /// parity: `LosslessMusicApi` searches with the tier, not hardcoded
