@@ -15,7 +15,7 @@ import '../../core/error/fatal_crumbs.dart';
 import '../../core/storage/prefs.dart';
 import '../../ui/components/buttons.dart' show LWTooltip;
 import '../../ui/components/menus.dart'
-    show WaveMenuAction, WaveMenuButton, WaveMenuSeparator, WaveMenuSubmenu;
+    show WaveMenuAction, WaveMenuButton, WaveMenuSeparator, WaveMenuSubmenu, showWaveMenuSheet;
 import '../../ui/components/states.dart';
 import '../../ui/lyrics/lyrics_panel.dart';
 import '../../ui/lyrics/lyrics_share_card.dart';
@@ -1551,30 +1551,30 @@ class _SourceMenu extends ConsumerWidget {
       ref.invalidate(waveLyricsProvider(track));
     }
 
+    final entries = [
+      for (final provider in LyricsProviderId.values)
+        WaveMenuAction(
+          leading: effective == provider.id
+              ? const Icon(FluentIcons.check_mark, size: 13)
+              : const SizedBox(width: 13),
+          label: provider.title,
+          onPressed: () => apply(provider.id),
+        ),
+      const WaveMenuSeparator(),
+      WaveMenuAction(
+        leading: const Icon(FluentIcons.refresh, size: 13),
+        label: 'Try another source',
+        onPressed: () => apply(null),
+      ),
+    ];
+
     return LWTooltip(
       message: result.source.isNotEmpty
           ? 'Source: ${result.source} · Change'
           : 'Change lyrics source',
-      child: WaveMenuButton(
-        placement: FlyoutPlacementMode.bottomRight,
-        entries: [
-          for (final provider in LyricsProviderId.values)
-            WaveMenuAction(
-              leading: effective == provider.id
-                  ? const Icon(FluentIcons.check_mark, size: 13)
-                  : const SizedBox(width: 13),
-              label: provider.title,
-              onPressed: () => apply(provider.id),
-            ),
-          const WaveMenuSeparator(),
-          WaveMenuAction(
-            leading: const Icon(FluentIcons.refresh, size: 13),
-            label: 'Try another source',
-            onPressed: () => apply(null),
-          ),
-        ],
-        buttonBuilder: (context, onOpen) =>
-            _MiniIconButton(icon: WaveIcons.lyrics, onTap: onOpen),
+      child: _MiniIconButton(
+        icon: WaveIcons.lyrics,
+        onTap: () => showWaveMenuSheet(context, entries),
       ),
     );
   }
