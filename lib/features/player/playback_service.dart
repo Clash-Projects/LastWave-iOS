@@ -2778,6 +2778,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
               : 'audio/mp4',
       bitrateKbps: isLossless ? 1411 : 256,
       audioCodec: isLossless ? 'FLAC' : ext.toUpperCase(),
+      format: ext.toUpperCase(),
       cacheKey: 'local:${track.queueKey}',
       isLossless: isLossless,
     );
