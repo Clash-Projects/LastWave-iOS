@@ -62,7 +62,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   bool _focusMode = false;
   bool _controlsIdle = false;
   bool _videoMode = false;
-  bool _commentsVisible = false;
   bool _suggestionsVisible = false;
   bool _resumeAudioAfterVideo = false;
   Timer? _idleTimer;
@@ -110,7 +109,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
       if (mounted) {
         setState(() {
           _videoMode = true;
-          _commentsVisible = false;
           _suggestionsVisible = false;
         });
       }
@@ -126,19 +124,11 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     if (shouldResume) await playback.playResume();
   }
 
-  void _selectInfoTab({required bool comments}) {
+  void _toggleSuggestions() {
     _resetIdleTimer();
     setState(() {
-      if (comments) {
-        final next = !_commentsVisible;
-        _commentsVisible = next;
-        _suggestionsVisible = false;
-      } else {
-        final next = !_suggestionsVisible;
-        _suggestionsVisible = next;
-        _commentsVisible = false;
-      }
-      if (_commentsVisible || _suggestionsVisible) _focusMode = false;
+      _suggestionsVisible = !_suggestionsVisible;
+      if (_suggestionsVisible) _focusMode = false;
     });
   }
 
@@ -148,10 +138,7 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
       setState(() => _videoMode = false);
       _videoModeMirror.state = false;
     }
-    setState(() {
-      _commentsVisible = false;
-      _suggestionsVisible = false;
-    });
+    setState(() => _suggestionsVisible = false);
     await ref.read(playbackServiceProvider.notifier).play(
           track,
           sourceLabel: 'YouTube Music',
@@ -283,15 +270,13 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     final resolvedVideoId =
         ref.watch(nowPlayingVideoIdProvider(current)).valueOrNull ??
             current.videoId;
-    final alternatePanelVisible = _commentsVisible || _suggestionsVisible;
-    final alternatePanel = _commentsVisible
-        ? WaveVideoCommentsPanel(track: current)
-        : _suggestionsVisible
-            ? WaveRelatedSuggestionsPanel(
-                track: current,
-                onPlayTrack: _playSuggestedTrack,
-              )
-            : null;
+    final alternatePanelVisible = _suggestionsVisible;
+    final alternatePanel = _suggestionsVisible
+        ? WaveRelatedSuggestionsPanel(
+            track: current,
+            onPlayTrack: _playSuggestedTrack,
+          )
+        : null;
 
     if (current.queueKey != _preloadedKey) {
       _preloadedKey = current.queueKey;
@@ -461,13 +446,9 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                           left: 0,
                           right: 0,
                           child: Center(
-                            child: _NowPlayingInfoTabs(
-                              commentsActive: _commentsVisible,
-                              suggestionsActive: _suggestionsVisible,
-                              onComments: () =>
-                                  _selectInfoTab(comments: true),
-                              onSuggestions: () =>
-                                  _selectInfoTab(comments: false),
+                            child: _NowPlayingSuggestionsButton(
+                              active: _suggestionsVisible,
+                              onTap: _toggleSuggestions,
                             ),
                           ),
                         ),
@@ -581,17 +562,13 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
 const double _kTopBarHeight = 54;
 
 
-class _NowPlayingInfoTabs extends StatelessWidget {
-  final bool commentsActive;
-  final bool suggestionsActive;
-  final VoidCallback onComments;
-  final VoidCallback onSuggestions;
+class _NowPlayingSuggestionsButton extends StatelessWidget {
+  final bool active;
+  final VoidCallback onTap;
 
-  const _NowPlayingInfoTabs({
-    required this.commentsActive,
-    required this.suggestionsActive,
-    required this.onComments,
-    required this.onSuggestions,
+  const _NowPlayingSuggestionsButton({
+    required this.active,
+    required this.onTap,
   });
 
   @override
@@ -604,20 +581,10 @@ class _NowPlayingInfoTabs extends StatelessWidget {
       border: Border.all(color: waveDivider(context)),
       child: Padding(
         padding: const EdgeInsets.all(3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _InfoTabButton(
-              label: 'Comments',
-              active: commentsActive,
-              onTap: onComments,
-            ),
-            _InfoTabButton(
-              label: 'Suggestions',
-              active: suggestionsActive,
-              onTap: onSuggestions,
-            ),
-          ],
+        child: _InfoTabButton(
+          label: 'Suggestions',
+          active: active,
+          onTap: onTap,
         ),
       ),
     );
@@ -1259,7 +1226,7 @@ class _DesktopDualPane extends StatelessWidget {
                                 child: alternatePanelVisible &&
                                         alternatePanel != null
                                     ? Padding(
-                                        // Comments and suggestions have their
+                                        // Suggestions have their
                                         // own heading, so keep them below both
                                         // the top action bar and the info tabs.
                                         padding: EdgeInsets.only(top: topInset),
