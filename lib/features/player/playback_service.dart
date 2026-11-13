@@ -2458,6 +2458,36 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     _notifyProcessing();
   }
 
+  /// Change the active stream tier without changing the selected track,
+  /// listening position, or current play/pause state.
+  Future<void> changeAudioQuality(int quality) async {
+    if (!Prefs.allowedQualities.contains(quality)) return;
+    final track = state.current;
+    final index = state.currentIndex;
+    if (track == null || index < 0 || index >= state.queue.length) {
+      await _prefs.setStreamingQuality(quality);
+      return;
+    }
+    if (_prefs.losslessQuality == quality) return;
+
+    final resumeAt = state.position;
+    final shouldPlay = state.isPlaying;
+    cancelCrossfade();
+    await _prefs.setStreamingQuality(quality);
+    _unavailable.remove(track.queueKey);
+    _losslessBypass.remove(track.queueKey);
+    _invalidatePlayCache(track);
+    _resumeKey = track.queueKey;
+    _resumeAt = resumeAt;
+    _crumb('audio quality change tier=$quality key=${track.queueKey}');
+    await _resolveAndOpen(
+      index,
+      forceRefresh: true,
+      forceRemote: true,
+      play: shouldPlay,
+    );
+  }
+
   Future<void> cycleSpeed() async {
     const steps = [0.75, 1.0, 1.25, 1.5, 2.0];
     var idx = steps.indexWhere((s) => s >= state.speed);
@@ -2552,7 +2582,9 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   Future<void> _resolveAndOpen(int index,
       {bool forceYoutube = false,
       bool forceRefresh = false,
-      int attempt = 0}) async {
+      int attempt = 0,
+      bool forceRemote = false,
+      bool play = true}) async {
     if (index < 0 || index >= state.queue.length) return;
     // Prevent duplicate resolver requests for the same index.
     if (_resolving &&
@@ -2605,11 +2637,11 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       // speculative resolves before the current one subscribed the
       // link, which measured +1s on search/mint and ~2.5s on the
       // current track's first byte.
-      final local = _localStream(track);
+      final local = forceRemote ? null : _localStream(track);
       if (local != null) {
         _resolving = false;
         final localOpenSw = Stopwatch()..start();
-        await _open(track, local, generation, wantedQueueKey);
+        await _open(track, local, generation, wantedQueueKey, play: play);
         localOpenSw.stop();
         totalSw.stop();
         _logTiming('play key=$wantedQueueKey path=local '
@@ -2675,7 +2707,10 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
             !forceYoutube &&
             _wouldTryLossless(track, false)) {
           await _resolveAndOpen(index,
-              forceYoutube: true, attempt: 1);
+              forceYoutube: true,
+              attempt: 1,
+              forceRemote: forceRemote,
+              play: play);
           return;
         }
         _unavailable.add(track.queueKey);
@@ -2685,7 +2720,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       }
 
       final openSw = Stopwatch()..start();
-      await _open(track, stream, generation, wantedQueueKey);
+      await _open(track, stream, generation, wantedQueueKey, play: play);
       openSw.stop();
       totalSw.stop();
 
@@ -3143,7 +3178,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> _open(PlayableTrack track, ResolvedStream stream,
-      int generation, String wantedQueueKey) async {
+      int generation, String wantedQueueKey, {bool play = true}) async {
     // Stale resolver callbacks must never replace the active track.
     if (generation != _resolveGeneration) return;
     if (_activeQueueKey != wantedQueueKey) return;
@@ -3288,7 +3323,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         final loadSw = Stopwatch()..start();
         await _player?.open(
           Media(playUrl, httpHeaders: stream.requestHeaders, start: resumeAt),
-          play: true,
+          play: play,
         );
         loadSw.stop();
         loadMs = loadSw.elapsedMilliseconds;
@@ -4028,6 +4063,13 @@ class PrefsHandle {
   bool get preferLossless => _prefs.preferLossless;
   bool get strictTrackMatching => _prefs.strictTrackMatching;
   int get losslessQuality => _prefs.losslessQuality;
+  Future<void> setStreamingQuality(int quality) async {
+    await _prefs.setLosslessQuality(quality);
+    await _prefs.setPreferLossless(
+      quality != AudioQualityTiers.youtubeOnly &&
+          quality != AudioQualityTiers.dataSaver,
+    );
+  }
   int get scrobblePercent => _prefs.scrobblePercent;
   bool get scrobblerEnabled => _prefs.scrobblerEnabled;
   bool get syncYtHistory => _prefs.syncYtHistory;

@@ -18,10 +18,11 @@ import '../components/touch_kit.dart';
 import '../navigation/destinations.dart';
 import '../queue/queue_panel.dart';
 import '../now_playing/now_playing_page.dart' show NowPlayingBackdrop;
-import '../components/buttons.dart' show LWVolumeSlider, WaveButton;
+import '../components/buttons.dart' show LWTooltip, LWVolumeSlider, WaveButton;
+import '../components/menus.dart';
 import '../components/wave_timeline.dart';
 import '../now_playing/immersive.dart'
-    show nowPlayingOverlayRequestProvider, nowPlayingVideoModeProvider;
+    show nowPlayingOverlayRequestProvider;
 import '../theme/fluent_theme.dart';
 import '../theme/haze.dart';
 import '../theme/tokens.dart';
@@ -240,8 +241,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final tablet = constraints.maxWidth >= 680 ||
             (viewSize.shortestSide >= 600 && constraints.maxWidth >= 520);
         final nowPlaying = _route.startsWith('/now');
-        final videoMode =
-            nowPlaying && ref.watch(nowPlayingVideoModeProvider);
         final online = ref.watch(networkMonitorProvider);
         final activePath = waveActivePath(widget.location);
         final theme = ref.watch(themeControllerProvider);
@@ -296,25 +295,23 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             _BackHeader(onBack: () => _back(moreDestinations)),
         ];
         final bottomChrome = nowPlaying
-            ? videoMode
-                ? const SizedBox.shrink()
-                : _DockFrame(
-                    child: _MobileTransportDock(
-                      // The Now Playing top bar carries queue / equalizer /
-                      // download on every screen size.
-                      showUtilities: false,
-                      onQueue: () => setState(() {
-                        _showQueue = !_showQueue;
-                        _showEqualizer = false;
-                      }),
-                      onEqualizer: () => setState(() {
-                        _showEqualizer = !_showEqualizer;
-                        _showQueue = false;
-                      }),
-                      queueActive: _showQueue,
-                      equalizerActive: _showEqualizer,
-                    ),
-                  )
+            ? _DockFrame(
+                child: _MobileTransportDock(
+                  // The Now Playing top bar carries queue / equalizer /
+                  // download on every screen size.
+                  showUtilities: false,
+                  onQueue: () => setState(() {
+                    _showQueue = !_showQueue;
+                    _showEqualizer = false;
+                  }),
+                  onEqualizer: () => setState(() {
+                    _showEqualizer = !_showEqualizer;
+                    _showQueue = false;
+                  }),
+                  queueActive: _showQueue,
+                  equalizerActive: _showEqualizer,
+                ),
+              )
             : tablet
                 ? _DockFrame(child: _MobileMiniPlayer(onOpen: _openNowPlaying))
                 : _DockFrame(
@@ -339,9 +336,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final pagePadding = nowPlaying
             ? EdgeInsets.only(
                 top: safe.top,
-                // The embedded video owns the full stage. Do not retain the
-                // transport dock's previously measured height after it hides.
-                bottom: videoMode ? 0 : safe.bottom + _bottomChromeHeight,
+                bottom: safe.bottom + _bottomChromeHeight,
               )
             : EdgeInsets.zero;
 
@@ -1006,8 +1001,6 @@ class _MobileTransportDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoMode = ref.watch(nowPlayingVideoModeProvider);
-    if (videoMode) return const SizedBox.shrink();
     final snapshot = ref.watch(
       playbackServiceProvider.select((state) => (
         current: state.current,
@@ -1155,6 +1148,8 @@ class _MobileTransportDock extends ConsumerWidget {
                   _MobileDownloadButton(track: snapshot.current),
                   const SizedBox(width: WaveSpacing.x4),
                 ],
+                const _MobileAudioQualityButton(),
+                const SizedBox(width: WaveSpacing.x2),
                 WaveTouchIconButton(
                   icon: volume <= 0
                       ? WaveIcons.volumeMute
@@ -1182,6 +1177,128 @@ class _MobileTransportDock extends ConsumerWidget {
   }
 }
 
+class _MobileAudioQualityButton extends ConsumerStatefulWidget {
+  const _MobileAudioQualityButton();
+
+  @override
+  ConsumerState<_MobileAudioQualityButton> createState() =>
+      _MobileAudioQualityButtonState();
+}
+
+class _MobileAudioQualityButtonState
+    extends ConsumerState<_MobileAudioQualityButton> {
+  final _flyout = FlyoutController();
+
+  @override
+  void dispose() {
+    _flyout.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stream = ref.watch(
+      playbackServiceProvider.select((state) => state.stream),
+    );
+    final detail = stream == null
+        ? 'Choose the audio stream quality'
+        : '${stream.audioCodec}${stream.bitrateKbps > 0 ? ' · ${stream.bitrateKbps} kbps' : ''}';
+    return FlyoutTarget(
+      controller: _flyout,
+      child: LWTooltip(
+        message: detail,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            final selectedQuality = ref.read(prefsProvider).losslessQuality;
+            _flyout.showFlyout(
+              barrierColor: Colors.transparent,
+              placementMode: FlyoutPlacementMode.topCenter,
+              transitionDuration: const Duration(milliseconds: 90),
+              transitionBuilder: fastFlyoutTransition,
+              builder: (context) => WaveFlyoutPanel.items(
+                entries: [
+                  WaveMenuAction(
+                    leading: const Icon(WaveIcons.gauge, size: 15),
+                    label: stream == null
+                        ? 'Audio quality'
+                        : 'Current · ${stream.qualityBadge}',
+                    onPressed: () {},
+                  ),
+                  const WaveMenuSeparator(),
+                  for (final quality in const [
+                    AudioQualityTiers.dolbyAtmos,
+                    AudioQualityTiers.maxHiRes,
+                    AudioQualityTiers.hiRes96,
+                    AudioQualityTiers.cdLossless,
+                    AudioQualityTiers.mp3_320,
+                    AudioQualityTiers.youtubeOnly,
+                    AudioQualityTiers.dataSaver,
+                  ])
+                    WaveMenuAction(
+                      leading: const Icon(WaveIcons.music, size: 15),
+                      label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}',
+                      onPressed: () {
+                        ref
+                            .read(playbackServiceProvider.notifier)
+                            .changeAudioQuality(quality);
+                      },
+                    ),
+                ],
+              ),
+            );
+          },
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: waveSurface(context).withValues(alpha: 0.35),
+              border: Border.all(color: waveDivider(context)),
+              borderRadius: BorderRadius.circular(WaveRadius.controls),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  WaveIcons.gauge,
+                  size: 15,
+                  color: waveTextSecondary(context),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  stream?.qualityBadge ?? 'QUALITY',
+                  style: WaveTouchType.caption.copyWith(
+                    color: waveTextSecondary(context),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 9,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Icon(
+                  FluentIcons.chevron_down,
+                  size: 10,
+                  color: waveTextSecondary(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _mobileAudioStreamLabel(ResolvedStream? stream) {
+  if (stream == null) return '';
+  final codec = stream.audioCodec.trim().isNotEmpty
+      ? stream.audioCodec.toUpperCase()
+      : stream.mimeType.split('/').last.toUpperCase();
+  final type = stream.isLossless ? 'LOSSLESS · $codec' : codec;
+  return stream.bitrateKbps > 0
+      ? '$type · ${stream.bitrateKbps} kbps'
+      : type;
+}
+
 /// Floating mini-player: artwork, title / artist, play-pause and next, with a
 /// hairline progress along the bottom edge. Tap opens Now Playing; swiping
 /// left or right skips to the next or previous track. Everything else (like,
@@ -1194,18 +1311,17 @@ class _MobileMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(nowPlayingVideoModeProvider)) {
-      return const SizedBox.shrink();
-    }
     final player = ref.watch(
       playbackServiceProvider.select((state) => (
         current: state.current,
+        stream: state.stream,
         isPlaying: state.isPlaying,
         isBuffering: state.isBuffering,
       )),
     );
     final track = player.current;
     if (track == null) return const SizedBox.shrink();
+    final streamDetails = _mobileAudioStreamLabel(player.stream);
     final playback = ref.read(playbackServiceProvider.notifier);
     return Semantics(
       container: true,
@@ -1252,7 +1368,9 @@ class _MobileMiniPlayer extends ConsumerWidget {
                                       ),
                                     ),
                                     _WaveAutoScrollText(
-                                      text: track.artist,
+                                      text: streamDetails.isEmpty
+                                          ? track.artist
+                                          : '${track.artist} · $streamDetails',
                                       style: WaveTouchType.rowMeta.copyWith(
                                         color: waveTextSecondary(context),
                                       ),

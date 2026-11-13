@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart' hide RepeatMode;
 import 'package:flutter/material.dart' show Icons, CircularProgressIndicator;
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -61,9 +60,7 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   // Focus mode: lyrics only, artwork column collapsed, lyrics centered.
   bool _focusMode = false;
   bool _controlsIdle = false;
-  bool _videoMode = false;
   bool _suggestionsVisible = false;
-  bool _resumeAudioAfterVideo = false;
   Timer? _idleTimer;
   DateTime _lastHoverAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastArmAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -76,13 +73,11 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   // Read eagerly in initState: a lazy `late final` is first touched in
   // dispose() on iOS (idle timer never runs there) and `ref` throws then.
   late final StateController<bool> _idleMirror;
-  late final StateController<bool> _videoModeMirror;
 
   @override
   void initState() {
     super.initState();
     _idleMirror = ref.read(nowPlayingControlsIdleProvider.notifier);
-    _videoModeMirror = ref.read(nowPlayingVideoModeProvider.notifier);
     _resetIdleTimer();
   }
 
@@ -92,37 +87,12 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     // Not while the tree is finalizing: a hidden-dock state must not
     // outlive the page.
     final mirror = _idleMirror;
-    final videoMirror = _videoModeMirror;
     Future.microtask(() {
       mirror.state = false;
-      videoMirror.state = false;
     });
     super.dispose();
   }
 
-
-  Future<void> _setVideoMode(bool enabled) async {
-    if (enabled == _videoMode) return;
-    final playback = ref.read(playbackServiceProvider.notifier);
-    if (enabled) {
-      _resumeAudioAfterVideo = ref.read(playbackServiceProvider).isPlaying;
-      if (mounted) {
-        setState(() {
-          _videoMode = true;
-          _suggestionsVisible = false;
-        });
-      }
-      _videoModeMirror.state = true;
-      await playback.pause();
-      return;
-    }
-
-    if (mounted) setState(() => _videoMode = false);
-    _videoModeMirror.state = false;
-    final shouldResume = _resumeAudioAfterVideo;
-    _resumeAudioAfterVideo = false;
-    if (shouldResume) await playback.playResume();
-  }
 
   void _toggleSuggestions() {
     _resetIdleTimer();
@@ -133,11 +103,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   }
 
   Future<void> _playSuggestedTrack(PlayableTrack track) async {
-    _resumeAudioAfterVideo = false;
-    if (_videoMode) {
-      setState(() => _videoMode = false);
-      _videoModeMirror.state = false;
-    }
     setState(() => _suggestionsVisible = false);
     await ref.read(playbackServiceProvider.notifier).play(
           track,
@@ -267,9 +232,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
       );
     }
 
-    final resolvedVideoId =
-        ref.watch(nowPlayingVideoIdProvider(current)).valueOrNull ??
-            current.videoId;
     final alternatePanelVisible = _suggestionsVisible;
     final alternatePanel = _suggestionsVisible
         ? WaveRelatedSuggestionsPanel(
@@ -408,50 +370,41 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                   // top bar instead of costing the lyrics a row of their own.
                   return Stack(
                     children: [
-                      if (_videoMode)
-                        Positioned.fill(
-                          child: _YoutubeMusicVideoView(
-                            key: ValueKey(resolvedVideoId),
-                            videoId: resolvedVideoId,
-                          ),
-                        )
-                      else
-                        Positioned.fill(
-                          child: isWide
-                              ? _DesktopDualPane(
-                                  topInset: _kTopBarHeight + 48,
+                      Positioned.fill(
+                        child: isWide
+                            ? _DesktopDualPane(
+                                topInset: _kTopBarHeight + 48,
+                                track: current,
+                                lyricsVisible:
+                                    _lyricsVisible && !alternatePanelVisible,
+                                alternatePanel: alternatePanel,
+                                alternatePanelVisible: alternatePanelVisible,
+                                focusMode: _focusMode,
+                              )
+                            : Padding(
+                                padding: EdgeInsets.only(
+                                  top: _kTopBarHeight + 48,
+                                ),
+                                child: _NarrowCenteredPane(
                                   track: current,
                                   lyricsVisible:
                                       _lyricsVisible && !alternatePanelVisible,
                                   alternatePanel: alternatePanel,
                                   alternatePanelVisible: alternatePanelVisible,
-                                  focusMode: _focusMode,
-                                )
-                              : Padding(
-                                  padding: EdgeInsets.only(
-                                    top: _kTopBarHeight + 48,
-                                  ),
-                                  child: _NarrowCenteredPane(
-                                    track: current,
-                                    lyricsVisible:
-                                        _lyricsVisible && !alternatePanelVisible,
-                                    alternatePanel: alternatePanel,
-                                    alternatePanelVisible: alternatePanelVisible,
-                                  ),
                                 ),
-                        ),
-                      if (!_videoMode)
-                        Positioned(
-                          top: _kTopBarHeight + 5,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: _NowPlayingSuggestionsButton(
-                              active: _suggestionsVisible,
-                              onTap: _toggleSuggestions,
-                            ),
+                              ),
+                      ),
+                      Positioned(
+                        top: _kTopBarHeight + 5,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: _NowPlayingSuggestionsButton(
+                            active: _suggestionsVisible,
+                            onTap: _toggleSuggestions,
                           ),
                         ),
+                      ),
                       Positioned(
                         top: 0,
                         left: 0,
@@ -471,10 +424,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                                 lyricsVisible: _lyricsVisible,
                                 focusMode: _focusMode,
                                 visualizerEnabled: visualizerEnabled,
-                                hasVideo: resolvedVideoId.isNotEmpty,
-                                videoMode: _videoMode,
-                                onListenToSong: () => _setVideoMode(false),
-                                onWatchVideo: () => _setVideoMode(true),
                                 downloadInProgress: downloadEntry != null &&
                                     (downloadEntry.status == DownloadStatus.queued ||
                                         downloadEntry.status == DownloadStatus.downloading),
@@ -630,104 +579,10 @@ class _InfoTabButton extends StatelessWidget {
   }
 }
 
-class _YoutubeMusicVideoView extends StatelessWidget {
-  final String videoId;
-
-  const _YoutubeMusicVideoView({
-    super.key,
-    required this.videoId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (videoId.isEmpty) {
-      return const Center(
-        child: Text('No associated music video is available.'),
-      );
-    }
-
-    final embedUrl = Uri.https(
-      'www.youtube.com',
-      '/embed/$videoId',
-      const {
-        'autoplay': '1',
-        'playsinline': '1',
-        'controls': '1',
-        'rel': '0',
-        'origin': 'https://github.com',
-      },
-    ).toString();
-
-    // On iOS, WKWebView does not reliably attach a Referer to a top-level
-    // embed URL. YouTube now rejects that request with error 153. Loading a
-    // small HTML host document with a real HTTPS base URL lets WebKit provide
-    // the required Referer on the cross-origin iframe request.
-    final html = '''
-<!doctype html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
-  <style>
-    html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-    }
-    iframe {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
-  </style>
-</head>
-<body>
-  <iframe
-    src="$embedUrl"
-    title="YouTube music video"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-    allowfullscreen>
-  </iframe>
-</body>
-</html>
-''';
-
-    return ColoredBox(
-      color: Colors.black,
-      child: SizedBox.expand(
-        child: InAppWebView(
-          initialData: InAppWebViewInitialData(
-            data: html,
-            // The public LastWave repository is the app's stable HTTPS
-            // identity until the project has a dedicated website origin.
-            baseUrl: WebUri('https://github.com/sundaywired/LastWave-iOS/'),
-          ),
-          initialSettings: InAppWebViewSettings(
-            javaScriptEnabled: true,
-            allowsInlineMediaPlayback: true,
-            mediaPlaybackRequiresUserGesture: false,
-            supportZoom: false,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TopActionsBar extends StatelessWidget {
   final bool lyricsVisible;
   final bool focusMode;
   final bool visualizerEnabled;
-  final bool hasVideo;
-  final bool videoMode;
-  final VoidCallback onListenToSong;
-  final VoidCallback onWatchVideo;
   final bool downloadInProgress;
   final double downloadProgress;
   final bool downloaded;
@@ -744,10 +599,6 @@ class _TopActionsBar extends StatelessWidget {
     required this.lyricsVisible,
     required this.focusMode,
     required this.visualizerEnabled,
-    required this.hasVideo,
-    required this.videoMode,
-    required this.onListenToSong,
-    required this.onWatchVideo,
     required this.downloadInProgress,
     required this.downloadProgress,
     required this.downloaded,
@@ -794,27 +645,6 @@ class _TopActionsBar extends StatelessWidget {
                 spacing: 4,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (hasVideo) ...[
-                    LWTooltip(
-                      message: 'Listen to song',
-                      child: _FsIconButton(
-                        icon: Icons.headphones_rounded,
-                        active: !videoMode,
-                        compact: true,
-                        onTap: onListenToSong,
-                      ),
-                    ),
-                    LWTooltip(
-                      message: 'Watch music video',
-                      child: _FsIconButton(
-                        icon: Icons.video_library_outlined,
-                        active: videoMode,
-                        compact: true,
-                        onTap: onWatchVideo,
-                      ),
-                    ),
-                    Container(width: 1, height: 22, color: waveDivider(context)),
-                  ],
                   if (Platform.isIOS) ...[
                     LWTooltip(
                       message: downloadInProgress

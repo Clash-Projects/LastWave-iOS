@@ -14,7 +14,6 @@ import '../../features/library/playlists.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/audio_output/output_controller.dart';
 import '../components/ambient.dart';
-import '../now_playing/immersive.dart' show nowPlayingVideoModeProvider;
 import '../components/artist_line.dart';
 import '../components/artwork.dart';
 import '../components/buttons.dart' show LWTooltip, LWVolumeSlider, WaveA11yButton, WaveLink;
@@ -72,10 +71,6 @@ class WavePlayerDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(nowPlayingVideoModeProvider)) {
-      // The YouTube embed owns its transport while the video is visible.
-      return const SizedBox.shrink();
-    }
     final dark = waveIsDark(context);
     // NOTE: position/duration/buffered/volume/speed deliberately excluded
     // here so 1s ticks and volume drags never rebuild the whole dock.
@@ -606,6 +601,7 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
           onExit: (_) => setState(() => _hover = false),
           child: GestureDetector(
             onTap: () {
+              final selectedQuality = ref.read(prefsProvider).losslessQuality;
               _flyout.showFlyout(
                 barrierColor: Colors.transparent,
                 placementMode: FlyoutPlacementMode.topCenter,
@@ -651,6 +647,30 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
                         leading: const Icon(WaveIcons.clock, size: 15),
                         label: 'Bitrate · ${s.bitrateKbps} kbps',
                         onPressed: () {},
+                      ),
+                    const WaveMenuSeparator(),
+                    WaveMenuAction(
+                      leading: const Icon(WaveIcons.gauge, size: 15),
+                      label: 'Change audio quality',
+                      onPressed: () {},
+                    ),
+                    for (final quality in const [
+                      AudioQualityTiers.dolbyAtmos,
+                      AudioQualityTiers.maxHiRes,
+                      AudioQualityTiers.hiRes96,
+                      AudioQualityTiers.cdLossless,
+                      AudioQualityTiers.mp3_320,
+                      AudioQualityTiers.youtubeOnly,
+                      AudioQualityTiers.dataSaver,
+                    ])
+                      WaveMenuAction(
+                        leading: const Icon(WaveIcons.music, size: 15),
+                        label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}',
+                        onPressed: () {
+                          ref
+                              .read(playbackServiceProvider.notifier)
+                              .changeAudioQuality(quality);
+                        },
                       ),
                     const WaveMenuSeparator(),
                     WaveMenuAction(
