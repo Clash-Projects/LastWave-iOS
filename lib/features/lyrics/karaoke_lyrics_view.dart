@@ -1528,6 +1528,8 @@ class _SourceMenu extends ConsumerWidget {
     );
     final effective = override ?? defaultId;
     final currentId = lyricsSourceToProviderId(result.source);
+    final selectedSource =
+        LyricsProviderId.fromId(currentId ?? effective).title;
 
     void apply(String? pickedId) {
       if (pickedId == null) {
@@ -1558,23 +1560,62 @@ class _SourceMenu extends ConsumerWidget {
               ? const Icon(FluentIcons.check_mark, size: 13)
               : const SizedBox(width: 13),
           label: provider.title,
+          hint: provider.subtitle,
           onPressed: () => apply(provider.id),
         ),
       const WaveMenuSeparator(),
       WaveMenuAction(
         leading: const Icon(FluentIcons.refresh, size: 13),
         label: 'Try another source',
+        hint: 'Skip the current provider and retry the others',
         onPressed: () => apply(null),
       ),
     ];
 
     return LWTooltip(
-      message: result.source.isNotEmpty
-          ? 'Source: ${result.source} · Change'
-          : 'Change lyrics source',
-      child: _MiniIconButton(
-        icon: WaveIcons.lyrics,
+      message: 'Lyrics source · $selectedSource · Change',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => showWaveMenuSheet(context, entries),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 132),
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          decoration: BoxDecoration(
+            color: waveSurface(context).withValues(alpha: 0.35),
+            border: Border.all(color: waveDivider(context)),
+            borderRadius: BorderRadius.circular(WaveRadius.controls),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                WaveIcons.lyrics,
+                size: 14,
+                color: waveTextSecondary(context),
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  selectedSource,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: WaveType.meta.copyWith(
+                    color: waveTextPrimary(context),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                FluentIcons.chevron_down,
+                size: 10,
+                color: waveTextSecondary(context),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
