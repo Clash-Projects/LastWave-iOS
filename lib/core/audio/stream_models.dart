@@ -227,6 +227,7 @@ class ResolvedStream {
       return 'E-AC3';
     }
     if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
+    if (metadata.contains('atmos')) return 'DOLBY ATMOS';
     if (metadata.contains('mp4a') ||
         metadata.contains('aac') ||
         mimeType.toLowerCase().contains('audio/mp4')) {
@@ -237,7 +238,6 @@ class ResolvedStream {
       return 'MP3';
     }
     if (metadata.contains('wav')) return 'WAV';
-    if (metadata.contains('atmos')) return 'DOLBY ATMOS';
     if (isLossless) return 'FLAC';
 
     final subtype = mimeType.split('/').last.split(';').first.trim();
