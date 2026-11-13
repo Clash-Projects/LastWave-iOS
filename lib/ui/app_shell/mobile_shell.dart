@@ -1192,7 +1192,16 @@ class _MobileAudioQualityButton extends ConsumerWidget {
       message: detail,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {
+        onTap: () async {
+          final player = ref.read(playbackServiceProvider.notifier);
+          final currentTrack = ref.read(playbackServiceProvider).current;
+          final atmosAvailable = currentTrack == null
+              ? null
+              : await player.hasDolbyAtmosVersion(
+                  title: currentTrack.title,
+                  artist: currentTrack.artist,
+                );
+          if (!context.mounted) return;
           final selectedQuality = ref.read(prefsProvider).losslessQuality;
           final entries = <WaveMenuEntry>[
             WaveMenuAction(
@@ -1213,13 +1222,26 @@ class _MobileAudioQualityButton extends ConsumerWidget {
               AudioQualityTiers.dataSaver,
             ])
               WaveMenuAction(
-                leading: const Icon(WaveIcons.music, size: 15),
-                label: '${AudioQualityTiers.label(quality)} · ${quality == AudioQualityTiers.youtubeOnly || quality == AudioQualityTiers.dataSaver ? 'YOUTUBE' : 'ADD-ON'}${quality == selectedQuality ? ' · Selected' : ''}',
-                onPressed: () {
-                  ref
-                      .read(playbackServiceProvider.notifier)
-                      .changeAudioQuality(quality);
-                },
+                leading: Icon(
+                  WaveIcons.music,
+                  size: 15,
+                  color: quality == AudioQualityTiers.dolbyAtmos &&
+                          atmosAvailable == false
+                      ? waveTextTertiary(context)
+                      : null,
+                ),
+                label: '${AudioQualityTiers.label(quality)} · ${quality == AudioQualityTiers.youtubeOnly || quality == AudioQualityTiers.dataSaver ? 'YOUTUBE' : 'ADD-ON'}${quality == selectedQuality ? ' · Selected' : ''}${quality == AudioQualityTiers.dolbyAtmos && atmosAvailable == false ? ' · Unavailable' : ''}',
+                hint: quality == AudioQualityTiers.dolbyAtmos
+                    ? atmosAvailable == false
+                        ? 'No Dolby Atmos version found for this track'
+                        : atmosAvailable == null
+                            ? 'Could not verify availability; tap to try'
+                            : 'Dolby Atmos version found in the add-on catalog'
+                    : null,
+                onPressed: quality == AudioQualityTiers.dolbyAtmos &&
+                        atmosAvailable == false
+                    ? null
+                    : () => player.changeAudioQuality(quality),
               ),
           ];
           showWaveMenuSheet(context, entries);
