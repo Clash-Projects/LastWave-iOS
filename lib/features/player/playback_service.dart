@@ -642,6 +642,9 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
           _maybePrefetchFromPosition(v);
           _updateCrossfadeSchedule(v);
           state = state.copyWith(position: v);
+          // Persist the latest listening position while playback advances so
+          // an iOS force-quit or app restart can resume close to this point.
+          _schedulePersist();
           unawaited(_syncIosNowPlaying());
         });
       }),
@@ -1784,6 +1787,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     // app close would otherwise leave it only as “Scrobbling now”).
     cancelCrossfade();
     _flushScrobble(completed: false);
+    // Flush the most recent queue and position before tearing down the player.
+    _persistNow();
     _resolveGeneration++;
     _resolving = false;
     _resolvingIndex = -1;
@@ -2015,6 +2020,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     cancelCrossfade();
     await _player?.seek(position);
     state = state.copyWith(position: position);
+    _schedulePersist();
   }
 
   /// Lets the volume slider drive libmpv again after a lock (used when a
