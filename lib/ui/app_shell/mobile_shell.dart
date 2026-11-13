@@ -1177,110 +1177,85 @@ class _MobileTransportDock extends ConsumerWidget {
   }
 }
 
-class _MobileAudioQualityButton extends ConsumerStatefulWidget {
+class _MobileAudioQualityButton extends ConsumerWidget {
   const _MobileAudioQualityButton();
 
   @override
-  ConsumerState<_MobileAudioQualityButton> createState() =>
-      _MobileAudioQualityButtonState();
-}
-
-class _MobileAudioQualityButtonState
-    extends ConsumerState<_MobileAudioQualityButton> {
-  final _flyout = FlyoutController();
-
-  @override
-  void dispose() {
-    _flyout.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final stream = ref.watch(
       playbackServiceProvider.select((state) => state.stream),
     );
     final detail = stream == null
         ? 'Choose the audio stream quality'
         : '${stream.audioCodec}${stream.bitrateKbps > 0 ? ' · ${stream.bitrateKbps} kbps' : ''}';
-    return FlyoutTarget(
-      controller: _flyout,
-      child: LWTooltip(
-        message: detail,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            final selectedQuality = ref.read(prefsProvider).losslessQuality;
-            _flyout.showFlyout(
-              barrierColor: Colors.transparent,
-              placementMode: FlyoutPlacementMode.topCenter,
-              transitionDuration: const Duration(milliseconds: 90),
-              transitionBuilder: fastFlyoutTransition,
-              builder: (context) => WaveFlyoutPanel.items(
-                entries: [
-                  WaveMenuAction(
-                    leading: const Icon(WaveIcons.gauge, size: 15),
-                    label: stream == null
-                        ? 'Audio quality'
-                        : 'Current · ${stream.qualityBadge}',
-                    onPressed: () {},
-                  ),
-                  const WaveMenuSeparator(),
-                  for (final quality in const [
-                    AudioQualityTiers.dolbyAtmos,
-                    AudioQualityTiers.maxHiRes,
-                    AudioQualityTiers.hiRes96,
-                    AudioQualityTiers.cdLossless,
-                    AudioQualityTiers.mp3_320,
-                    AudioQualityTiers.youtubeOnly,
-                    AudioQualityTiers.dataSaver,
-                  ])
-                    WaveMenuAction(
-                      leading: const Icon(WaveIcons.music, size: 15),
-                      label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}',
-                      onPressed: () {
-                        ref
-                            .read(playbackServiceProvider.notifier)
-                            .changeAudioQuality(quality);
-                      },
-                    ),
-                ],
+    return LWTooltip(
+      message: detail,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          final selectedQuality = ref.read(prefsProvider).losslessQuality;
+          final entries = <WaveMenuEntry>[
+            WaveMenuAction(
+              leading: const Icon(WaveIcons.gauge, size: 15),
+              label: stream == null
+                  ? 'Audio quality'
+                  : 'Current · ${stream.qualityBadge}',
+              onPressed: () {},
+            ),
+            const WaveMenuSeparator(),
+            for (final quality in const [
+              AudioQualityTiers.dolbyAtmos,
+              AudioQualityTiers.maxHiRes,
+              AudioQualityTiers.hiRes96,
+              AudioQualityTiers.cdLossless,
+              AudioQualityTiers.mp3_320,
+              AudioQualityTiers.youtubeOnly,
+              AudioQualityTiers.dataSaver,
+            ])
+              WaveMenuAction(
+                leading: const Icon(WaveIcons.music, size: 15),
+                label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}',
+                onPressed: () {
+                  ref
+                      .read(playbackServiceProvider.notifier)
+                      .changeAudioQuality(quality);
+                },
               ),
-            );
-          },
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: waveSurface(context).withValues(alpha: 0.35),
-              border: Border.all(color: waveDivider(context)),
-              borderRadius: BorderRadius.circular(WaveRadius.controls),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  WaveIcons.gauge,
-                  size: 15,
+          ];
+          showWaveMenuSheet(context, entries);
+        },
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: waveSurface(context).withValues(alpha: 0.35),
+            border: Border.all(color: waveDivider(context)),
+            borderRadius: BorderRadius.circular(WaveRadius.controls),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                WaveIcons.gauge,
+                size: 15,
+                color: waveTextSecondary(context),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                stream?.qualityBadge ?? 'QUALITY',
+                style: WaveTouchType.caption.copyWith(
                   color: waveTextSecondary(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 9,
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  stream?.qualityBadge ?? 'QUALITY',
-                  style: WaveTouchType.caption.copyWith(
-                    color: waveTextSecondary(context),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 9,
-                  ),
-                ),
-                const SizedBox(width: 3),
-                Icon(
-                  FluentIcons.chevron_down,
-                  size: 10,
-                  color: waveTextSecondary(context),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                FluentIcons.chevron_down,
+                size: 10,
+                color: waveTextSecondary(context),
+              ),
+            ],
           ),
         ),
       ),
