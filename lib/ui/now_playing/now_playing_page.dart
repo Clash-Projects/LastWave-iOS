@@ -765,7 +765,7 @@ class _FsIconButtonState extends State<_FsIconButton> {
         child: AnimatedContainer(
           duration: waveMotion(context, WaveMotion.fast),
           width: Platform.isIOS ? 44 : 36,
-          height: widget.compact ? 32 : Platform.isIOS ? 44 : 36,
+          height: Platform.isIOS ? 44 : 36,
           decoration: BoxDecoration(
             color: widget.active
                 ? accent.withValues(alpha: 0.15)
