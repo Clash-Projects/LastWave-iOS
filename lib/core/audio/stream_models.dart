@@ -157,6 +157,9 @@ class ResolvedStream {
   final String mimeType;
   final int bitrateKbps;
   final String audioCodec;
+  /// Actual codec/container format when the resolver can identify it.
+  /// Kept separate from [audioCodec], which may contain a quality label.
+  final String format;
   final String cacheKey;
   final Map<String, String> requestHeaders;
   final bool isLossless;
@@ -177,6 +180,7 @@ class ResolvedStream {
     this.mimeType = 'audio/webm',
     this.bitrateKbps = 0,
     this.audioCodec = 'OPUS',
+    this.format = '',
     this.cacheKey = '',
     this.requestHeaders = const {},
     this.isLossless = false,
@@ -193,6 +197,51 @@ class ResolvedStream {
     if (exp == null) return false;
     return DateTime.now()
         .isAfter(exp.subtract(const Duration(minutes: 2)));
+  }
+
+  /// Human-readable format of the bytes being streamed. Codec identifiers
+  /// take precedence over the container MIME type; OPUS wins over AAC when
+  /// both appear in a composite codec string.
+  String get formatLabel {
+    final declared = format.trim().toLowerCase();
+    if (declared.contains('flac')) return 'FLAC';
+    if (declared.contains('opus')) return 'OPUS';
+    if (declared.contains('eac3') ||
+        declared.contains('ec-3') ||
+        declared.contains('ec3')) {
+      return 'E-AC3';
+    }
+    if (declared.contains('ac-3') || declared.contains('ac3')) return 'AC-3';
+    if (declared.contains('aac') || declared.contains('mp4a')) return 'AAC';
+    if (declared.contains('mp3')) return 'MP3';
+    if (declared.contains('wav')) return 'WAV';
+    if (declared.contains('atmos')) return 'DOLBY ATMOS';
+
+    final metadata =
+        '${audioCodec.toLowerCase()} ${mimeType.toLowerCase()} ${url.toLowerCase()}';
+    if (metadata.contains('flac')) return 'FLAC';
+    if (metadata.contains('opus')) return 'OPUS';
+    if (metadata.contains('eac3') ||
+        metadata.contains('ec-3') ||
+        metadata.contains('ec3')) {
+      return 'E-AC3';
+    }
+    if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
+    if (metadata.contains('mp4a') ||
+        metadata.contains('aac') ||
+        mimeType.toLowerCase().contains('audio/mp4')) {
+      return 'AAC';
+    }
+    if (metadata.contains('mp3') ||
+        mimeType.toLowerCase().contains('audio/mpeg')) {
+      return 'MP3';
+    }
+    if (metadata.contains('wav')) return 'WAV';
+    if (metadata.contains('atmos')) return 'DOLBY ATMOS';
+    if (isLossless) return 'FLAC';
+
+    final subtype = mimeType.split('/').last.split(';').first.trim();
+    return subtype.isEmpty ? 'AUDIO' : subtype.toUpperCase();
   }
 
   String get qualityBadge => AudioQualityTiers.shortBadge(
