@@ -1,4 +1,4 @@
-name: LastWave iOS v1.0.0 unsigned build
+name: LastWave iOS
 
 on:
   push:
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: Analyze and build LastWave iOS v1.0.0 IPA
+    name: Analyze and build LastWave iOS
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
