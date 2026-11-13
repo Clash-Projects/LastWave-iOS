@@ -41,7 +41,8 @@ import '../../core/platform/ios_now_playing.dart';
 /// - stream failure backoff (client cooldown + unavailable set)
 class PlaybackService extends StateNotifier<PlayerSnapshot> {
   final InnerTubeMusicApi _tube;
-  final LosslessSource _lossless;
+  LosslessSource _lossless;
+  int _losslessSourceGeneration = 0;
   final void Function(String notice)? _onAddonQuota;
   final ScrobbleRepository _scrobbler;
   final DownloadManager _downloads;
@@ -430,6 +431,20 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     this._onAddonQuota,
   ])  : _artworkService = artworkService ?? OfficialArtworkService(),
         super(const PlayerSnapshot());
+
+  /// Replace the configured lossless source without rebuilding the player.
+  /// Addon URL changes invalidate losslessApiProvider; the playback service
+  /// listens for that update so mpv, its event subscriptions, and the queue
+  /// remain alive while the source configuration changes.
+  void updateLosslessSource(LosslessSource source) {
+    if (identical(_lossless, source)) return;
+    _lossless = source;
+    _losslessSourceGeneration++;
+    _playCache.clear();
+    _resolveInflight.clear();
+    _prefetchSeedKey = '';
+    _crumb('lossless source updated configured=${source.isConfigured}');
+  }
 
   /// Tests run the real decks on mpv's `null` output (real-time clock, no
   /// sound card). Never set in the app.
@@ -2748,6 +2763,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     bool forceRefresh = false,
   }) async {
     final cacheKey = _playCacheKey(track, forceYoutube);
+    final sourceGeneration = _losslessSourceGeneration;
     if (!forceRefresh) {
       final hit = _playCache.get(cacheKey);
       if (hit != null) return hit;
@@ -2766,11 +2782,17 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         // result the prefetcher already had. ResolvedStreamCache drops
         // entries 2 minutes before their signed URL expires, so a stale
         // hit can never reach mpv.
-        _playCache.put(cacheKey, stream);
+        if (sourceGeneration == _losslessSourceGeneration) {
+          _playCache.put(cacheKey, stream);
+        }
       }
       return stream;
     } finally {
-      _resolveInflight.remove(cacheKey);
+      // A source refresh can start a replacement resolve under the same
+      // key. An older future must not remove that newer in-flight entry.
+      if (identical(_resolveInflight[cacheKey], future)) {
+        _resolveInflight.remove(cacheKey);
+      }
     }
   }
 
@@ -4037,7 +4059,7 @@ final playbackServiceProvider =
     StateNotifierProvider<PlaybackService, PlayerSnapshot>((ref) {
   final service = PlaybackService(
     ref.watch(innerTubeProvider),
-    ref.watch(losslessApiProvider),
+    ref.read(losslessApiProvider),
     ref.watch(scrobbleRepositoryProvider),
     ref.watch(downloadManagerProvider.notifier),
     PrefsHandle(ref.watch(prefsProvider)),
@@ -4049,6 +4071,12 @@ final playbackServiceProvider =
       } catch (_) {}
     },
   );
+  // Listen rather than watch: changing addon URLs must not dispose the
+  // PlaybackService and its live mpv player. Push the replacement source
+  // into the existing service and clear only its source-dependent caches.
+  ref.listen<LosslessSource>(losslessApiProvider, (_, next) {
+    service.updateLosslessSource(next);
+  });
   ref.onDispose(() {
     unawaited(service.disposePlayer());
   });
