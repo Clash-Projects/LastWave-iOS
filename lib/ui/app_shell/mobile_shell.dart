@@ -1214,7 +1214,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
             ])
               WaveMenuAction(
                 leading: const Icon(WaveIcons.music, size: 15),
-                label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}',
+                label: '${AudioQualityTiers.label(quality)} · ${quality == AudioQualityTiers.youtubeOnly || quality == AudioQualityTiers.dataSaver ? 'YOUTUBE' : 'ADD-ON'}${quality == selectedQuality ? ' · Selected' : ''}',
                 onPressed: () {
                   ref
                       .read(playbackServiceProvider.notifier)
