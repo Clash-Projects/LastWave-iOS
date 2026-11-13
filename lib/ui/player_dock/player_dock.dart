@@ -578,6 +578,7 @@ class _QualityFlyout extends ConsumerStatefulWidget {
 
 class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
   bool _hover = false;
+  bool _checkingAtmos = false;
   final _flyout = FlyoutController();
   @override
   void dispose() {
@@ -599,7 +600,21 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
           child: GestureDetector(
-            onTap: () {
+            onTap: () async {
+              if (_checkingAtmos) return;
+              setState(() => _checkingAtmos = true);
+              final currentTrack =
+                  ref.read(playbackServiceProvider).current;
+              final atmosAvailable = currentTrack == null
+                  ? null
+                  : await ref
+                      .read(playbackServiceProvider.notifier)
+                      .hasDolbyAtmosVersion(
+                        title: currentTrack.title,
+                        artist: currentTrack.artist,
+                      );
+              if (!mounted) return;
+              setState(() => _checkingAtmos = false);
               final selectedQuality = ref.read(prefsProvider).losslessQuality;
               _flyout.showFlyout(
                 barrierColor: Colors.transparent,
@@ -657,13 +672,28 @@ class _QualityFlyoutState extends ConsumerState<_QualityFlyout> {
                       AudioQualityTiers.dataSaver,
                     ])
                       WaveMenuAction(
-                        leading: const Icon(WaveIcons.music, size: 15),
-                        label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}',
-                        onPressed: () {
-                          ref
-                              .read(playbackServiceProvider.notifier)
-                              .changeAudioQuality(quality);
-                        },
+                        leading: Icon(
+                          WaveIcons.music,
+                          size: 15,
+                          color: quality == AudioQualityTiers.dolbyAtmos &&
+                                  atmosAvailable == false
+                              ? waveTextTertiary(context)
+                              : null,
+                        ),
+                        label: '${AudioQualityTiers.label(quality)}${quality == selectedQuality ? ' · Selected' : ''}${quality == AudioQualityTiers.dolbyAtmos && atmosAvailable == false ? ' · Unavailable' : ''}',
+                        hint: quality == AudioQualityTiers.dolbyAtmos
+                            ? atmosAvailable == false
+                                ? 'No Dolby Atmos version found for this track'
+                                : atmosAvailable == null
+                                    ? 'Could not verify availability; tap to try'
+                                    : 'Dolby Atmos version found in the add-on catalog'
+                            : null,
+                        onPressed: quality == AudioQualityTiers.dolbyAtmos &&
+                                atmosAvailable == false
+                            ? null
+                            : () => ref
+                                .read(playbackServiceProvider.notifier)
+                                .changeAudioQuality(quality),
                       ),
                     const WaveMenuSeparator(),
                     WaveMenuAction(
