@@ -1226,6 +1226,12 @@ class AddonApi implements LosslessSource {
       return 'MP3';
     }
     if (isAtmos) return 'DOLBY ATMOS';
+    if (urls.any((url) {
+      final path = url.split('?').first.toLowerCase();
+      return path.endsWith('.m4a') || path.endsWith('.mp4');
+    })) {
+      return 'AAC';
+    }
     return 'FLAC';
   }
 
