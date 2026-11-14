@@ -207,7 +207,7 @@ class WaveYtShelfPage extends ConsumerWidget {
     String videoId = '',
   }) =>
       SizedBox(
-        width: 160,
+        width: waveMediaCardWidth(context),
         child: WaveMediaCard(
           title: title,
           subtitle: subtitle,
