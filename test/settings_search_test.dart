@@ -13,8 +13,8 @@ void main() {
     expect(filterSettings(settingsSearchEntries, '   '), isEmpty);
   });
 
-  test('finds a card by a setting inside it', () {
-    expect(titles('crossfade'), contains('Playback'));
+  test('finds settings and ignores retired settings', () {
+    expect(titles('crossfade'), isEmpty);
     expect(titles('amoled'), isEmpty);
     expect(titles('reorganize'), contains('Offline'));
     expect(titles('export'), contains('Backup'));
