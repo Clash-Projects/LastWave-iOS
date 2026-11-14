@@ -20,6 +20,7 @@ import '../navigation/wave_nav.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
+import 'library_tabs.dart';
 
 class _Album {
   final String title;
@@ -113,17 +114,27 @@ class WaveAlbumsPage extends ConsumerWidget {
       ),
       data: (list) {
         if (list.isEmpty) {
-          return const WaveEmpty(
-            icon: FluentIcons.music_note,
-            title: 'No albums yet',
-            subtitle:
-                'Your most-played records will appear here once you scrobble.',
+          return ListView(
+            children: const [
+              WaveChromeSpacer.top(),
+              WaveLibraryTabs(activePath: '/albums'),
+              WaveEmpty(
+                icon: FluentIcons.music_note,
+                title: 'No albums yet',
+                subtitle:
+                    'Your most-played records will appear here once you scrobble.',
+              ),
+              WaveChromeSpacer.bottom(),
+            ],
           );
         }
         return WaveEntranceGroup(
           child: CustomScrollView(
             slivers: [
         const WaveChromeSliver.top(),
+            const SliverToBoxAdapter(
+              child: WaveLibraryTabs(activePath: '/albums'),
+            ),
             SliverToBoxAdapter(
               child: Padding(
                 padding:
