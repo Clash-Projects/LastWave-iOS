@@ -15,8 +15,7 @@ enum BitPerfectReason {
   sharedMode,
   speedNotUnity,
   pitchNotUnity,
-  loudnessActive,
-  autoMixActive;
+  loudnessActive;
 
   String get label => switch (this) {
         BitPerfectReason.bitPerfect => 'Bit-Perfect',
@@ -42,8 +41,6 @@ enum BitPerfectReason {
           'Bit-Perfect unavailable — pitch ≠ 1.0.',
         BitPerfectReason.loudnessActive =>
           'Bit-Perfect unavailable — loudness normalization is on.',
-        BitPerfectReason.autoMixActive =>
-          'Bit-Perfect unavailable — timed AutoMix is on.',
       };
 }
 
