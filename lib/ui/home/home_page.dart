@@ -1,20 +1,14 @@
 import '../components/chrome_insets.dart';
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../../app/track_actions.dart'
     show playGenerated, playableFromGenerated, relativeTime;
 import '../../core/artwork/official_artwork_service.dart';
-import '../../core/network/network_monitor.dart';
 import '../../features/feed/feed_repository.dart';
-import '../../features/feed/home_blend.dart';
 import '../../features/feed/genre_source.dart' show genreChartProvider;
 import '../../features/feed/genre_browse.dart' show genreTracksProvider;
 import '../../features/feed/home_shelf_layout.dart';
@@ -30,7 +24,6 @@ import '../components/buttons.dart';
 import '../components/artist_line.dart';
 import '../components/menus.dart';
 import '../components/shelf.dart';
-import '../components/hero.dart' show WavePageHeader;
 import '../collections/yt_shelf_page.dart';
 import '../components/states.dart';
 import '../navigation/wave_nav.dart';
@@ -115,7 +108,6 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
                     local: true,
                     child: _Header(
                       greeting: _selectedTitle,
-                      date: '',
                       onRefresh: () => _refreshHome(ref),
                     ),
                   ),
@@ -191,12 +183,16 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
   ) {
     final hidden = layout.hidden;
     final topIds = HomeShelfCatalog.topNavigationIds;
-    final homeChip = sourceChips.cast<YtHomeChip?>().firstWhere(
-          (chip) => HomeShelfCatalog.idForTitle(chip!.title) == HomeShelfId.home,
-          orElse: () => null,
-        ) ??
+    YtHomeChip? apiHomeChip;
+    for (final chip in sourceChips) {
+      if (HomeShelfCatalog.idForTitle(chip.title) == HomeShelfId.home) {
+        apiHomeChip = chip;
+        break;
+      }
+    }
+    final homeChip = apiHomeChip ??
         const YtHomeChip(title: 'Home', browseId: InnerTubeMusicApi.homeBrowseId);
-    YtHomeChip? fromApiOr(String title, YtHomeChip fallback) {
+    YtHomeChip fromApiOr(String title, YtHomeChip fallback) {
       for (final chip in sourceChips) {
         if (HomeShelfCatalog.idForTitle(chip.title) ==
             HomeShelfCatalog.idForTitle(title)) {
@@ -1093,31 +1089,93 @@ class _NativeQuickPickRow extends ConsumerWidget {
   }
 }
 
-/// Native FeedScreen's expressive greeting header: greeting and uppercase date only.
+/// Compact filter pill used for YouTube Music's top tabs and moods.
+class _YtmHomeChipPill extends StatelessWidget {
+  final String title;
+  final bool selected;
+  final bool enabled;
+  final bool compact;
+  final VoidCallback onTap;
+
+  const _YtmHomeChipPill({
+    required this.title,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: enabled ? onTap : null,
+        child: AnimatedContainer(
+          duration: waveMotion(context, WaveMotion.fast),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 14 : 16,
+            vertical: compact ? 7 : 9,
+          ),
+          decoration: BoxDecoration(
+            color: selected
+                ? waveAccent(context).withValues(alpha: 0.18)
+                : waveSurfaceRaised(context).withValues(alpha: enabled ? 0.78 : 0.42),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected
+                  ? waveAccent(context).withValues(alpha: 0.78)
+                  : waveDivider(context).withValues(alpha: enabled ? 0.3 : 0.14),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: WaveType.trackTitle.copyWith(
+                fontSize: compact ? 12 : 13,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected
+                    ? waveAccent(context)
+                    : enabled
+                        ? waveTextSecondary(context)
+                        : waveTextTertiary(context),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Home title and refresh control.
 class _Header extends StatelessWidget {
   final String greeting;
-  final String date;
   final VoidCallback onRefresh;
 
-  const _Header({
-    required this.greeting,
-    required this.date,
-    required this.onRefresh,
-  });
+  const _Header({required this.greeting, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: WavePageHeader(
-        overline: date,
-        subtitle: Platform.isIOS ? date : null,
-        title: greeting,
-        action: WaveIconButton(
-          tooltip: 'Refresh home feed',
-          icon: const Icon(FluentIcons.refresh, size: 14),
-          onPressed: onRefresh,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              greeting,
+              style: WaveType.pageTitle.copyWith(fontSize: 26),
+            ),
+          ),
+          WaveIconButton(
+            tooltip: 'Refresh home feed',
+            icon: const Icon(FluentIcons.refresh, size: 14),
+            onPressed: onRefresh,
+          ),
+        ],
       ),
     );
   }
