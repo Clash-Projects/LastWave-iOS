@@ -1327,7 +1327,7 @@ class _WaveMenuSheetState extends State<_WaveMenuSheet> {
               const SizedBox(width: WaveSpacing.x8),
             ],
             Expanded(
-              child: Platform.isIOS
+              child: MediaQuery.sizeOf(context).width < 600
                   ? Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1368,7 +1368,7 @@ class _WaveMenuSheetState extends State<_WaveMenuSheet> {
                       ),
                     ),
             ),
-            if (hint != null && !Platform.isIOS)
+            if (hint != null && MediaQuery.sizeOf(context).width >= 600)
               Text(
                 hint,
                 style: WaveTouchType.rowMeta.copyWith(
