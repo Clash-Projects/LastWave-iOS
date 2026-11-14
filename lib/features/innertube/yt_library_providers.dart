@@ -78,31 +78,44 @@ final ytAccountProvider = FutureProvider<YtAccount?>((ref) async {
       .fetchAccountInfo(pageId: conn.activePageId);
 });
 
-/// Titled shelves from the YouTube Music home browse.
+/// Endpoint identity for a Home chip returned by YouTube Music.
+typedef YtHomeBrowseKey = ({String browseId, String? params});
+
+/// Full YouTube Music Home response: category chips plus ordered shelves.
 ///
-/// Only fetched when connected: the whole point of the home browse is
-/// the personalized "For you" surface, and an anonymous call returns
-/// generic trending shelves that would just duplicate Discover. Empty
-/// on any failure, so the Home page simply omits the section.
-final ytHomeShelvesProvider =
-    FutureProvider<List<YtHomeShelf>>((ref) async {
+/// The anonymous response is also useful: it supplies the public Home feed
+/// and its category endpoints. Signed-in responses are isolated by channel.
+final ytHomeFeedProvider = FutureProvider<YtHomeFeed>((ref) async {
   final conn = ref.watch(ytConnectionProvider);
-  if (!conn.connected) {
-    return const [];
-  }
   final tube = ref.watch(innerTubeProvider);
-  // Stale-while-revalidate over a per-channel disk snapshot, so the Home
-  // shelves are there on launch instead of after the browse round trips.
-  return swrLoad<List<YtHomeShelf>>(
+  return swrLoad<YtHomeFeed>(
     ref,
     key: homeShelvesSnapshotKey(
       connected: conn.connected,
       profileEmail: conn.profileEmail,
       activePageId: conn.activePageId,
     ),
-    codec: shelvesSnapshotCodec,
-    fetch: tube.fetchHomeShelves,
+    codec: ytHomeFeedSnapshotCodec,
+    fetch: tube.fetchHomeFeed,
   );
+});
+
+/// Loads another Home category using the exact browse id and params returned
+/// by YouTube Music's chip cloud. The family key is value-equal because it is
+/// a Dart record, so reselecting a category reuses its in-memory response.
+final ytHomeBrowseProvider =
+    FutureProvider.family<YtHomeFeed, YtHomeBrowseKey>((ref, key) async {
+  if (key.browseId.trim().isEmpty) return const YtHomeFeed();
+  return ref.watch(innerTubeProvider).fetchHomeFeed(
+        browseId: key.browseId,
+        params: key.params,
+      );
+});
+
+/// Compatibility surface for collection pages that only need the shelves.
+final ytHomeShelvesProvider = FutureProvider<List<YtHomeShelf>>((ref) async {
+  final feed = await ref.watch(ytHomeFeedProvider.future);
+  return feed.shelves;
 });
 
 
