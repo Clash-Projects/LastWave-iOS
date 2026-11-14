@@ -16,7 +16,6 @@ import '../../../features/home/home_snapshot.dart';
 import '../../../features/library/playlists.dart';
 import '../../../features/innertube/innertube_api.dart';
 import '../../../features/player/playback_service.dart';
-import '../components/ambient.dart';
 import '../components/artwork.dart';
 import '../components/buttons.dart';
 import '../components/command_bar.dart';
