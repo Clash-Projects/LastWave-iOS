@@ -939,10 +939,6 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
     // track and let endless radio (Settings → Playback) pick what
     // follows, instead of the next-best search match.
     final e = _songs[start.clamp(0, _songs.length - 1)];
-    if (e.externalUrl.isNotEmpty) {
-      await _openExternalCatalogItem(e);
-      return;
-    }
     await ref.read(playbackServiceProvider.notifier).playQueue(
       [playableFromSearch(e)],
       0,
@@ -963,10 +959,6 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
   }
 
   Future<void> _playSingle(WidgetRef ref, SearchResultItem hero) async {
-    if (hero.externalUrl.isNotEmpty) {
-      await _openExternalCatalogItem(hero);
-      return;
-    }
     await ref.read(playbackServiceProvider.notifier).playQueue(
       [playableFromSearch(hero)],
       0,
@@ -975,20 +967,10 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
     );
   }
 
-  /// Primary action keeps hierarchy: artist → artist page, album →
-  /// album page, song → play. (Previous build re-searched on artist tap
-  /// and dwarfed the hero at 92px.)
-  Future<void> _openExternalCatalogItem(SearchResultItem item) async {
-    final uri = Uri.tryParse(item.externalUrl);
-    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
+  /// Primary action keeps catalog discovery inside LastWave. Artist
+  /// metadata opens the in-app artist view; songs use the normal resolver.
+  /// Catalog IDs are never treated as YouTube Music browse/video IDs.
   void _primary(SearchResultItem hero) {
-    if (hero.externalUrl.isNotEmpty) {
-      unawaited(_openExternalCatalogItem(hero));
-      return;
-    }
     switch (hero.tab) {
       case SearchTab.artists:
         if (hero.name.isNotEmpty) {
@@ -1339,9 +1321,7 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                     size: 124,
                     providerLabel: a.providerLabel,
                     onTap: () {
-                      if (a.externalUrl.isNotEmpty) {
-                        unawaited(_openExternalCatalogItem(a));
-                      } else if (a.entityId.isNotEmpty) {
+                      if (a.entityId.isNotEmpty) {
                         waveOpen(
                             context,
                             waveAlbumLocation(
@@ -1392,14 +1372,10 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                       cursor: SystemMouseCursors.click,
                       child: GestureDetector(
                     onTap: () {
-                      if (a.externalUrl.isNotEmpty) {
-                        _openExternalCatalogItem(a);
-                      } else {
-                        waveOpen(
-                          context,
-                          '/artist/${Uri.encodeComponent(a.name)}',
-                        );
-                      }
+                      waveOpen(
+                        context,
+                        '/artist/${Uri.encodeComponent(a.name)}',
+                      );
                     },
                     child: SizedBox(
                       width: 96,
@@ -1813,11 +1789,9 @@ class _SongsTable extends ConsumerWidget {
           : '',
       durationSortOf: (e) => e.durationSeconds,
       titleSortOf: (e) => e.name.toLowerCase(),
-      isCurrent: (e) => e.externalUrl.isEmpty && playingKey == keyOf(e),
+      isCurrent: (e) => playingKey == keyOf(e),
       isPlaying: (e) =>
-          e.externalUrl.isEmpty && playingKey == keyOf(e) && isPlaying,
-      menuBuilder: (ref, item) =>
-          item.externalUrl.isNotEmpty ? const <WaveMenuEntry>[] : null,
+          playingKey == keyOf(e) && isPlaying,
       onPlay: onPlay,
     );
   }
