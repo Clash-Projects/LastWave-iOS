@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -69,6 +70,7 @@ const _waveSettingsSections = [
   ('lastfm', 'Last.fm', WaveIcons.liked),
   ('integrations', 'Integrations', FluentIcons.link),
   ('sources', 'Sources', FluentIcons.cloud),
+  ('more', 'More', WaveIcons.more),
   ('about', 'About', FluentIcons.info),
 ];
 
@@ -313,9 +315,48 @@ class _SectionBody extends ConsumerWidget {
         return _Ytm(onUpdate: onUpdate);
       case 'sources':
         return _Sources(onUpdate: onUpdate);
+      case 'more':
+        return const _More();
       default:
         return const _About();
     }
+  }
+}
+
+/// Secondary app destinations moved out of the primary navigation bar.
+class _More extends StatelessWidget {
+  const _More();
+
+  static const _destinations = <(String, String, IconData)>[
+    ('/home-layout', 'Edit Home', FluentIcons.edit),
+    ('/artists', 'Artists', FluentIcons.contact),
+    ('/stats', 'Stats', FluentIcons.bar_chart_vertical),
+    ('/podcasts', 'Podcasts', FluentIcons.headset),
+    ('/mixes', 'Mix Lab', FluentIcons.lightbulb),
+    ('/history', 'Listening history', FluentIcons.history),
+    ('/friends', 'Friends', WaveIcons.friends),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return _Group(
+      id: 'more.destinations',
+      title: 'More',
+      subtitle: 'Additional pages and tools',
+      child: Column(
+        children: [
+          for (final destination in _destinations)
+            ListTile.selectable(
+              selected: false,
+              selectionMode: ListTileSelectionMode.single,
+              leading: Icon(destination.$3, size: 16),
+              title: Text(destination.$2),
+              trailing: const Icon(WaveIcons.chevronRight, size: 14),
+              onPressed: () => context.push(destination.$1),
+            ),
+        ],
+      ),
+    );
   }
 }
 
