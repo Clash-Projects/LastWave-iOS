@@ -665,7 +665,15 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       p.stream.position.listen((v) {
         runGuarded('player.position', () {
           _maybeLogFirstAudio(v);
-          if (_resolving || state.error != null) return;
+          // A restored session has a current track and saved position but no
+          // live stream until the user resumes it. mpv emits its idle clock
+          // (00:00) when this listener is first attached; accepting that
+          // value would erase the restored position and persist zero again.
+          if (_resolving ||
+              state.error != null ||
+              (state.current != null && state.stream == null)) {
+            return;
+          }
           if (state.position == v) return;
           final now = DateTime.now();
           if (now.difference(_lastPositionEmit).inMilliseconds < 100) {
