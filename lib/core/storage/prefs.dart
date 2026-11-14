@@ -15,9 +15,12 @@ class Prefs {
     final preferences = await SharedPreferences.getInstance();
     // Remove keys for settings that are no longer part of the app.
     await preferences.remove('lw_wavy_seekbar');
-    // Remove the retired standalone crossfade setting from older installs.
+    // Remove retired crossfade and AutoMix settings from older installs.
     await preferences.remove('lw_crossfade_enabled');
     await preferences.remove('lw_crossfade_seconds');
+    await preferences.remove('lw_automix_enabled');
+    await preferences.remove('lw_automix_seconds');
+    await preferences.remove('lw_automix_spectral');
     return Prefs(preferences);
   }
 
@@ -163,27 +166,6 @@ class Prefs {
 
   Future<void> setHeadphoneProfile(String id) =>
       _sp.setString('lw_headphone_profile', id.trim());
-
-  // -- Timed AutoMix (not beat-matched).
-  bool get autoMixEnabled => _sp.getBool('lw_automix_enabled') ?? false;
-
-  int get autoMixSeconds {
-    // 12–18 s. Older builds allowed up to 30 s, which ate the end of
-    // short songs; stored values above 18 are read as 18.
-    final v = _sp.getInt('lw_automix_seconds') ?? 14;
-    return v.clamp(12, 18);
-  }
-
-  bool get autoMixSpectral => _sp.getBool('lw_automix_spectral') ?? true;
-
-  Future<void> setAutoMixEnabled(bool enabled) =>
-      _sp.setBool('lw_automix_enabled', enabled);
-
-  Future<void> setAutoMixSeconds(int seconds) =>
-      _sp.setInt('lw_automix_seconds', seconds.clamp(12, 18));
-
-  Future<void> setAutoMixSpectral(bool enabled) =>
-      _sp.setBool('lw_automix_spectral', enabled);
 
   bool get downloadLyrics => _sp.getBool('lw_download_lyrics') ?? true;
   Future<void> setDownloadLyrics(bool v) =>
