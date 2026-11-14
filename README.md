@@ -46,7 +46,7 @@ The port is a work in progress. The feature list below comes from the shared cod
 - Bit-Perfect audio output (direct hardware bypass)
 - Lossless FLAC addon support (up to 24-bit Hi-Res)
 - 15-band Parametric Equalizer & AutoEQ presets
-- Smart Automix transitions & smooth crossfade
+- Timed AutoMix transitions with optional beat matching
 - Audio normalization (ReplayGain / LUFS)
 - Real-time tempo & pitch control
 
