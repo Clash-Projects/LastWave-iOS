@@ -53,7 +53,10 @@ class DeezerCatalogApi {
     }
 
     final pending = _requests[key];
-    if (pending != null) return await pending ?? const [];
+    if (pending != null) {
+      final result = await pending;
+      return result ?? const [];
+    }
 
     late final Future<List<DeezerCatalogHit>?> started;
     started = _fetch(q, kind).then((hits) {
@@ -65,7 +68,8 @@ class DeezerCatalogApi {
       if (identical(_requests[key], started)) _requests.remove(key);
     });
     _requests[key] = started;
-    return await started ?? const [];
+    final result = await started;
+    return result ?? const [];
   }
 
   Future<List<DeezerCatalogHit>?> _fetch(
