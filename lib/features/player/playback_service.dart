@@ -177,9 +177,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   /// the tags disagreed, so untagged siblings use the fixed fallback.
   final Map<String, double> _albumReplayGainDb = {};
 
-  /// Fired when EQ, loudness, speed, pitch, or the mix mode changes so
-  /// WASAPI exclusive can drop out. Null until the output controller
-  /// attaches.
+  /// Fired when EQ, loudness, speed, or pitch changes so WASAPI
+  /// exclusive can drop out. Null until the output controller attaches.
   void Function()? onProcessingChanged;
 
   void _notifyProcessing() {
