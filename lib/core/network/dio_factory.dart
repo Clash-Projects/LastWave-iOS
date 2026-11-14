@@ -70,9 +70,7 @@ class DioFactory {
           onError: (e, handler) {
             final host = e.requestOptions.uri.host;
             final code = e.response?.statusCode;
-            // iTunes Search 403s when burst-queried; artwork code
-            // handles that with a Deezer fallback. Don't dump a stack
-            // per tile.
+            // Suppress noisy store lookup errors for individual artwork tiles.
             if (code == 403 && host.contains('itunes.apple.com')) {
               handler.next(e);
               return;
