@@ -2498,24 +2498,15 @@ class _Sources extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SwitchRow(
-                value: prefs.itunesCatalogSearchEnabled,
+                value: prefs.spotifyCatalogSearchEnabled,
                 onChanged: (v) async {
-                  await onUpdate((p) => p.setItunesCatalogSearchEnabled(v));
+                  await onUpdate((p) => p.setSpotifyCatalogSearchEnabled(v));
                   ref.invalidate(searchRepositoryProvider);
                 },
-                title: 'iTunes Search',
-                subtitle:
-                    'Search Apple’s public music storefront catalog for songs, albums and artists.',
-              ),
-              _SwitchRow(
-                value: prefs.musicBrainzCatalogSearchEnabled,
-                onChanged: (v) async {
-                  await onUpdate((p) => p.setMusicBrainzCatalogSearchEnabled(v));
-                  ref.invalidate(searchRepositoryProvider);
-                },
-                title: 'MusicBrainz',
-                subtitle:
-                    'Add community-maintained recordings, artists and releases. Requests are rate-limited.',
+                title: 'Spotify',
+                subtitle: ref.watch(spotifyAuthProvider).connected
+                    ? 'Add songs, albums and artists from Spotify.'
+                    : 'Add songs, albums and artists from Spotify. Connect your account under Integrations to use it.',
               ),
             ],
           ),

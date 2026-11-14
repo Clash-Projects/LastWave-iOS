@@ -598,18 +598,13 @@ class Prefs {
   Future<void> setDownloadStructure(String id) =>
       _sp.setString('lw_download_structure', id);
 
-  // -- Optional public catalog search providers -----------------------------
-  // Enabled by default so both catalogs contribute to discovery searches.
-  // These settings affect metadata results only; playback remains unchanged.
-  bool get itunesCatalogSearchEnabled =>
-      _sp.getBool('lw_catalog_itunes_enabled') ?? true;
-  Future<void> setItunesCatalogSearchEnabled(bool enabled) =>
-      _sp.setBool('lw_catalog_itunes_enabled', enabled);
-
-  bool get musicBrainzCatalogSearchEnabled =>
-      _sp.getBool('lw_catalog_musicbrainz_enabled') ?? true;
-  Future<void> setMusicBrainzCatalogSearchEnabled(bool enabled) =>
-      _sp.setBool('lw_catalog_musicbrainz_enabled', enabled);
+  // -- Catalog search providers ---------------------------------------------
+  // Spotify adds discovery results to Search when an account is connected.
+  // This affects metadata results only; playback remains unchanged.
+  bool get spotifyCatalogSearchEnabled =>
+      _sp.getBool('lw_catalog_spotify_enabled') ?? true;
+  Future<void> setSpotifyCatalogSearchEnabled(bool enabled) =>
+      _sp.setBool('lw_catalog_spotify_enabled', enabled);
 
   // -- Portable backup (non-secret prefs only) ------------------------------
   static bool isSecretPref(String key) {

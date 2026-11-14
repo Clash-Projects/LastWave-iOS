@@ -6,7 +6,7 @@ import '../../core/storage/app_database.dart';
 import '../../core/storage/prefs.dart';
 import '../innertube/innertube_api.dart';
 import '../lastfm/auth_repository.dart';
-import 'public_catalogs.dart';
+import '../spotify/spotify_api.dart';
 import 'shared_providers.dart';
 
 enum SearchTab { tracks, videos, artists, albums, playlists, users }
@@ -94,9 +94,8 @@ class SearchRepository {
   final InnerTubeMusicApi _tube;
   final AppDatabase _db;
   final String Function() _apiKey;
-  final PublicMusicCatalogs _catalogs;
-  final bool Function() _itunesEnabled;
-  final bool Function() _musicBrainzEnabled;
+  final SpotifyApi? _spotify;
+  final bool Function() _spotifyEnabled;
 
   SearchRepository(
     this._api,
@@ -104,18 +103,21 @@ class SearchRepository {
     this._db,
     this._apiKey, {
     DateTime Function()? clock,
-    PublicMusicCatalogs? catalogs,
-    bool Function()? itunesEnabled,
-    bool Function()? musicBrainzEnabled,
+    SpotifyApi? spotify,
+    bool Function()? spotifyEnabled,
   })  : _now = clock ?? DateTime.now,
-        _catalogs = catalogs ?? PublicMusicCatalogs(),
-        _itunesEnabled = itunesEnabled ?? (() => true),
-        _musicBrainzEnabled = musicBrainzEnabled ?? (() => true);
+        _spotify = spotify,
+        _spotifyEnabled = spotifyEnabled ?? (() => false);
   final DateTime Function() _now;
 
+  /// Whether Spotify results should be added: the setting is on and a
+  /// Spotify account is connected.
+  bool get _spotifyActive =>
+      _spotify != null && _spotifyEnabled() && _spotify.connected;
+
   /// A failed YouTube Music request must not discard successful catalog
-  /// results from iTunes or MusicBrainz. Each source is isolated so the
-  /// combined search can still render whichever providers respond.
+  /// results from Spotify. Each source is isolated so the combined search
+  /// can still render whichever providers respond.
   Future<List<T>> _searchSafely<T>(
     String provider,
     String category,
@@ -251,7 +253,7 @@ class SearchRepository {
     final q = query.trim();
     if (q.isEmpty) return Future.value(const []);
     return _memoized(
-      '${tab.name}|${q.toLowerCase()}|itunes=${_itunesEnabled()}|musicbrainz=${_musicBrainzEnabled()}',
+      '${tab.name}|${q.toLowerCase()}|spotify=$_spotifyActive',
       () => _search(tab, q),
     );
   }
@@ -280,15 +282,10 @@ class SearchRepository {
                 .toList(),
           ),
         ];
-        if (_itunesEnabled()) {
-          requests.add(_catalogs
-              .searchItunesSongs(q)
-              .then((hits) => _catalogItems(hits, SearchTab.tracks, 'iTunes')));
-        }
-        if (_musicBrainzEnabled()) {
-          requests.add(_catalogs
-              .searchMusicBrainzRecordings(q)
-              .then((hits) => _catalogItems(hits, SearchTab.tracks, 'MusicBrainz')));
+        if (_spotifyActive) {
+          requests.add(_spotify!
+              .searchCatalog(q, kind: SpotifyCatalogKind.track)
+              .then((hits) => _catalogItems(hits, SearchTab.tracks)));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.tracks);
 
@@ -323,15 +320,10 @@ class SearchRepository {
                 .toList(),
           ),
         ];
-        if (_itunesEnabled()) {
-          requests.add(_catalogs
-              .searchItunesArtists(q)
-              .then((hits) => _catalogItems(hits, SearchTab.artists, 'iTunes')));
-        }
-        if (_musicBrainzEnabled()) {
-          requests.add(_catalogs
-              .searchMusicBrainzArtists(q)
-              .then((hits) => _catalogItems(hits, SearchTab.artists, 'MusicBrainz')));
+        if (_spotifyActive) {
+          requests.add(_spotify!
+              .searchCatalog(q, kind: SpotifyCatalogKind.artist)
+              .then((hits) => _catalogItems(hits, SearchTab.artists)));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.artists);
 
@@ -352,15 +344,10 @@ class SearchRepository {
                 .toList(),
           ),
         ];
-        if (_itunesEnabled()) {
-          requests.add(_catalogs
-              .searchItunesAlbums(q)
-              .then((hits) => _catalogItems(hits, SearchTab.albums, 'iTunes')));
-        }
-        if (_musicBrainzEnabled()) {
-          requests.add(_catalogs
-              .searchMusicBrainzAlbums(q)
-              .then((hits) => _catalogItems(hits, SearchTab.albums, 'MusicBrainz')));
+        if (_spotifyActive) {
+          requests.add(_spotify!
+              .searchCatalog(q, kind: SpotifyCatalogKind.album)
+              .then((hits) => _catalogItems(hits, SearchTab.albums)));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.albums);
 
@@ -386,9 +373,8 @@ class SearchRepository {
   }
 
   List<SearchResultItem> _catalogItems(
-    List<PublicCatalogResult> hits,
+    List<SpotifyCatalogHit> hits,
     SearchTab tab,
-    String providerLabel,
   ) =>
       hits
           .map((hit) => SearchResultItem(
@@ -401,7 +387,7 @@ class SearchRepository {
                 // title/artist through the existing lossless/YouTube chain.
                 entityId: '',
                 externalUrl: '',
-                providerLabel: providerLabel,
+                providerLabel: 'Spotify',
                 tab: tab,
                 durationSeconds: hit.durationSeconds,
               ))
@@ -739,7 +725,9 @@ final searchRepositoryProvider = Provider<SearchRepository>((ref) {
     ref.watch(innerTubeProvider),
     ref.watch(databaseProvider),
     () => ref.watch(prefsApiKeyProvider),
-    itunesEnabled: () => prefs.itunesCatalogSearchEnabled,
-    musicBrainzEnabled: () => prefs.musicBrainzCatalogSearchEnabled,
+    // Read, not watched: SpotifyAuth notifies on every token refresh, which
+    // would rebuild the repository and drop its cached searches each time.
+    spotify: ref.read(spotifyApiProvider),
+    spotifyEnabled: () => prefs.spotifyCatalogSearchEnabled,
   );
 });

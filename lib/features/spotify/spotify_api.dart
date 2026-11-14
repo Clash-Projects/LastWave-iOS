@@ -82,12 +82,37 @@ class SpotifyCanvasResult {
   const SpotifyCanvasResult.none(this.reason) : clip = null;
 }
 
+/// What a catalog search looks for.
+enum SpotifyCatalogKind { track, artist, album }
+
+/// A catalog-only search result. It deliberately has no playback fields:
+/// Spotify only supplies discovery metadata here.
+class SpotifyCatalogHit {
+  final String id;
+  final String title;
+  final String artist;
+  final String album;
+  final String artworkUrl;
+  final int durationSeconds;
+  const SpotifyCatalogHit({
+    required this.id,
+    required this.title,
+    this.artist = '',
+    this.album = '',
+    this.artworkUrl = '',
+    this.durationSeconds = 0,
+  });
+}
+
 /// Spotify web-player GraphQL ("Pathfinder") client: account playlists,
 /// Liked Songs, track search and Canvas. Port of the LastWave-Native
 /// Spotify importer / canvas code.
 class SpotifyApi {
   SpotifyApi(this._auth);
   final SpotifyAuth _auth;
+
+  /// Whether a Spotify account (`sp_dc` cookie) is connected.
+  bool get connected => _auth.connected;
 
   Dio get _dio => _auth.dio;
 
@@ -509,6 +534,119 @@ class SpotifyApi {
       }
     }
     return null;
+  }
+
+  /// Largest page the Web API search is asked for. Kept small on purpose:
+  /// Spotify has been lowering the maximum, and this only supplements the
+  /// YouTube Music results.
+  static const _catalogLimit = 10;
+
+  /// Catalog search for the Search page: songs, artists or albums from the
+  /// Spotify Web API, using the connected account's session. Empty when no
+  /// account is connected or Spotify refuses the request (the outcome is
+  /// written to the diagnostics log; never tokens).
+  Future<List<SpotifyCatalogHit>> searchCatalog(
+    String query, {
+    required SpotifyCatalogKind kind,
+  }) async {
+    final tag = 'spotify catalog kind=${kind.name}';
+    final headers = await _authHeaders();
+    if (headers == null) {
+      DiagnosticsLog.info('$tag session=false');
+      return const [];
+    }
+    try {
+      final res = await _dio.get<String>(
+        'https://api.spotify.com/v1/search',
+        queryParameters: {
+          'type': kind.name,
+          'q': query,
+          'limit': _catalogLimit,
+        },
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: headers,
+          validateStatus: (_) => true,
+        ),
+      );
+      if ((res.statusCode ?? 0) ~/ 100 != 2) {
+        DiagnosticsLog.info('$tag http=${res.statusCode}');
+        return const [];
+      }
+      final hits = parseCatalog(jsonDecode(res.data ?? '{}'), kind);
+      DiagnosticsLog.info('$tag hits=${hits.length}');
+      return hits;
+    } catch (e) {
+      DiagnosticsLog.info('$tag error=${e.runtimeType}');
+      return const [];
+    }
+  }
+
+  /// Turns a Web API search response into catalog hits.
+  static List<SpotifyCatalogHit> parseCatalog(
+    Object? body,
+    SpotifyCatalogKind kind,
+  ) {
+    final items = _at(body, ['${kind.name}s', 'items']);
+    if (items is! List) return const [];
+    String names(Object? artists) => [
+      if (artists is List)
+        for (final a in artists)
+          if (a is Map) _text(a['name']),
+    ].where((s) => s.isNotEmpty).join(', ');
+
+    final out = <SpotifyCatalogHit>[];
+    for (final it in items) {
+      if (it is! Map) continue;
+      final title = _text(it['name']);
+      if (title.isEmpty) continue;
+      final album = it['album'];
+      switch (kind) {
+        case SpotifyCatalogKind.track:
+          out.add(SpotifyCatalogHit(
+            id: _text(it['id']),
+            title: title,
+            artist: names(it['artists']),
+            album: album is Map ? _text(album['name']) : '',
+            artworkUrl: _catalogImage(album is Map ? album['images'] : null),
+            durationSeconds: ((_int(it['duration_ms']) ?? 0) / 1000).round(),
+          ));
+        case SpotifyCatalogKind.artist:
+          out.add(SpotifyCatalogHit(
+            id: _text(it['id']),
+            title: title,
+            artist: title,
+            artworkUrl: _catalogImage(it['images']),
+          ));
+        case SpotifyCatalogKind.album:
+          out.add(SpotifyCatalogHit(
+            id: _text(it['id']),
+            title: title,
+            artist: names(it['artists']),
+            artworkUrl: _catalogImage(it['images']),
+          ));
+      }
+    }
+    return out;
+  }
+
+  /// The image closest to a 300px thumbnail; Spotify lists them largest first.
+  static String _catalogImage(Object? images) {
+    if (images is! List) return '';
+    String best = '';
+    var bestGap = 1 << 30;
+    for (final im in images) {
+      if (im is! Map) continue;
+      final url = _text(im['url']);
+      if (url.isEmpty) continue;
+      final width = _int(im['width']) ?? 300;
+      final gap = (width - 300).abs();
+      if (gap < bestGap) {
+        best = url;
+        bestGap = gap;
+      }
+    }
+    return best;
   }
 
   /// POST form of a persisted query (Pathfinder v2).

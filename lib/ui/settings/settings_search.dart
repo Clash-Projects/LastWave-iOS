@@ -223,8 +223,8 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     id: 'sources.catalog',
     section: 'sources',
     title: 'Catalog providers',
-    subtitle: 'iTunes Search and MusicBrainz discovery results',
-    keywords: 'itunes apple music musicbrainz catalog search provider metadata',
+    subtitle: 'Spotify discovery results in search',
+    keywords: 'spotify catalog search provider metadata songs albums artists',
   ),
   SettingsSearchEntry(
     id: 'sources.addons',
