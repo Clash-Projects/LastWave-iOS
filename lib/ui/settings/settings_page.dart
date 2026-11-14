@@ -2419,15 +2419,14 @@ class _Sources extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SwitchRow(
-                value: prefs.spotifyCatalogSearchEnabled,
+                value: prefs.deezerCatalogSearchEnabled,
                 onChanged: (v) async {
-                  await onUpdate((p) => p.setSpotifyCatalogSearchEnabled(v));
+                  await onUpdate((p) => p.setDeezerCatalogSearchEnabled(v));
                   ref.invalidate(searchRepositoryProvider);
                 },
-                title: 'Spotify',
-                subtitle: ref.watch(spotifyAuthProvider).connected
-                    ? 'Add songs, albums and artists from Spotify.'
-                    : 'Add songs, albums and artists from Spotify. Connect your account under Integrations to use it.',
+                title: 'Deezer',
+                subtitle:
+                    'Add songs, albums and artists from Deezer. Metadata only; playback stays with your existing sources.',
               ),
             ],
           ),
