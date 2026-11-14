@@ -10,7 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../components/text_selection.dart';
-import '../components/buttons.dart' show LWTooltip, WaveLink;
+import '../components/buttons.dart'
+    show LWTooltip, WaveLink, WaveButton, WaveFilledButton;
 import '../components/inputs.dart';
 import '../theme/wave_icons.dart';
 
@@ -371,7 +372,30 @@ decoration: waveInputDecoration(),
                   _controller.text = q;
                   _submit(q);
                 },
-                onClear: () {
+                onClear: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => ContentDialog(
+                      title: const Text('Clear search history?'),
+                      content: const Text(
+                        'Are you sure you want to permanently delete your '
+                        'recent search history? This cannot be undone.',
+                      ),
+                      actions: [
+                        WaveButton(
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        WaveFilledButton(
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(true),
+                          child: const Text('Delete history'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true || !mounted) return;
                   ref.read(searchRepositoryProvider).clearHistory();
                   setState(() {});
                 },
