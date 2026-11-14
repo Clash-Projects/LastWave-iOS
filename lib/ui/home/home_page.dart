@@ -237,21 +237,28 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
 
     final moodChips = <YtHomeChip>[];
     final seenChipKeys = <String>{};
-    for (final chip in [...sourceChips, ...feed.chips]) {
-      final id = HomeShelfCatalog.idForTitle(chip.title);
-      if (id == null || topIds.contains(id) || hidden.contains(id)) continue;
-      final key = '${chip.browseId}|${chip.params}|${chip.title.toLowerCase()}';
-      if (seenChipKeys.add(key)) moodChips.add(chip);
+    // Library's own filter row (Playlists, Songs, Albums, Artists, etc.) is
+    // a different navigation model from the Home mood row. Keep it inside the
+    // Library page implementation rather than mixing those filters into the
+    // Home-only Edit Home category list.
+    if (_selectedTitle != 'Library') {
+      for (final chip in [...sourceChips, ...feed.chips]) {
+        final id = HomeShelfCatalog.idForTitle(chip.title);
+        if (id == null || topIds.contains(id) || hidden.contains(id)) continue;
+        final key =
+            '${chip.browseId}|${chip.params}|${chip.title.toLowerCase()}';
+        if (seenChipKeys.add(key)) moodChips.add(chip);
+      }
+      moodChips.sort((a, b) {
+        final aIndex = layout.order.indexOf(
+          HomeShelfCatalog.idForTitle(a.title) ?? '',
+        );
+        final bIndex = layout.order.indexOf(
+          HomeShelfCatalog.idForTitle(b.title) ?? '',
+        );
+        return aIndex.compareTo(bIndex);
+      });
     }
-    moodChips.sort((a, b) {
-      final aIndex = layout.order.indexOf(
-        HomeShelfCatalog.idForTitle(a.title) ?? '',
-      );
-      final bIndex = layout.order.indexOf(
-        HomeShelfCatalog.idForTitle(b.title) ?? '',
-      );
-      return aIndex.compareTo(bIndex);
-    });
 
     final slivers = <Widget>[
       SliverToBoxAdapter(
