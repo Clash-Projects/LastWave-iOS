@@ -1035,10 +1035,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   /// EQ + headphone correction, plus scaletempo when pitch is not 1.
-  /// [sweep] is the timed-mix low-pass or high-pass, appended inside
-  /// the same lavfi graph.
-  String _playbackAf({String sweep = ''}) {
-    final base = afWithSweep(_currentAudioFilter, sweep);
+  String _playbackAf() {
+    final base = _currentAudioFilter;
     final pitch = state.pitch.clamp(0.5, 1.5).toDouble();
     if ((pitch - 1.0).abs() <= 0.005) return base;
     final rate = state.speed <= 0 ? 1.0 : state.speed;
