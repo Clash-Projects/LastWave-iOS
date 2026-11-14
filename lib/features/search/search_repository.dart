@@ -364,8 +364,11 @@ class SearchRepository {
                 artist: hit.artist,
                 artworkUrl: hit.artworkUrl,
                 subtitle: hit.album,
-                entityId: hit.id,
-                externalUrl: hit.externalUrl,
+                // Catalog IDs are provider-specific metadata, never
+                // YouTube Music video or browse IDs. Playback resolves by
+                // title/artist through the existing lossless/YouTube chain.
+                entityId: '',
+                externalUrl: '',
                 providerLabel: providerLabel,
                 tab: tab,
                 durationSeconds: hit.durationSeconds,
