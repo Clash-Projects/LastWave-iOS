@@ -53,15 +53,6 @@ String waveRoutePath(String location) => location.split('?').first;
 
 String waveActivePath(String location) {
   final path = waveRoutePath(location);
-  // Liked Songs, Albums and Downloads are subtabs within the Playlists
-  // destination in the touch-first iPhone/iPad shell.
-  if (path == '/liked' ||
-      path.startsWith('/liked/') ||
-      path == '/albums' ||
-      path.startsWith('/album/') ||
-      path == '/downloads') {
-    return '/playlists';
-  }
   for (final d in allWaveDestinations) {
     if (path == d.path || path.startsWith('${d.path}/')) {
       return d.path;
