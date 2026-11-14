@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/lastfm_api.dart';
 import '../../core/storage/app_database.dart';
+import '../../core/storage/prefs.dart';
 import '../innertube/innertube_api.dart';
 import '../lastfm/auth_repository.dart';
 import 'public_catalogs.dart';
