@@ -45,6 +45,12 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
   YtHomeBrowseKey? _selectedBrowse;
   String _selectedTitle = 'Home';
 
+  String _displayChipTitle(YtHomeChip chip) {
+    final id = HomeShelfCatalog.idForTitle(chip.title);
+    if (id == null || id == HomeShelfId.similar) return chip.title;
+    return HomeShelfCatalog.label(id);
+  }
+
   static void _refreshHome(WidgetRef ref) {
     feedRefreshSalt++;
     ref.invalidate(ytHomeFeedProvider);
@@ -75,7 +81,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
         browseId: browseId,
         params: chip.params.isEmpty ? null : chip.params,
       );
-      _selectedTitle = chip.title;
+      _selectedTitle = _displayChipTitle(chip);
     });
   }
 
@@ -261,8 +267,8 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
               itemBuilder: (context, index) {
                 final chip = tabs[index];
                 return _YtmHomeChipPill(
-                  title: chip.title,
-                  selected: _selectedTitle == chip.title,
+                  title: _displayChipTitle(chip),
+                  selected: _selectedTitle == _displayChipTitle(chip),
                   enabled: chip.title == 'Home' ||
                       chip.browseId.isNotEmpty || chip.params.isNotEmpty,
                   onTap: () => _selectHomeChip(chip),
