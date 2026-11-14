@@ -23,6 +23,7 @@ import '../navigation/wave_nav.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
+import 'library_tabs.dart';
 
 /// Downloads: Offline hero + 40px-artwork rows
 /// (art · title/artist · progress or quality chip · play · delete).
@@ -97,6 +98,9 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
       child: CustomScrollView(
         slivers: [
         const WaveChromeSliver.top(),
+        const SliverToBoxAdapter(
+          child: WaveLibraryTabs(activePath: '/downloads'),
+        ),
         SliverToBoxAdapter(
           child: Padding(
             padding:
