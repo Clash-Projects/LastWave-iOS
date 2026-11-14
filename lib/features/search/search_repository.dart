@@ -103,10 +103,9 @@ class SearchRepository {
     this._db,
     this._apiKey, {
     DateTime Function()? clock,
-    SpotifyApi? spotify,
+    this._spotify,
     bool Function()? spotifyEnabled,
   })  : _now = clock ?? DateTime.now,
-        _spotify = spotify,
         _spotifyEnabled = spotifyEnabled ?? (() => false);
   final DateTime Function() _now;
 
