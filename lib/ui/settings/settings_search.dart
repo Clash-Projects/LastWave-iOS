@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:fluent_ui/fluent_ui.dart';
 
 import '../components/text_selection.dart';
@@ -340,7 +342,14 @@ class _SettingsSearchBoxState extends State<SettingsSearchBox> {
 
   @override
   Widget build(BuildContext context) {
-    final hits = filterSettings(settingsSearchEntries, _query);
+    // Discord Rich Presence is desktop-only; do not return a jump target
+    // for a card that is intentionally not built on iOS.
+    final availableEntries = Platform.isIOS
+        ? settingsSearchEntries
+            .where((entry) => entry.id != 'integrations.discord')
+            .toList()
+        : settingsSearchEntries;
+    final hits = filterSettings(availableEntries, _query);
     final searching = _query.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
