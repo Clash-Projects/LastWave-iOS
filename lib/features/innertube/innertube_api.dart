@@ -2988,6 +2988,7 @@ class InnerTubeMusicApi {
     final lists = <Map<String, dynamic>>[];
     _collectObjects(page, 'sectionListRenderer', lists);
     _collectObjects(page, 'sectionListContinuation', lists);
+    _collectObjects(page, 'gridRenderer', lists);
     for (final list in lists) {
       final token = _findString(list['continuations'], 'continuation');
       if (token != null && token.isNotEmpty) return token;
@@ -4451,11 +4452,11 @@ class InnerTubeMusicApi {
     String browseId = '';
     String playlistId = '';
     final nav = r['navigationEndpoint'];
+    final browse = _firstBrowseEndpoint(nav);
+    if (browse != null) {
+      browseId = browse['browseId']?.toString() ?? '';
+    }
     if (nav is Map) {
-      final browse = nav['browseEndpoint'];
-      if (browse is Map) {
-        browseId = browse['browseId']?.toString() ?? '';
-      }
       final watch = nav['watchEndpoint'];
       if (watch is Map) {
         playlistId = watch['playlistId']?.toString() ?? '';
