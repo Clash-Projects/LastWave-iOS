@@ -339,10 +339,7 @@ class PublicMusicCatalogs {
 
   static List<Map<String, dynamic>> _asMapList(Object? value) {
     if (value is! List) return const [];
-    return [
-      for (final item in value)
-        if (_asMap(item) case final map?) map,
-    ];
+    return [for (final item in value) ?_asMap(item)];
   }
 
   static String _string(Object? value) => value?.toString().trim() ?? '';
