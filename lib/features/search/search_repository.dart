@@ -4,6 +4,7 @@ import '../../core/network/lastfm_api.dart';
 import '../../core/storage/app_database.dart';
 import '../innertube/innertube_api.dart';
 import '../lastfm/auth_repository.dart';
+import 'public_catalogs.dart';
 import 'shared_providers.dart';
 
 enum SearchTab { tracks, videos, artists, albums, playlists, users }
@@ -17,6 +18,7 @@ class SearchResultItem {
   final String entityId;
   final SearchTab tab;
   final int durationSeconds;
+  final String externalUrl;
 
   const SearchResultItem({
     required this.name,
@@ -27,6 +29,7 @@ class SearchResultItem {
     this.entityId = '',
     required this.tab,
     this.durationSeconds = 0,
+    this.externalUrl = '',
   });
 }
 
@@ -74,6 +77,9 @@ class SearchRepository {
   final InnerTubeMusicApi _tube;
   final AppDatabase _db;
   final String Function() _apiKey;
+  final PublicMusicCatalogs _catalogs;
+  final bool Function() _itunesEnabled;
+  final bool Function() _musicBrainzEnabled;
 
   SearchRepository(
     this._api,
@@ -81,7 +87,13 @@ class SearchRepository {
     this._db,
     this._apiKey, {
     DateTime Function()? clock,
-  }) : _now = clock ?? DateTime.now;
+    PublicMusicCatalogs? catalogs,
+    bool Function()? itunesEnabled,
+    bool Function()? musicBrainzEnabled,
+  })  : _now = clock ?? DateTime.now,
+        _catalogs = catalogs ?? PublicMusicCatalogs(),
+        _itunesEnabled = itunesEnabled ?? (() => true),
+        _musicBrainzEnabled = musicBrainzEnabled ?? (() => true);
   final DateTime Function() _now;
 
   /// Session memo for repeat queries. The result providers are autoDispose
@@ -197,7 +209,7 @@ class SearchRepository {
     final q = query.trim();
     if (q.isEmpty) return Future.value(const []);
     return _memoized(
-      '${tab.name}|${q.toLowerCase()}',
+      '${tab.name}|${q.toLowerCase()}|itunes=${_itunesEnabled()}|musicbrainz=${_musicBrainzEnabled()}',
       () => _search(tab, q),
     );
   }
@@ -208,19 +220,34 @@ class SearchRepository {
   ) async {
     switch (tab) {
       case SearchTab.tracks:
-        final tracks = await _tube.searchSongs(q, limit: 60);
-        return tracks
-            .map((t) => SearchResultItem(
-                  name: t.title,
-                  artist: t.artist,
-                  artworkUrl: t.artworkUrl,
-                  subtitle: t.album,
-                  videoId: t.videoId,
-                  entityId: t.videoId,
-                  tab: SearchTab.tracks,
-                  durationSeconds: t.durationSeconds,
-                ))
-            .toList();
+        final requests = <Future<List<SearchResultItem>>>[
+          _tube.searchSongs(q, limit: 60).then(
+                (tracks) => tracks
+                    .map((t) => SearchResultItem(
+                          name: t.title,
+                          artist: t.artist,
+                          artworkUrl: t.artworkUrl,
+                          subtitle: t.album,
+                          videoId: t.videoId,
+                          entityId: t.videoId,
+                          tab: SearchTab.tracks,
+                          durationSeconds: t.durationSeconds,
+                        ))
+                    .toList(),
+              ),
+        ];
+        if (_itunesEnabled()) {
+          requests.add(_catalogs
+              .searchItunesSongs(q)
+              .then((hits) => _catalogItems(hits, SearchTab.tracks)));
+        }
+        if (_musicBrainzEnabled()) {
+          requests.add(_catalogs
+              .searchMusicBrainzRecordings(q)
+              .then((hits) => _catalogItems(hits, SearchTab.tracks)));
+        }
+        return _mergeCatalogItems(await Future.wait(requests), SearchTab.tracks);
+
       case SearchTab.videos:
         final videos = await _tube.searchVideos(q, limit: 60);
         return videos
@@ -235,49 +262,118 @@ class SearchRepository {
                   durationSeconds: v.durationSeconds,
                 ))
             .toList();
+
       case SearchTab.artists:
-        final artists = await _tube.searchArtists(q);
-        return artists
-            .map((e) => SearchResultItem(
-                  name: e.name,
-                  subtitle: e.subtitle,
-                  artworkUrl: e.artworkUrl,
-                  entityId: e.browseId,
-                  tab: tab,
-                ))
-            .toList();
+        final requests = <Future<List<SearchResultItem>>>[
+          _tube.searchArtists(q).then(
+                (artists) => artists
+                    .map((e) => SearchResultItem(
+                          name: e.name,
+                          subtitle: e.subtitle,
+                          artworkUrl: e.artworkUrl,
+                          entityId: e.browseId,
+                          tab: tab,
+                        ))
+                    .toList(),
+              ),
+        ];
+        if (_itunesEnabled()) {
+          requests.add(_catalogs
+              .searchItunesArtists(q)
+              .then((hits) => _catalogItems(hits, SearchTab.artists)));
+        }
+        if (_musicBrainzEnabled()) {
+          requests.add(_catalogs
+              .searchMusicBrainzArtists(q)
+              .then((hits) => _catalogItems(hits, SearchTab.artists)));
+        }
+        return _mergeCatalogItems(await Future.wait(requests), SearchTab.artists);
+
       case SearchTab.albums:
-        final albums = await _tube.searchAlbums(q);
-        return albums
-            .map((e) => SearchResultItem(
-                  name: e.name,
-                  artist: e.artist,
-                  subtitle: e.subtitle,
-                  artworkUrl: e.artworkUrl,
-                  entityId: e.browseId,
-                  tab: tab,
-                ))
-            .toList();
+        final requests = <Future<List<SearchResultItem>>>[
+          _tube.searchAlbums(q).then(
+                (albums) => albums
+                    .map((e) => SearchResultItem(
+                          name: e.name,
+                          artist: e.artist,
+                          subtitle: e.subtitle,
+                          artworkUrl: e.artworkUrl,
+                          entityId: e.browseId,
+                          tab: tab,
+                        ))
+                    .toList(),
+              ),
+        ];
+        if (_itunesEnabled()) {
+          requests.add(_catalogs
+              .searchItunesAlbums(q)
+              .then((hits) => _catalogItems(hits, SearchTab.albums)));
+        }
+        if (_musicBrainzEnabled()) {
+          requests.add(_catalogs
+              .searchMusicBrainzAlbums(q)
+              .then((hits) => _catalogItems(hits, SearchTab.albums)));
+        }
+        return _mergeCatalogItems(await Future.wait(requests), SearchTab.albums);
+
       case SearchTab.playlists:
-        final playlists =
-            await _tube.searchPlaylists(q, limit: 30);
+        final playlists = await _tube.searchPlaylists(q, limit: 30);
         return playlists
             .map((e) => SearchResultItem(
                   name: e.title,
                   artist: e.author,
                   subtitle: [
                     if (e.author.isNotEmpty) e.author,
-                    if (e.trackCountText.isNotEmpty)
-                      e.trackCountText,
+                    if (e.trackCountText.isNotEmpty) e.trackCountText,
                   ].join(' • '),
                   artworkUrl: e.artworkUrl,
                   entityId: e.id,
                   tab: tab,
                 ))
             .toList();
+
       case SearchTab.users:
         return _searchUsers(q);
     }
+  }
+
+  List<SearchResultItem> _catalogItems(
+    List<PublicCatalogResult> hits,
+    SearchTab tab,
+  ) =>
+      hits
+          .map((hit) => SearchResultItem(
+                name: hit.title,
+                artist: hit.artist,
+                artworkUrl: hit.artworkUrl,
+                subtitle: hit.album,
+                entityId: hit.id,
+                externalUrl: hit.externalUrl,
+                tab: tab,
+                durationSeconds: hit.durationSeconds,
+              ))
+          .toList();
+
+  List<SearchResultItem> _mergeCatalogItems(
+    List<List<SearchResultItem>> batches,
+    SearchTab tab,
+  ) {
+    final out = <SearchResultItem>[];
+    final seen = <String>{};
+    String normalize(String value) =>
+        value.toLowerCase().trim().replaceAll(RegExp(r'\\s+'), ' ');
+    for (final batch in batches) {
+      for (final item in batch) {
+        final artistKey = tab == SearchTab.artists
+            ? ''
+            : normalize(item.artist.isNotEmpty ? item.artist : item.subtitle);
+        final key = '${tab.name}|${normalize(item.name)}|$artistKey';
+        if (!seen.add(key)) continue;
+        out.add(item);
+        if (out.length >= 100) return out;
+      }
+    }
+    return out;
   }
 
   /// A single token of length 2+ is treated as a Last.fm username.
@@ -563,10 +659,13 @@ List<SearchResultItem> rankSearchPlaylistsByTaste(
 }
 
 final searchRepositoryProvider = Provider<SearchRepository>((ref) {
+  final prefs = ref.watch(prefsProvider);
   return SearchRepository(
     ref.watch(lastFmApiProvider),
     ref.watch(innerTubeProvider),
     ref.watch(databaseProvider),
     () => ref.watch(prefsApiKeyProvider),
+    itunesEnabled: () => prefs.itunesCatalogSearchEnabled,
+    musicBrainzEnabled: () => prefs.musicBrainzCatalogSearchEnabled,
   );
 });
