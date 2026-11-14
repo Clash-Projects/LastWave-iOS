@@ -204,18 +204,18 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
 
     final tabs = <YtHomeChip>[
       homeChip,
-      fromApiOr('Samples', const YtHomeChip(title: 'Samples'))!,
+      fromApiOr('Samples', const YtHomeChip(title: 'Samples')),
       fromApiOr(
         'Explore',
         const YtHomeChip(title: 'Explore', browseId: 'FEmusic_explore'),
-      )!,
+      ),
       fromApiOr(
         'Library',
         const YtHomeChip(
           title: 'Library',
           browseId: 'FEmusic_library_landing',
         ),
-      )!,
+      ),
     ].where((chip) {
       final id = HomeShelfCatalog.idForTitle(chip.title);
       return id == null || !hidden.contains(id);
