@@ -213,6 +213,13 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     keywords: 'discord rich presence status activity',
   ),
   SettingsSearchEntry(
+    id: 'sources.catalog',
+    section: 'sources',
+    title: 'Catalog providers',
+    subtitle: 'iTunes Search and MusicBrainz discovery results',
+    keywords: 'itunes apple music musicbrainz catalog search provider metadata',
+  ),
+  SettingsSearchEntry(
     id: 'sources.addons',
     section: 'sources',
     title: 'Addon sources',
