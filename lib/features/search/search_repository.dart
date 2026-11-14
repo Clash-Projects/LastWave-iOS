@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/network/lastfm_api.dart';
 import '../../core/storage/app_database.dart';
@@ -111,6 +112,31 @@ class SearchRepository {
         _itunesEnabled = itunesEnabled ?? (() => true),
         _musicBrainzEnabled = musicBrainzEnabled ?? (() => true);
   final DateTime Function() _now;
+
+  /// A failed YouTube Music request must not discard successful catalog
+  /// results from iTunes or MusicBrainz. Each source is isolated so the
+  /// combined search can still render whichever providers respond.
+  Future<List<T>> _searchSafely<T>(
+    String provider,
+    String category,
+    Future<List<T>> Function() request,
+  ) async {
+    try {
+      final results = await request();
+      debugPrint(
+        '[Search] provider=$provider category=$category '
+        'status=${results.isEmpty ? 'zero_results' : 'success'} '
+        'results=${results.length}',
+      );
+      return results;
+    } catch (error) {
+      debugPrint(
+        '[Search] provider=$provider category=$category '
+        'status=error errorType=${error.runtimeType}',
+      );
+      return const <T>[];
+    }
+  }
 
   /// Session memo for repeat queries. The result providers are autoDispose
   /// (one per keystroke prefix), so without this every return to a query
@@ -237,20 +263,22 @@ class SearchRepository {
     switch (tab) {
       case SearchTab.tracks:
         final requests = <Future<List<SearchResultItem>>>[
-          _tube.searchSongs(q, limit: 60).then(
-                (tracks) => tracks
-                    .map((t) => SearchResultItem(
-                          name: t.title,
-                          artist: t.artist,
-                          artworkUrl: t.artworkUrl,
-                          subtitle: t.album,
-                          videoId: t.videoId,
-                          entityId: t.videoId,
-                          tab: SearchTab.tracks,
-                          durationSeconds: t.durationSeconds,
-                        ))
-                    .toList(),
-              ),
+          _searchSafely<SearchResultItem>(
+            'YouTube Music',
+            'songs',
+            () async => (await _tube.searchSongs(q, limit: 60))
+                .map((t) => SearchResultItem(
+                      name: t.title,
+                      artist: t.artist,
+                      artworkUrl: t.artworkUrl,
+                      subtitle: t.album,
+                      videoId: t.videoId,
+                      entityId: t.videoId,
+                      tab: SearchTab.tracks,
+                      durationSeconds: t.durationSeconds,
+                    ))
+                .toList(),
+          ),
         ];
         if (_itunesEnabled()) {
           requests.add(_catalogs
@@ -281,17 +309,19 @@ class SearchRepository {
 
       case SearchTab.artists:
         final requests = <Future<List<SearchResultItem>>>[
-          _tube.searchArtists(q).then(
-                (artists) => artists
-                    .map((e) => SearchResultItem(
-                          name: e.name,
-                          subtitle: e.subtitle,
-                          artworkUrl: e.artworkUrl,
-                          entityId: e.browseId,
-                          tab: tab,
-                        ))
-                    .toList(),
-              ),
+          _searchSafely<SearchResultItem>(
+            'YouTube Music',
+            'artists',
+            () async => (await _tube.searchArtists(q))
+                .map((e) => SearchResultItem(
+                      name: e.name,
+                      subtitle: e.subtitle,
+                      artworkUrl: e.artworkUrl,
+                      entityId: e.browseId,
+                      tab: tab,
+                    ))
+                .toList(),
+          ),
         ];
         if (_itunesEnabled()) {
           requests.add(_catalogs
@@ -307,18 +337,20 @@ class SearchRepository {
 
       case SearchTab.albums:
         final requests = <Future<List<SearchResultItem>>>[
-          _tube.searchAlbums(q).then(
-                (albums) => albums
-                    .map((e) => SearchResultItem(
-                          name: e.name,
-                          artist: e.artist,
-                          subtitle: e.subtitle,
-                          artworkUrl: e.artworkUrl,
-                          entityId: e.browseId,
-                          tab: tab,
-                        ))
-                    .toList(),
-              ),
+          _searchSafely<SearchResultItem>(
+            'YouTube Music',
+            'albums',
+            () async => (await _tube.searchAlbums(q))
+                .map((e) => SearchResultItem(
+                      name: e.name,
+                      artist: e.artist,
+                      subtitle: e.subtitle,
+                      artworkUrl: e.artworkUrl,
+                      entityId: e.browseId,
+                      tab: tab,
+                    ))
+                .toList(),
+          ),
         ];
         if (_itunesEnabled()) {
           requests.add(_catalogs
