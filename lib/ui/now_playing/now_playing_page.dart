@@ -937,18 +937,18 @@ class _DesktopDualPane extends StatelessWidget {
                               child: Offstage(
                                 offstage: !showRightPanel,
                                 child: _VisibleTicker(
-                                        enabled: lyricsVisible,
-                                        child: RepaintBoundary(
-                                          child: WaveKaraokeLyricsView(
-                                            track: track,
-                                            compact: false,
-                                            showHeaderControls: true,
-                                            fontSize: 36.0,
-                                            isActive: lyricsVisible,
-                                            toolbarRightInset: toolbarInset,
-                                          ),
-                                        ),
-                                      ),
+                                  enabled: lyricsVisible,
+                                  child: RepaintBoundary(
+                                    child: WaveKaraokeLyricsView(
+                                      track: track,
+                                      compact: false,
+                                      showHeaderControls: true,
+                                      fontSize: 36.0,
+                                      isActive: lyricsVisible,
+                                      toolbarRightInset: toolbarInset,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
