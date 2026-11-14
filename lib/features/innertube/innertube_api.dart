@@ -3056,10 +3056,7 @@ class InnerTubeMusicApi {
         final renderer = raw['chipCloudChipRenderer'];
         if (renderer is! Map<String, dynamic>) continue;
         final navigation = renderer['navigationEndpoint'];
-        add(
-          renderer['text'],
-          navigation is Map ? navigation['browseEndpoint'] : null,
-        );
+        add(renderer['text'], _firstBrowseEndpoint(navigation));
       }
     }
 
@@ -3075,10 +3072,7 @@ class InnerTubeMusicApi {
         final renderer = item['musicCategoryListItemRenderer'];
         if (renderer is! Map<String, dynamic>) continue;
         final navigation = renderer['navigationEndpoint'];
-        add(
-          renderer['title'],
-          navigation is Map ? navigation['browseEndpoint'] : null,
-        );
+        add(renderer['title'], _firstBrowseEndpoint(navigation));
       }
     }
 
@@ -3088,10 +3082,7 @@ class InnerTubeMusicApi {
     _collectObjects(root, 'musicNavigationButtonRenderer', buttons);
     for (final button in buttons) {
       final command = button['clickCommand'];
-      add(
-        button['buttonText'],
-        command is Map ? command['browseEndpoint'] : null,
-      );
+      add(button['buttonText'], _firstBrowseEndpoint(command));
     }
     return chips;
   }
@@ -3250,6 +3241,54 @@ class InnerTubeMusicApi {
         entities: entities,
         trackCards: trackCards,
       );
+    }
+
+    // Library landing and some Explore pages return a gridRenderer
+    // instead of a musicCarouselShelfRenderer. Parse its two-row cards into
+    // the same entity shelf model so Home can display API-backed collections.
+    final grids = <Map<String, dynamic>>[];
+    _collectObjects(section, 'gridRenderer', grids);
+    for (final grid in grids) {
+      final header = grid['header'];
+      String? title = _homeShelfTitle(grid['title']);
+      if (title == null && header is Map) {
+        for (final value in header.values) {
+          if (value is Map) {
+            title ??= _homeShelfTitle(value['title']);
+          }
+        }
+      }
+      final items = <Map<String, dynamic>>[];
+      _collectObjects(grid['items'], 'musicTwoRowItemRenderer', items);
+      final entities = <YouTubeMusicEntity>[];
+      for (final item in items) {
+        final endpoint = _firstBrowseEndpoint(item['navigationEndpoint']) ??
+            _firstBrowseEndpoint(item);
+        final browseId = endpoint?['browseId']?.toString() ?? '';
+        if (browseId.isEmpty ||
+            browseId.startsWith('MPSPP') ||
+            browseId.startsWith('MPED')) {
+          // Podcast shows and episodes have their own parser and player path.
+          continue;
+        }
+        final entity = _parseTwoRowEntity(
+          item,
+          kind: kindForBrowseId(browseId),
+        );
+        if (entity == null ||
+            isLikedMusicId(entity.browseId) ||
+            isLikedMusicId(entity.playlistId)) {
+          continue;
+        }
+        entities.add(entity);
+        if (entities.length >= maxItemsPerShelf) break;
+      }
+      if (entities.isNotEmpty) {
+        return YtHomeShelf(
+          title: title ?? 'From your library',
+          entities: entities,
+        );
+      }
     }
 
     // `musicTastebuilderShelfRenderer` (the "Made for you" picker) and
