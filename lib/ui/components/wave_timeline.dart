@@ -25,6 +25,7 @@ class WaveTimeline extends StatelessWidget {
     required this.progressColor,
     required this.thumbColor,
     required this.thumbGlowColor,
+    this.verticalOffset = 0,
   });
 
   final Duration progress;
@@ -40,6 +41,9 @@ class WaveTimeline extends StatelessWidget {
   final Color progressColor;
   final Color thumbColor;
   final Color thumbGlowColor;
+
+  /// Small per-use vertical adjustment for tight progress tracks.
+  final double verticalOffset;
 
   double _ratio(Duration d) {
     final ms = total.inMilliseconds;
@@ -81,6 +85,7 @@ class WaveTimeline extends StatelessWidget {
                   progressColor: progressColor,
                   thumbColor: thumbColor,
                   thumbGlowColor: thumbGlowColor,
+                  verticalOffset: verticalOffset,
                 ),
               ),
             ),
@@ -101,6 +106,7 @@ class _WaveTimelinePainter extends CustomPainter {
     required this.progressColor,
     required this.thumbColor,
     required this.thumbGlowColor,
+    required this.verticalOffset,
   });
 
   final double progress;
@@ -111,6 +117,7 @@ class _WaveTimelinePainter extends CustomPainter {
   final Color progressColor;
   final Color thumbColor;
   final Color thumbGlowColor;
+  final double verticalOffset;
 
   static const _amplitude = 2.2;
   static const _wavelength = 26.0;
@@ -120,7 +127,7 @@ class _WaveTimelinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
-    final mid = size.height / 2;
+    final mid = size.height / 2 + verticalOffset;
     final path = _wavePath(size.width, mid);
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -177,5 +184,6 @@ class _WaveTimelinePainter extends CustomPainter {
       old.bufferedColor != bufferedColor ||
       old.progressColor != progressColor ||
       old.thumbColor != thumbColor ||
-      old.thumbGlowColor != thumbGlowColor;
+      old.thumbGlowColor != thumbGlowColor ||
+      old.verticalOffset != verticalOffset;
 }
