@@ -169,7 +169,7 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
   void refreshPath() => _rebuildPath();
 
   /// Drops or restores WASAPI exclusive when DSP, loudness, pitch,
-  /// speed or timed AutoMix changes. Exclusive stays off
+  /// speed changes. Exclusive stays off
   /// while any of those are active.
   Future<void> syncExclusiveGate() async {
     final playback = _ref.read(playbackServiceProvider.notifier);
@@ -416,7 +416,6 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
     final headphone =
         HeadphoneProfiles.byId(prefs.headphoneProfile).id != 'off';
     final loudnessOn = prefs.loudnessMode != 'off';
-    final autoMix = prefs.autoMixEnabled;
     final reason = _negotiator.evaluate(
       decision: decision ??
           FormatDecision(
@@ -434,7 +433,6 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
       softwareVolume: softwareVol,
       speed: snap.speed,
       loudness: loudnessOn,
-      autoMix: autoMix,
       pitch: snap.pitch,
     );
     // Exclusive DAC format is the negotiated integer PCM — never the
@@ -453,7 +451,7 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
       source: source,
       output: output,
       resampling: decision?.resampling ?? false,
-      dspActive: headphone || loudnessOn || autoMix,
+      dspActive: headphone,
       peqActive: peq,
       softwareVolume: softwareVol,
       hardwareVolume: hw,
