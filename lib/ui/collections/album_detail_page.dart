@@ -275,9 +275,9 @@ class _WaveAlbumPageState extends ConsumerState<WaveAlbumPage> {
                   WaveEntrance(
                     index: 0,
                     rise: 10,
-                    child: WaveAmbientBand(
-                      artworkUrl: art,
-                      child: LayoutBuilder(builder: (context, c) {
+                    // Keep the album header transparent so the shell's
+                    // backdrop remains continuous behind the artwork and metadata.
+                    child: LayoutBuilder(builder: (context, c) {
                     final narrow = c.maxWidth < 640;
                     final header = Column(
                       crossAxisAlignment:
@@ -425,7 +425,6 @@ class _WaveAlbumPageState extends ConsumerState<WaveAlbumPage> {
                       ],
                     );
                       }),
-                    ),
                   ),
                   const SizedBox(height: 20),
                   // The browse answers well after the route entrance has
