@@ -6,7 +6,6 @@ import 'package:audio_video_progress_bar/audio_video_progress_bar.dart' as avp;
 import '../../core/audio/stream_models.dart';
 import '../../core/storage/prefs.dart' show prefsProvider;
 import '../../features/downloads/download_manager.dart';
-import '../../core/network/network_monitor.dart';
 import '../../features/settings/theme_controller.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/equalizer/equalizer_panel.dart';
@@ -18,7 +17,7 @@ import '../components/touch_kit.dart';
 import '../navigation/destinations.dart';
 import '../queue/queue_panel.dart';
 import '../now_playing/now_playing_page.dart' show NowPlayingBackdrop;
-import '../components/buttons.dart' show LWTooltip, LWVolumeSlider, WaveButton;
+import '../components/buttons.dart' show LWTooltip, LWVolumeSlider;
 import '../components/menus.dart';
 import '../components/wave_timeline.dart';
 import '../now_playing/immersive.dart'
@@ -103,7 +102,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   bool _showMore = false;
   bool _showEqualizer = false;
   bool _showQueue = false;
-  bool _offlineNoticeDismissed = false;
   FluentThemeData? _artworkPlayerTheme;
   String get _route => waveRoutePath(widget.location);
 
@@ -223,11 +221,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
       });
       ref.read(nowPlayingOverlayRequestProvider.notifier).state = null;
     });
-    ref.listen<bool>(networkMonitorProvider, (previous, online) {
-      if (online && _offlineNoticeDismissed && mounted) {
-        setState(() => _offlineNoticeDismissed = false);
-      }
-    });
     // The dark stage applies in Dark mode only; Light mode keeps its theme.
     final artworkPlayerStage = _route.startsWith('/now') &&
         waveIsDark(context) &&
@@ -241,7 +234,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final tablet = constraints.maxWidth >= 680 ||
             (viewSize.shortestSide >= 600 && constraints.maxWidth >= 520);
         final nowPlaying = _route.startsWith('/now');
-        final online = ref.watch(networkMonitorProvider);
         final activePath = waveActivePath(widget.location);
         final theme = ref.watch(themeControllerProvider);
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -412,66 +404,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                                     ],
                                   ),
                                 ),
-                              if (!online && !_offlineNoticeDismissed)
-                                Positioned.fill(
-                                  child: ColoredBox(
-                                    color: Colors.black.withValues(alpha: 0.38),
-                                    child: Center(
-                                      child: Container(
-                                        constraints:
-                                            const BoxConstraints(maxWidth: 360),
-                                        margin: const EdgeInsets.all(
-                                          WaveSpacing.x20,
-                                        ),
-                                        padding: const EdgeInsets.all(
-                                          WaveSpacing.x20,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: waveSurfaceRaised(context),
-                                          borderRadius:
-                                              WaveRadius.floatingRadius,
-                                          border: Border.all(
-                                            color: waveDivider(context),
-                                          ),
-                                          boxShadow: WaveElevation.floating(
-                                            waveIsDark(context),
-                                          ),
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              "You're offline",
-                                              textAlign: TextAlign.center,
-                                              style: WaveTouchType.rowTitle
-                                                  .copyWith(
-                                                color:
-                                                    waveTextPrimary(context),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              height: WaveSpacing.x4,
-                                            ),
-                                            Text(
-                                              'Check your internet connection. '
-                                              'Some LastWave features need to be online.',
-                                              textAlign: TextAlign.center,
-                                              style:
-                                                  WaveTouchType.rowMeta.copyWith(
-                                                color:
-                                                    waveTextSecondary(context),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              height: WaveSpacing.x12,
-                                            ),
-                                            WaveButton(
-                                              onPressed: () => setState(
-                                                () => _offlineNoticeDismissed =
-                                                    true,
-                                              ),
-                                              child: const Text('Dismiss'),
-                                            ),
                                           ],
                                         ),
                                       ),
