@@ -19,12 +19,8 @@ export '../../core/artwork/artwork_resolver.dart' show ArtworkKind;
 /// Rapid track switches carry a generation counter so stale requests can
 /// never overwrite the current image. No stars, no generic error icons.
 ///
-/// Official-source upgrade: when the primary URL is NOT from an official
-/// store CDN (YouTube video still, Last.fm crowd photo, …) and the widget
-/// carries title/artist metadata, the official cover/photo is resolved in
-/// the background (iTunes store covers for tracks/albums, Deezer press
-/// photos for artists) and hot-swapped in — the original image keeps
-/// showing until then and remains as fallback.
+/// Artwork upgrade: when metadata is available, a YouTube Music image is
+/// resolved in the background and the original remains a fallback.
 class WaveArtwork extends StatefulWidget {
   final String url;
   final String videoId;
@@ -96,8 +92,7 @@ class _WaveArtworkState extends State<WaveArtwork> {
       widget.kind ??
       (widget.isCircle ? ArtworkKind.artist : ArtworkKind.track);
 
-  /// [WaveArtwork.url] minus images that load fine but show nothing: the
-  /// Last.fm star placeholder and Deezer's blank-artist silhouette.
+  /// [WaveArtwork.url] minus known placeholder artwork.
   String get _primaryUrl {
     final u = widget.url;
     if (u.contains('2a96cbd8b46e442fc41c2b86b821562f') ||
@@ -150,11 +145,7 @@ class _WaveArtworkState extends State<WaveArtwork> {
     // a user named like an artist would get that artist's photo.
     if (!widget.upgrade) return;
     if (_fileArtworkPath(widget.url) != null) return;
-    if (_kind == ArtworkKind.artist &&
-        OfficialArtworkService.isOfficialArtistPhoto(_primaryUrl)) {
-      return;
-    }
-    final hit = _peekDisplay();
+final hit = _peekDisplay();
     if (hit != null && hit.artworkUrl.isNotEmpty) {
       _resolvedUrl = hit.artworkUrl;
       _resolveFailed = false;
@@ -283,12 +274,8 @@ class _WaveArtworkState extends State<WaveArtwork> {
     );
     _chain = ArtworkResolver.resolve(req).urls;
 
-    // Store-search kickoff runs post-frame, not in the build phase:
-    // a fresh page mounts N artworks in one frame (the settings-open
-    // trace showed ~7 WaveArtwork subtrees in a single BUILD), and
-    // starting N iTunes/Deezer resolutions synchronously inside that
-    // frame's didChangeDependencies piles store machinery onto the
-    // navigation frame. One frame later is visually identical.
+    // Artwork fallback lookup runs post-frame so page transitions do not
+    // start metadata requests during the navigation frame.
     final gen = _gen;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || gen != _gen) return;
@@ -296,11 +283,8 @@ class _WaveArtworkState extends State<WaveArtwork> {
     });
   }
 
-  /// Proactive official-source upgrade: when the primary image is NOT
-  /// from an official store CDN (YouTube video still, Last.fm crowd
-  /// photo, …) resolve the official cover/photo in the background and
-  /// hot-swap it in. The current image keeps showing until then and
-  /// stays in the chain as fallback if the official source has no match.
+  /// Upgrade artwork from YouTube Music metadata in the background while
+  /// keeping the current image visible as a fallback.
   void _maybeUpgradeOfficial() {
     if (!widget.upgrade) return;
     if (_fileArtworkPath(widget.url) != null) return;
@@ -320,14 +304,9 @@ class _WaveArtworkState extends State<WaveArtwork> {
         if (artist.isEmpty && title.isEmpty) return;
     }
     // Album/track: skip if we already have a store sleeve.
-    // Artist circles: skip only if we already have a Deezer *artist*
-    // press photo — an iTunes album cover is official, but it is the
-    // wrong kind of image for an artist tile.
-    if (_kind == ArtworkKind.artist) {
-      if (OfficialArtworkService.isOfficialArtistPhoto(_primaryUrl)) {
-        return;
-      }
-    } else if (OfficialArtworkService.isOfficialArtwork(widget.url)) {
+    // Existing lossless artwork is authoritative for tracks and albums.
+    if (_kind != ArtworkKind.artist &&
+        OfficialArtworkService.isOfficialArtwork(widget.url)) {
       return;
     }
     _upgradeAttempted = true;
@@ -342,8 +321,7 @@ class _WaveArtworkState extends State<WaveArtwork> {
 
     _isResolving = true;
     final service = OfficialArtworkService.instance;
-    // Route by content kind: artist circles → Deezer press photos,
-    // albums → iTunes album catalog, tracks → iTunes song catalog.
+    // Resolve artwork through YouTube Music fallbacks only.
     final Future<OfficialArtworkResult?> task = switch (_kind) {
       ArtworkKind.artist => service
           .resolveArtistArtwork(artist.isNotEmpty ? artist : title),
@@ -359,10 +337,10 @@ class _WaveArtworkState extends State<WaveArtwork> {
       _isResolving = false;
       if (res != null && res.artworkUrl.isNotEmpty) {
         final usable = _kind == ArtworkKind.artist
-            // Deezer photo, or the YouTube Music portrait fallback.
+            // YouTube Music artist portrait.
             ? res.artworkUrl.startsWith('http')
             : _kind != ArtworkKind.artist
-                // Store cover, or the YouTube Music cover fallback.
+                // YouTube Music cover.
                 ? res.artworkUrl.startsWith('http')
                 : OfficialArtworkService.isOfficialArtwork(res.artworkUrl);
         if (!usable) {
