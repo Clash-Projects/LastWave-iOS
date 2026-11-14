@@ -59,7 +59,7 @@ class LWSectionHeader extends StatelessWidget {
                   Flexible(
                     child: Text(
                       title,
-                      maxLines: 1,
+                      maxLines: touch ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
                       style: touch
                           ? WaveTouchType.title.copyWith(
