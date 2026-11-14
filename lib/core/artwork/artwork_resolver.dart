@@ -12,7 +12,7 @@ import 'package:flutter/widgets.dart';
 ///   missing scheme with known host → `https://`. Query parameters are
 ///   NEVER stripped (CDN signatures live there; stripping expires URLs).
 /// - http → https upgrade for image CDNs (ytimg, googleusercontent,
-///   last.fm, deezer, spotify). Plain http kept only for
+///   last.fm, spotify). Plain http kept only for
 ///   unrecognized hosts to avoid breaking LAN servers.
 /// - redirects: left to the HTTP client (CachedNetworkImage follows them).
 /// - resolution: [sized] rewrites ONLY recognized size patterns
