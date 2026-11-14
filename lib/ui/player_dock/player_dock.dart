@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/audio/stream_models.dart';
+import '../../core/storage/prefs.dart';
 import '../../features/downloads/download_manager.dart';
 import '../../features/jam/jam_client.dart';
 import '../../features/library/playlists.dart';
