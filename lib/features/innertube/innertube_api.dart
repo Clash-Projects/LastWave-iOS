@@ -3027,10 +3027,27 @@ class InnerTubeMusicApi {
   ///
   /// The endpoint is authoritative; localized labels are display-only.
   List<YtHomeChip> parseHomeChips(Map<String, dynamic> root) {
-    final clouds = <Map<String, dynamic>>[];
-    _collectObjects(root, 'chipCloudRenderer', clouds);
     final chips = <YtHomeChip>[];
     final seen = <String>{};
+
+    void add(Object? textNode, Object? endpointNode) {
+      final title = _homeShelfTitle(textNode) ?? '';
+      if (title.isEmpty || endpointNode is! Map) return;
+      final browseId = endpointNode['browseId']?.toString() ?? '';
+      final params = endpointNode['params']?.toString() ?? '';
+      if (browseId.isEmpty && params.isEmpty) return;
+      final key = '$browseId|$params|${title.toLowerCase()}';
+      if (!seen.add(key)) return;
+      chips.add(YtHomeChip(
+        title: title,
+        browseId: browseId,
+        params: params,
+      ));
+    }
+
+    // Main Home / account category row.
+    final clouds = <Map<String, dynamic>>[];
+    _collectObjects(root, 'chipCloudRenderer', clouds);
     for (final cloud in clouds) {
       final rawChips = cloud['chips'];
       if (rawChips is! List) continue;
@@ -3038,28 +3055,43 @@ class InnerTubeMusicApi {
         if (raw is! Map<String, dynamic>) continue;
         final renderer = raw['chipCloudChipRenderer'];
         if (renderer is! Map<String, dynamic>) continue;
-        final title = _homeShelfTitle(renderer['text']) ?? '';
-        if (title.isEmpty) continue;
         final navigation = renderer['navigationEndpoint'];
-        final endpoint = navigation is Map
-            ? navigation['browseEndpoint']
-            : null;
-        final browseId = endpoint is Map
-            ? endpoint['browseId']?.toString() ?? ''
-            : '';
-        final params = endpoint is Map
-            ? endpoint['params']?.toString() ?? ''
-            : '';
-        // Repeated labels can point at the same feed. Preserve the first
-        // occurrence and its server order.
-        final key = '$browseId|$params|${title.toLowerCase()}';
-        if (!seen.add(key)) continue;
-        chips.add(YtHomeChip(
-          title: title,
-          browseId: browseId,
-          params: params,
-        ));
+        add(
+          renderer['text'],
+          navigation is Map ? navigation['browseEndpoint'] : null,
+        );
       }
+    }
+
+    // Explore pages use musicCategoryListRenderer for quick browse choices
+    // such as New releases. These are not chipCloudRenderer instances.
+    final categoryLists = <Map<String, dynamic>>[];
+    _collectObjects(root, 'musicCategoryListRenderer', categoryLists);
+    for (final categoryList in categoryLists) {
+      final items = categoryList['items'];
+      if (items is! List) continue;
+      for (final item in items) {
+        if (item is! Map<String, dynamic>) continue;
+        final renderer = item['musicCategoryListItemRenderer'];
+        if (renderer is! Map<String, dynamic>) continue;
+        final navigation = renderer['navigationEndpoint'];
+        add(
+          renderer['title'],
+          navigation is Map ? navigation['browseEndpoint'] : null,
+        );
+      }
+    }
+
+    // Mood/genre carousels contain musicNavigationButtonRenderer items whose
+    // endpoint is clickCommand.browseEndpoint, not navigationEndpoint.
+    final buttons = <Map<String, dynamic>>[];
+    _collectObjects(root, 'musicNavigationButtonRenderer', buttons);
+    for (final button in buttons) {
+      final command = button['clickCommand'];
+      add(
+        button['buttonText'],
+        command is Map ? command['browseEndpoint'] : null,
+      );
     }
     return chips;
   }
