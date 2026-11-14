@@ -1291,6 +1291,7 @@ class _MiniProgressLine extends ConsumerWidget {
         progressColor: waveTextPrimary(context),
         thumbColor: waveTextPrimary(context),
         thumbGlowColor: waveAccent(context).withValues(alpha: 0.25),
+        verticalOffset: 1.5,
       );
     }
     final durationMs = progress.duration.inMilliseconds;
