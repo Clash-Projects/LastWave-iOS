@@ -764,8 +764,6 @@ class _Audio extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _TimedMixSettings(onUpdate: onUpdate),
-        const SizedBox(height: 8),
         _Group(
           id: 'audio.equalizer',
           title: 'Equalizer & Sound FX',
@@ -3183,7 +3181,7 @@ decoration: waveInputDecoration(),
   }
 }
 
-class _TimedMixSettings extends ConsumerStatefulWidget {
+
   final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
   const _TimedMixSettings({required this.onUpdate});
 
