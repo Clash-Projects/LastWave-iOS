@@ -15,6 +15,8 @@ const homeShelfLayoutKey = 'home_shelf_layout';
 /// id the save never mentioned in its default slot.
 abstract final class HomeShelfId {
   static const home = 'home';
+  // Kept only to recognize and suppress the unsupported API chip.
+  // It is intentionally absent from Edit Home defaults.
   static const samples = 'samples';
   static const explore = 'explore';
   static const library = 'library';
@@ -65,7 +67,6 @@ abstract final class HomeShelfCatalog {
   /// The order shown in Edit Home and used for the YouTube Music Home feed.
   static const defaults = <String>[
     HomeShelfId.home,
-    HomeShelfId.samples,
     HomeShelfId.explore,
     HomeShelfId.library,
     HomeShelfId.energize,
