@@ -33,8 +33,13 @@ class OfficialArtworkService {
   final Map<String, OfficialArtworkResult> _fallbackCache = {};
   final List<void Function()> _listeners = [];
 
-  OfficialArtworkService([Dio? dio, AppDatabase? db, InnerTubeMusicApi? tube])
-      : _db = db;
+  // Accept both the legacy (Dio, AppDatabase, InnerTubeMusicApi) shape and
+  // the database-only form used by focused artwork tests.
+  OfficialArtworkService([
+    Object? dioOrDatabase,
+    AppDatabase? db,
+    InnerTubeMusicApi? tube,
+  ]) : _db = dioOrDatabase is AppDatabase ? dioOrDatabase : db;
 
 
   void init({AppDatabase? db, InnerTubeMusicApi? tube}) {
