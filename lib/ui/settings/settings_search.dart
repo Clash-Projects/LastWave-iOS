@@ -95,13 +95,6 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     keywords: 'headphone eq correction',
   ),
   SettingsSearchEntry(
-    id: 'audio.automix',
-    section: 'audio',
-    title: 'AutoMix',
-    subtitle: 'Timed overlap between tracks',
-    keywords: 'automix timed mix transition overlap',
-  ),
-  SettingsSearchEntry(
     id: 'audio.equalizer',
     section: 'audio',
     title: 'Equalizer & Sound FX',
