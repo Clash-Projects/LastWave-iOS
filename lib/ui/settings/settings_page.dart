@@ -1237,8 +1237,8 @@ class _Ytm extends ConsumerWidget {
             url: photoUrl,
             size: 40,
             label: name,
-            // Identity avatar: never let the official-source upgrade
-            // swap it for a Deezer artist photo matching the name.
+            // Keep the signed-in identity avatar separate from
+            // background artwork lookups.
             upgrade: false,
           )
         else
