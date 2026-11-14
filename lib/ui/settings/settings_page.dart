@@ -32,6 +32,7 @@ import '../../features/innertube/yt_web_login.dart';
 import '../../features/auth/mobile_cookie_login.dart';
 import '../components/artwork.dart';
 import '../components/select.dart';
+import '../components/ui_scale.dart';
 import 'yt_profile_chooser.dart';
 import 'spotify_connect.dart';
 import '../../features/spotify/spotify_api.dart';
@@ -853,6 +854,8 @@ class _Appearance extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
+        _UiScaleGroup(onUpdate: onUpdate),
+        const SizedBox(height: 8),
         _Group(
           id: 'appearance.wavy_timeline',
           title: 'Timeline',
@@ -865,6 +868,82 @@ class _Appearance extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _UiScaleGroup extends ConsumerStatefulWidget {
+  final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
+  const _UiScaleGroup({required this.onUpdate});
+
+  @override
+  ConsumerState<_UiScaleGroup> createState() => _UiScaleGroupState();
+}
+
+class _UiScaleGroupState extends ConsumerState<_UiScaleGroup> {
+  double? _drag;
+
+  @override
+  Widget build(BuildContext context) {
+    final auto = ref.watch(prefsProvider.select((p) => p.uiScaleAuto));
+    final manual = ref.watch(prefsProvider.select((p) => p.uiScaleManual));
+    final value = _drag ?? manual;
+    final current = resolveUiScale(
+      MediaQuery.sizeOf(context),
+      auto: auto,
+      manual: value,
+    );
+    return _Group(
+      id: 'appearance.ui_scale',
+      title: 'Interface scale',
+      subtitle: 'Scale the UI down to fit smaller screens',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SwitchRow(
+            value: auto,
+            onChanged: (v) => widget.onUpdate((p) => p.setUiScaleAuto(v)),
+            title: 'Automatic',
+            subtitle: 'Fit the UI to this screen. iPad stays at 100%.',
+          ),
+          if (!auto)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Scale ${(value * 100).round()}%',
+                      style: WaveType.trackTitle,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 180,
+                    child: Slider(
+                      value: value,
+                      min: kUiScaleMin,
+                      max: 1.0,
+                      divisions: 30,
+                      onChanged: (v) => setState(() => _drag = v),
+                      onChangeEnd: (v) {
+                        setState(() => _drag = null);
+                        widget.onUpdate((p) => p.setUiScaleManual(v));
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Currently ${(current * 100).round()}%',
+                style: WaveType.meta.copyWith(color: waveTextSecondary(context)),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -386,6 +386,14 @@ class Prefs {
   bool get wavySeekbar => _sp.getBool('lw_wavy_seekbar') ?? false;
   Future<void> setWavySeekbar(bool v) => _sp.setBool('lw_wavy_seekbar', v);
 
+  /// Interface scale: automatic (fit to the screen) or a manual 70–100%.
+  bool get uiScaleAuto => _sp.getBool('lw_ui_scale_auto') ?? true;
+  Future<void> setUiScaleAuto(bool v) => _sp.setBool('lw_ui_scale_auto', v);
+  double get uiScaleManual =>
+      (_sp.getDouble('lw_ui_scale') ?? 0.9).clamp(0.7, 1.0);
+  Future<void> setUiScaleManual(double v) =>
+      _sp.setDouble('lw_ui_scale', v.clamp(0.7, 1.0));
+
   // -- Scrobbler --------------------------------------------------------------
   bool get scrobblerEnabled => _sp.getBool('lw_scrobbler_enabled') ?? false;
   bool get scrobbleNowPlaying => _sp.getBool('lw_submit_now_playing') ?? true;
