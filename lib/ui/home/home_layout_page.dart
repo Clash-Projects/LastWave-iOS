@@ -9,8 +9,8 @@ import '../components/buttons.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 
-/// Reorder and hide the Home shelves. Order and the hidden set live in
-/// SQLite `kv_store` (`home_shelf_layout`), not Prefs.
+/// Reorder and hide the YouTube Music Home tabs, mood filters, and shelves.
+/// Order and visibility live in SQLite `kv_store` (`home_shelf_layout`).
 class WaveHomeLayoutPage extends ConsumerWidget {
   const WaveHomeLayoutPage({super.key});
 
@@ -32,7 +32,7 @@ class WaveHomeLayoutPage extends ConsumerWidget {
           Text('Edit home', style: WaveType.pageTitle.copyWith(fontSize: 24)),
           const SizedBox(height: 4),
           Text(
-            'Show, hide, and reorder shelves. Reset restores the default order.',
+            'Choose which YouTube Music tabs, moods, and shelves appear on Home. Drag to reorder.',
             style: WaveType.meta.copyWith(color: waveTextSecondary(context)),
           ),
           const SizedBox(height: 14),
