@@ -64,8 +64,7 @@ Future<String> buildDiagnosticsReport(WidgetRef ref) async {
   b.writeln('  prefer_lossless: ${prefs.preferLossless}, '
       'lossless_quality: ${prefs.losslessQuality}, '
       'download_quality: ${prefs.downloadQuality}');
-  b.writeln('  crossfade: ${prefs.crossfadeEnabled} '
-      '(${prefs.crossfadeSeconds}s), scrobbling: ${prefs.scrobblerEnabled}');
+  b.writeln('  scrobbling: ${prefs.scrobblerEnabled}');
   b.writeln();
 
   final track = player.current;
