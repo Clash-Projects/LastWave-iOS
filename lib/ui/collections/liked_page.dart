@@ -22,6 +22,7 @@ import '../components/states.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
+import 'library_tabs.dart';
 
 /// Liked Songs: hero + filter + sort + dense table.
 class WaveLikedPage extends ConsumerStatefulWidget {
@@ -151,6 +152,7 @@ class _WaveLikedPageState
         padding: EdgeInsets.fromLTRB(waveGutter(context, 24), 20, waveGutter(context, 24), 32),
         children: [
         const WaveChromeSpacer.top(),
+          const WaveLibraryTabs(activePath: '/liked'),
           ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: WaveDensity.contentMax,
@@ -181,6 +183,9 @@ class _WaveLikedPageState
       child: CustomScrollView(
         slivers: [
         const WaveChromeSliver.top(),
+        const SliverToBoxAdapter(
+          child: WaveLibraryTabs(activePath: '/liked'),
+        ),
         SliverToBoxAdapter(
           child: Padding(
             padding:
