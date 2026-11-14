@@ -16,7 +16,6 @@ import '../../features/home/home_providers.dart';
 import '../../features/innertube/innertube_api.dart';
 import '../../features/innertube/yt_library_providers.dart';
 import '../../features/podcasts/podcast_models.dart';
-import '../../features/search/shared_providers.dart';
 import '../../features/podcasts/podcast_repository.dart';
 import '../../features/player/playback_service.dart';
 import '../components/artwork.dart';
@@ -263,7 +262,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: tabs.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final chip = tabs[index];
                 return _YtmHomeChipPill(
