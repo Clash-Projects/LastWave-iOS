@@ -286,12 +286,12 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: moodChips.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final chip = moodChips[index];
                   return _YtmHomeChipPill(
-                    title: chip.title,
-                    selected: _selectedTitle == chip.title,
+                    title: _displayChipTitle(chip),
+                    selected: _selectedTitle == _displayChipTitle(chip),
                     enabled: chip.browseId.isNotEmpty || chip.params.isNotEmpty,
                     compact: true,
                     onTap: () => _selectHomeChip(chip),
