@@ -27,12 +27,10 @@ import '../theme/haze.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 
-/// iPhone tab bar: five destinations plus More, so every tab keeps an icon
-/// *and* a label at one-handed thumb size. Everything else lives in More.
+/// Four primary destinations shared by the iPhone and iPad navigation.
 const _phoneDestinations = <WaveDestination>[
   WaveDestination('/home', 'Home', WaveIcons.home),
   WaveDestination('/search', 'Search', WaveIcons.search),
-  WaveDestination('/liked', 'Liked', WaveIcons.liked),
   WaveDestination('/playlists', 'Playlists', WaveIcons.playlists),
   WaveDestination('/settings', 'Settings', WaveIcons.settings),
 ];
@@ -49,15 +47,11 @@ const _phoneMoreDestinations = <WaveDestination>[
   WaveDestination('/friends', 'Friends', WaveIcons.friends),
 ];
 
-/// iPad floating top bar: a tablet has the width for Albums and Downloads
-/// in the bar itself.
+/// iPad uses the same four primary destinations in the same order.
 const _tabletDestinations = <WaveDestination>[
   WaveDestination('/home', 'Home', WaveIcons.home),
   WaveDestination('/search', 'Search', WaveIcons.search),
-  WaveDestination('/liked', 'Liked Songs', WaveIcons.liked),
   WaveDestination('/playlists', 'Playlists', WaveIcons.playlists),
-  WaveDestination('/albums', 'Albums', WaveIcons.albums),
-  WaveDestination('/downloads', 'Downloads', WaveIcons.downloads),
   WaveDestination('/settings', 'Settings', WaveIcons.settings),
 ];
 
@@ -255,8 +249,12 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             moreDestinations.any((d) =>
                 activePath == d.path ||
                 _route.startsWith('${d.path}/'));
-        // Tab roots have nothing to go back to; every other page does.
+        // Collection subpages live inside the Playlists destination.
+        final libraryRoot = _route == '/liked' ||
+            _route == '/albums' ||
+            _route == '/downloads';
         final showBack = !nowPlaying &&
+            !libraryRoot &&
             (_showMore || !tabs.any((d) => d.path == _route));
 
         final systemMedia = MediaQuery.of(context);
@@ -275,7 +273,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
               showBack: showBack,
               showLabels: constraints.maxWidth >= 1000,
               onGo: _go,
-              onMore: () => setState(() => _showMore = !_showMore),
               onBack: () => _back(moreDestinations),
             ),
           if (!tablet && !nowPlaying)
@@ -310,9 +307,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                     child: _PhoneTabBar(
                       destinations: tabs,
                       activePath: activePath,
-                      moreActive: moreActive,
                       onGo: _go,
-                      onMore: () => setState(() => _showMore = !_showMore),
                     ),
                   );
 
@@ -631,16 +626,12 @@ class _MobileOverlayHeader extends StatelessWidget {
 class _PhoneTabBar extends StatelessWidget {
   final List<WaveDestination> destinations;
   final String activePath;
-  final bool moreActive;
   final void Function(String) onGo;
-  final VoidCallback onMore;
 
   const _PhoneTabBar({
     required this.destinations,
     required this.activePath,
-    required this.moreActive,
     required this.onGo,
-    required this.onMore,
   });
 
   @override
@@ -658,20 +649,11 @@ class _PhoneTabBar extends StatelessWidget {
                   child: _PhoneTab(
                     icon: destination.icon,
                     label: destination.label,
-                    selected: !moreActive &&
-                        (activePath == destination.path ||
-                            activePath.startsWith('${destination.path}/')),
+                    selected: activePath == destination.path ||
+                        activePath.startsWith('${destination.path}/'),
                     onTap: () => onGo(destination.path),
                   ),
                 ),
-              Expanded(
-                child: _PhoneTab(
-                  icon: WaveIcons.more,
-                  label: 'More',
-                  selected: moreActive,
-                  onTap: onMore,
-                ),
-              ),
             ],
           ),
         ),
@@ -751,21 +733,17 @@ class _PhoneTab extends StatelessWidget {
 class _TabletTopBar extends StatelessWidget {
   final List<WaveDestination> destinations;
   final String activePath;
-  final bool moreActive;
   final bool showBack;
   final bool showLabels;
   final void Function(String) onGo;
-  final VoidCallback onMore;
   final VoidCallback onBack;
 
   const _TabletTopBar({
     required this.destinations,
     required this.activePath,
-    required this.moreActive,
     required this.showBack,
     required this.showLabels,
     required this.onGo,
-    required this.onMore,
     required this.onBack,
   });
 
@@ -807,23 +785,12 @@ class _TabletTopBar extends StatelessWidget {
                             icon: destination.icon,
                             label: destination.label,
                             showLabel: showLabels ||
-                                (!moreActive &&
-                                    (activePath == destination.path ||
-                                        activePath.startsWith(
-                                            '${destination.path}/'))),
-                            selected: !moreActive &&
-                                (activePath == destination.path ||
-                                    activePath
-                                        .startsWith('${destination.path}/')),
+                                activePath == destination.path ||
+                                activePath.startsWith('${destination.path}/'),
+                            selected: activePath == destination.path ||
+                                activePath.startsWith('${destination.path}/'),
                             onTap: () => onGo(destination.path),
                           ),
-                        _TabletTab(
-                          icon: WaveIcons.more,
-                          label: 'More',
-                          showLabel: showLabels || moreActive,
-                          selected: moreActive,
-                          onTap: onMore,
-                        ),
                       ],
                     ),
                   ),
