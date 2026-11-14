@@ -15,7 +15,6 @@ class Prefs {
     final preferences = await SharedPreferences.getInstance();
     // Remove keys for settings that are no longer part of the app.
     await preferences.remove('lw_wavy_seekbar');
-    await preferences.remove('lw_catalog_deezer_enabled');
     return Prefs(preferences);
   }
 
