@@ -971,14 +971,14 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
   /// and dwarfed the hero at 92px.)
   Future<void> _openExternalCatalogItem(SearchResultItem item) async {
     final uri = Uri.tryParse(item.externalUrl);
-    if (uri == null || !uri.hasScheme) return;
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   void _primary(SearchResultItem hero) {
     if (hero.externalUrl.isNotEmpty &&
         (hero.tab == SearchTab.artists || hero.tab == SearchTab.albums)) {
-      _openExternalCatalogItem(hero);
+      unawaited(_openExternalCatalogItem(hero));
       return;
     }
     switch (hero.tab) {
@@ -1331,7 +1331,7 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                     size: 124,
                     onTap: () {
                       if (a.externalUrl.isNotEmpty) {
-                        _openExternalCatalogItem(a);
+                        unawaited(_openExternalCatalogItem(a));
                       } else if (a.entityId.isNotEmpty) {
                         waveOpen(
                             context,
