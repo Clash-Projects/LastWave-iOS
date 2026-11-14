@@ -379,6 +379,20 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
         continue;
       }
 
+      if (id == HomeShelfId.podcasts) {
+        slivers.addAll([
+          const SliverToBoxAdapter(child: SizedBox(height: 22)),
+          SliverToBoxAdapter(
+            child: WaveEntrance(
+              index: entrance++,
+              rise: 8,
+              child: const PodcastHomeShelf(),
+            ),
+          ),
+        ]);
+        continue;
+      }
+
       if (id == HomeShelfId.speedDial) {
         slivers.addAll([
           const SliverToBoxAdapter(child: SizedBox(height: 22)),
