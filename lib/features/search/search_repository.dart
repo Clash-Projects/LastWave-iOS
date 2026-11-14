@@ -6,7 +6,7 @@ import '../../core/storage/app_database.dart';
 import '../../core/storage/prefs.dart';
 import '../innertube/innertube_api.dart';
 import '../lastfm/auth_repository.dart';
-import '../spotify/spotify_api.dart';
+import 'deezer_catalog.dart';
 import 'shared_providers.dart';
 
 enum SearchTab { tracks, videos, artists, albums, playlists, users }
@@ -94,8 +94,8 @@ class SearchRepository {
   final InnerTubeMusicApi _tube;
   final AppDatabase _db;
   final String Function() _apiKey;
-  final SpotifyApi? _spotify;
-  final bool Function() _spotifyEnabled;
+  final DeezerCatalogApi? _deezer;
+  final bool Function() _deezerEnabled;
 
   SearchRepository(
     this._api,
@@ -103,19 +103,17 @@ class SearchRepository {
     this._db,
     this._apiKey, {
     DateTime Function()? clock,
-    this._spotify,
-    bool Function()? spotifyEnabled,
+    this._deezer,
+    bool Function()? deezerEnabled,
   })  : _now = clock ?? DateTime.now,
-        _spotifyEnabled = spotifyEnabled ?? (() => false);
+        _deezerEnabled = deezerEnabled ?? (() => false);
   final DateTime Function() _now;
 
-  /// Whether Spotify results should be added: the setting is on and a
-  /// Spotify account is connected.
-  bool get _spotifyActive =>
-      _spotify != null && _spotifyEnabled() && _spotify.connected;
+  /// Deezer results are added when the metadata catalog setting is enabled.
+  bool get _deezerActive => _deezer != null && _deezerEnabled();
 
   /// A failed YouTube Music request must not discard successful catalog
-  /// results from Spotify. Each source is isolated so the combined search
+  /// results from Deezer. Each source is isolated so the combined search
   /// can still render whichever providers respond.
   Future<List<T>> _searchSafely<T>(
     String provider,
@@ -252,7 +250,7 @@ class SearchRepository {
     final q = query.trim();
     if (q.isEmpty) return Future.value(const []);
     return _memoized(
-      '${tab.name}|${q.toLowerCase()}|spotify=$_spotifyActive',
+      '${tab.name}|${q.toLowerCase()}|deezer=$_deezerActive',
       () => _search(tab, q),
     );
   }
@@ -281,10 +279,18 @@ class SearchRepository {
                 .toList(),
           ),
         ];
-        if (_spotifyActive) {
-          requests.add(_spotify!
-              .searchCatalog(q, kind: SpotifyCatalogKind.track)
-              .then((hits) => _catalogItems(hits, SearchTab.tracks)));
+        if (_deezerActive) {
+          requests.add(_searchSafely<SearchResultItem>(
+            'Deezer',
+            'tracks',
+            () async => _deezerItems(
+              await _deezer!.searchCatalog(
+                q,
+                kind: DeezerCatalogKind.track,
+              ),
+              SearchTab.tracks,
+            ),
+          ));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.tracks);
 
@@ -319,10 +325,18 @@ class SearchRepository {
                 .toList(),
           ),
         ];
-        if (_spotifyActive) {
-          requests.add(_spotify!
-              .searchCatalog(q, kind: SpotifyCatalogKind.artist)
-              .then((hits) => _catalogItems(hits, SearchTab.artists)));
+        if (_deezerActive) {
+          requests.add(_searchSafely<SearchResultItem>(
+            'Deezer',
+            'artists',
+            () async => _deezerItems(
+              await _deezer!.searchCatalog(
+                q,
+                kind: DeezerCatalogKind.artist,
+              ),
+              SearchTab.artists,
+            ),
+          ));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.artists);
 
@@ -343,10 +357,18 @@ class SearchRepository {
                 .toList(),
           ),
         ];
-        if (_spotifyActive) {
-          requests.add(_spotify!
-              .searchCatalog(q, kind: SpotifyCatalogKind.album)
-              .then((hits) => _catalogItems(hits, SearchTab.albums)));
+        if (_deezerActive) {
+          requests.add(_searchSafely<SearchResultItem>(
+            'Deezer',
+            'albums',
+            () async => _deezerItems(
+              await _deezer!.searchCatalog(
+                q,
+                kind: DeezerCatalogKind.album,
+              ),
+              SearchTab.albums,
+            ),
+          ));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.albums);
 
@@ -371,8 +393,8 @@ class SearchRepository {
     }
   }
 
-  List<SearchResultItem> _catalogItems(
-    List<SpotifyCatalogHit> hits,
+  List<SearchResultItem> _deezerItems(
+    List<DeezerCatalogHit> hits,
     SearchTab tab,
   ) =>
       hits
@@ -381,12 +403,11 @@ class SearchRepository {
                 artist: hit.artist,
                 artworkUrl: hit.artworkUrl,
                 subtitle: hit.album,
-                // Catalog IDs are provider-specific metadata, never
-                // YouTube Music video or browse IDs. Playback resolves by
-                // title/artist through the existing lossless/YouTube chain.
+                // Deezer IDs and links are metadata only. Playback resolves
+                // by title/artist through the existing lossless/YouTube chain.
                 entityId: '',
                 externalUrl: '',
-                providerLabel: 'Spotify',
+                providerLabel: 'Deezer',
                 tab: tab,
                 durationSeconds: hit.durationSeconds,
               ))
@@ -724,9 +745,7 @@ final searchRepositoryProvider = Provider<SearchRepository>((ref) {
     ref.watch(innerTubeProvider),
     ref.watch(databaseProvider),
     () => ref.watch(prefsApiKeyProvider),
-    // Read, not watched: SpotifyAuth notifies on every token refresh, which
-    // would rebuild the repository and drop its cached searches each time.
-    spotify: ref.read(spotifyApiProvider),
-    spotifyEnabled: () => prefs.spotifyCatalogSearchEnabled,
+    deezer: ref.read(deezerCatalogApiProvider),
+    deezerEnabled: () => prefs.deezerCatalogSearchEnabled,
   );
 });
