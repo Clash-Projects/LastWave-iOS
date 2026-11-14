@@ -1516,7 +1516,7 @@ class _YtSongCardRow extends ConsumerWidget {
       itemBuilder: (context, i) {
         final t = tracks[i];
         return SizedBox(
-          width: 160,
+          width: waveMediaCardWidth(context),
           child: WaveMediaCard(
             title: t.name,
             subtitle: t.artist,
