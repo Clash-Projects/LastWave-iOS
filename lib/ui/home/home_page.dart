@@ -230,21 +230,23 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
       return aIndex.compareTo(bIndex);
     });
 
-    final moodChips = sourceChips.where((chip) {
+    final moodChips = <YtHomeChip>[];
+    final seenChipKeys = <String>{};
+    for (final chip in [...sourceChips, ...feed.chips]) {
       final id = HomeShelfCatalog.idForTitle(chip.title);
-      return id != null &&
-          !topIds.contains(id) &&
-          !hidden.contains(id);
-    }).toList()
-      ..sort((a, b) {
-        final aIndex = layout.order.indexOf(
-          HomeShelfCatalog.idForTitle(a.title) ?? '',
-        );
-        final bIndex = layout.order.indexOf(
-          HomeShelfCatalog.idForTitle(b.title) ?? '',
-        );
-        return aIndex.compareTo(bIndex);
-      });
+      if (id == null || topIds.contains(id) || hidden.contains(id)) continue;
+      final key = '${chip.browseId}|${chip.params}|${chip.title.toLowerCase()}';
+      if (seenChipKeys.add(key)) moodChips.add(chip);
+    }
+    moodChips.sort((a, b) {
+      final aIndex = layout.order.indexOf(
+        HomeShelfCatalog.idForTitle(a.title) ?? '',
+      );
+      final bIndex = layout.order.indexOf(
+        HomeShelfCatalog.idForTitle(b.title) ?? '',
+      );
+      return aIndex.compareTo(bIndex);
+    });
 
     final slivers = <Widget>[
       SliverToBoxAdapter(
