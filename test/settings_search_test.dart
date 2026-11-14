@@ -27,7 +27,7 @@ void main() {
   });
 
   test('title matches rank above keyword matches', () {
-    // "theme" is Theme's title, but only a keyword of Surfaces.
+    // The exact title match should rank first.
     expect(titles('theme').first, 'Theme');
   });
 
