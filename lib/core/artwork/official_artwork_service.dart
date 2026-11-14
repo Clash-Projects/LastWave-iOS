@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../features/innertube/innertube_api.dart';
 
 import '../audio/artist_parser.dart' as artist_parser;
 import '../storage/app_database.dart';
@@ -30,9 +33,11 @@ class OfficialArtworkService {
   final Map<String, OfficialArtworkResult> _fallbackCache = {};
   final List<void Function()> _listeners = [];
 
-  OfficialArtworkService([AppDatabase? db]) : _db = db;
+  OfficialArtworkService([Dio? dio, AppDatabase? db, InnerTubeMusicApi? tube])
+      : _db = db;
 
-  void init({AppDatabase? db}) {
+
+  void init({AppDatabase? db, InnerTubeMusicApi? tube}) {
     if (db != null) _db = db;
   }
 
@@ -172,6 +177,11 @@ class OfficialArtworkService {
     }
   }
 
+  /// Kept for compatibility with existing callers. Deezer artist-photo
+  /// URLs are deliberately no longer accepted as an artwork source.
+  static bool isOfficialArtistPhoto(String url) => false;
+
+
   static String primaryArtistName(String artist) =>
       artist_parser.primaryArtistName(artist);
 
@@ -207,6 +217,231 @@ class OfficialArtworkService {
     value = value.replaceAll(r'$', 's');
     value = value.replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ');
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  /// Artist billing aliases — a Madvillain track may be filed under
+  /// "MF DOOM" (or the reverse). Token overlap is empty in those cases,
+  /// so without this the exact title can fail the score bar.
+  static const _artistAliasGroups = <Set<String>>[
+    {'madvillain', 'mf doom', 'mfdoom', 'doom', 'metal fingers'},
+    {'jay z', 'jayz', 'jigga', 'shawn carter'},
+    {'kanye west', 'ye', 'yeezy'},
+    {'the weeknd', 'weeknd'},
+  ];
+
+  static bool _artistsAliased(String a, String b) {
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+    for (final g in _artistAliasGroups) {
+      if (g.contains(a) && g.contains(b)) return true;
+    }
+    return false;
+  }
+
+
+  static const _artistStopwords = {
+    'the', 'a', 'an', 'and', 'of', 'feat', 'ft', 'with', 'x',
+  };
+
+  static Set<String> _nameTokens(String s) => s
+      .split(' ')
+      .where((t) => t.length > 1 && !_artistStopwords.contains(t))
+      .toSet();
+
+  /// Title score for store artwork. No substring contains — that is
+  /// how "Cider" stole Cinderella and "Piranha" stole Piranha Pt. 2.
+  static int artworkTitleScore(String candidate, String target) {
+    final a = normalizeForSearch(candidate);
+    final b = normalizeForSearch(target);
+    if (a.isEmpty || b.isEmpty) return 0;
+    if (a == b) return 100;
+    if (_isNearTypo(a, b)) return 90;
+    final ta = _nameTokens(a);
+    final tb = _nameTokens(b);
+    if (ta.isEmpty || tb.isEmpty) return 0;
+    final common = ta.intersection(tb).length;
+    if (common == 0) return 0;
+    final dice = (200 * common) ~/ (ta.length + tb.length);
+    return dice >= 92 ? 90 : 0;
+  }
+
+  /// Artist score for store artwork. Token equality / subset only —
+  /// string contains would accept "zane" inside "zany inzane".
+  static int artworkArtistScore(String candidate, String target) {
+    final a = normalizeForSearch(candidate);
+    final b = normalizeForSearch(target);
+    if (a.isEmpty || b.isEmpty) return 0;
+    if (a == b || _artistsAliased(a, b)) return 100;
+    final ta = _nameTokens(a);
+    final tb = _nameTokens(b);
+    if (ta.isEmpty || tb.isEmpty) return 0;
+    if (ta.containsAll(tb) || tb.containsAll(ta)) {
+      final shorter = ta.length <= tb.length ? ta : tb;
+      if (shorter.length >= 2 || shorter.every((t) => t.length >= 3)) {
+        return 80;
+      }
+    }
+    return 0;
+  }
+
+  /// One-edit / adjacent-transposition typo for titles long enough
+  /// that "Cider"/"Coder" will not collide.
+  static bool _isNearTypo(String a, String b) {
+    if (a.length < 6 || b.length < 6) return false;
+    final la = a.length;
+    final lb = b.length;
+    if ((la - lb).abs() > 1) return false;
+    if (la == lb) {
+      var diffs = 0;
+      var first = -1;
+      for (var i = 0; i < la; i++) {
+        if (a[i] == b[i]) continue;
+        diffs++;
+        if (diffs == 1) {
+          first = i;
+        } else if (diffs == 2 &&
+            first == i - 1 &&
+            a[first] == b[i] &&
+            a[i] == b[first]) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+      return diffs <= 1;
+    }
+    final longer = la > lb ? a : b;
+    final shorter = la > lb ? b : a;
+    var i = 0;
+    var j = 0;
+    var skipped = 0;
+    while (i < longer.length && j < shorter.length) {
+      if (longer[i] == shorter[j]) {
+        i++;
+        j++;
+      } else {
+        skipped++;
+        if (skipped > 1) return false;
+        i++;
+      }
+    }
+    return true;
+  }
+
+  /// Public scorer used by tests and [_findBestMatch].
+  static Map<String, dynamic>? pickBestTrackArtwork(
+    List<Map<String, dynamic>> items, {
+    required String title,
+    required String artist,
+  }) =>
+      _findBestMatch(
+        items,
+        normalizeForSearch(title),
+        normalizeForSearch(artist),
+      );
+
+  static Map<String, dynamic>? _findBestMatch(
+    List<Map<String, dynamic>> items,
+    String targetTitle,
+    String targetArtist,
+  ) {
+    if (items.isEmpty || targetTitle.isEmpty || targetArtist.isEmpty) {
+      return null;
+    }
+
+    final accepted = <(int, DateTime?, Map<String, dynamic>)>[];
+    final exact = <(int, DateTime?, Map<String, dynamic>)>[];
+
+    for (final item in items) {
+      final rawArtistName = item['artistName']?.toString() ?? '';
+      final trackName = item['trackName']?.toString() ?? '';
+      final collection =
+          normalizeForSearch(item['collectionName']?.toString() ?? '');
+      final collectionArtist =
+          normalizeForSearch(item['collectionArtistName']?.toString() ?? '');
+      final titleScore = artworkTitleScore(trackName, targetTitle);
+      if (titleScore < 90) continue;
+      final artistScore = artworkArtistScore(rawArtistName, targetArtist);
+      if (artistScore < 80) continue;
+
+      var score = titleScore + artistScore;
+
+      final noise = '${normalizeForSearch(trackName)} $collection';
+      if (!targetTitle.contains('instrumental') &&
+          (noise.contains('instrumental') ||
+              noise.contains('karaoke') ||
+              noise.contains('tribute') ||
+              noise.contains('cover version') ||
+              noise.contains('made famous'))) {
+        score -= 80;
+      }
+
+      final looksLikeCompilation = collectionArtist == 'various artists' ||
+          collection.contains('greatest hits') ||
+          collection.contains('best of') ||
+          collection.contains('essential') ||
+          collection.contains('anthology') ||
+          collection.contains('various');
+      if (looksLikeCompilation) score -= 60;
+
+      if (collection.endsWith(' single')) score -= 15;
+
+      // The target title is normalized (feat. stripped), so a "Sirens
+      // (feat. …)" row from another film ties with the plain "Sirens"
+      // and used to win on the earliest-release tie-break. A bare title
+      // beats a featured one when nothing else separates them.
+      if (RegExp(r'[(\[]\s*(?:feat|ft\.?|featuring)\b', caseSensitive: false)
+          .hasMatch(trackName)) {
+        score -= 5;
+      }
+
+      if (score >= 170) {
+        DateTime? released;
+        try {
+          released = DateTime.parse(item['releaseDate']?.toString() ?? '');
+        } catch (_) {}
+        accepted.add((score, released, item));
+      } else if (titleScore == 100 && artistScore == 100) {
+        DateTime? released;
+        try {
+          released = DateTime.parse(item['releaseDate']?.toString() ?? '');
+        } catch (_) {}
+        exact.add((score, released, item));
+      }
+    }
+
+    if (accepted.isNotEmpty) {
+      // Highest score wins; ties broken by earliest release (the original
+      // studio album predates compilations, remasters and reissues).
+      accepted.sort((a, b) {
+        final s = b.$1.compareTo(a.$1);
+        if (s != 0) return s;
+        final ad = a.$2, bd = b.$2;
+        if (ad != null && bd != null) return ad.compareTo(bd);
+        if (ad != null) return -1;
+        if (bd != null) return 1;
+        return 0;
+      });
+      return accepted.first.$3;
+    }
+    // Last-resort tier: an exact title + exact/aliased artist match that
+    // lost points to penalties (an "instrumental" or compilation edition)
+    // is still better than no official art when no catalog match is available.
+    // Non-exact impostors (Cider->Cinderella, Piranha->Pt. 2) can never
+    // enter this tier, so the noise bar stays intact.
+    if (exact.isNotEmpty) {
+      exact.sort((a, b) {
+        final s = b.$1.compareTo(a.$1);
+        if (s != 0) return s;
+        final ad = a.$2, bd = b.$2;
+        if (ad != null && bd != null) return ad.compareTo(bd);
+        if (ad != null) return -1;
+        if (bd != null) return 1;
+        return 0;
+      });
+      return exact.first.$3;
+    }
+    return null;
   }
 
   Future<String> Function(String title, String artist)? trackCoverFallback;
