@@ -1162,7 +1162,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
                         ? 'No Dolby Atmos version found for this track'
                         : atmosAvailable == null
                             ? 'Could not verify availability; tap to try'
-                            : 'Dolby Atmos version found in the add-on catalog'
+                            : 'Dolby Atmos version found'
                     : null,
                 onPressed: quality == AudioQualityTiers.dolbyAtmos &&
                         atmosAvailable == false
