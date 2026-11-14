@@ -194,7 +194,13 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final tablet = constraints.maxWidth >= 680 ||
             (viewSize.shortestSide >= 600 && constraints.maxWidth >= 520);
         final nowPlaying = _route.startsWith('/now');
-        final activePath = waveActivePath(widget.location);
+        final routeActivePath = waveActivePath(widget.location);
+        final activePath = _route == '/liked' ||
+                _route == '/albums' ||
+                _route.startsWith('/album/') ||
+                _route == '/downloads'
+            ? '/playlists'
+            : routeActivePath;
         final theme = ref.watch(themeControllerProvider);
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
         final interfaceScale = tablet ? 1.0 : 0.97;
