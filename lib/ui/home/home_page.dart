@@ -158,9 +158,8 @@ class WaveHomePage extends ConsumerWidget {
               );
               final copy = switch (reason) {
                 FeedEmptyReason.offline => (
-                    title: "You're offline",
-                    subtitle:
-                        'Connect to load charts and picks.',
+                    title: "Couldn't load your feed",
+                    subtitle: 'Try again in a moment.',
                     action: 'Retry',
                   ),
                 FeedEmptyReason.lastfmError => (
