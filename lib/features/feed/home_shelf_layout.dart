@@ -147,7 +147,9 @@ abstract final class HomeShelfCatalog {
     if (value == 'samples') return HomeShelfId.samples;
     if (value == 'explore') return HomeShelfId.explore;
     if (value == 'library') return HomeShelfId.library;
-    if (value.contains('energize')) return HomeShelfId.energize;
+    if (value.contains('energize') || value.contains('energise') || value == 'energy') return HomeShelfId.energize;
+    if (value == 'chill' || value.contains('unwind')) return HomeShelfId.relax;
+    if (value.contains('mood booster') || value == 'happy') return HomeShelfId.feelGood;
     if (value.contains('workout')) return HomeShelfId.workout;
     if (value.contains('relax')) return HomeShelfId.relax;
     if (value.contains('focus')) return HomeShelfId.focus;
