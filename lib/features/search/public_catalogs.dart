@@ -87,8 +87,9 @@ class PublicMusicCatalogs {
   void _logFailure(String provider, String category, Object error) {
     final statusCode =
         error is DioException ? error.response?.statusCode : null;
-    final errorType =
-        error is DioException ? error.type.toString() : error.runtimeType.toString();
+    final errorType = error is DioException
+        ? error.type.toString()
+        : error.runtimeType.toString();
     debugPrint(
       '[CatalogSearch] provider=$provider category=$category '
       'status=error errorType=$errorType'
@@ -100,7 +101,6 @@ class PublicMusicCatalogs {
     String query, {
     required String category,
     required String entity,
-    required String attribute,
     required int limit,
   }) async {
     try {
@@ -112,7 +112,6 @@ class PublicMusicCatalogs {
           'country': 'us',
           'media': 'music',
           'entity': entity,
-          'attribute': attribute,
           'limit': '$limit',
         },
       );
@@ -136,7 +135,6 @@ class PublicMusicCatalogs {
       query,
       category: 'songs',
       entity: 'song',
-      attribute: 'songTerm',
       limit: limit,
     );
     return rows
@@ -166,7 +164,6 @@ class PublicMusicCatalogs {
       query,
       category: 'artists',
       entity: 'musicArtist',
-      attribute: 'artistTerm',
       limit: limit,
     );
     return rows
@@ -195,7 +192,6 @@ class PublicMusicCatalogs {
       query,
       category: 'albums',
       entity: 'album',
-      attribute: 'albumTerm',
       limit: limit,
     );
     return rows
