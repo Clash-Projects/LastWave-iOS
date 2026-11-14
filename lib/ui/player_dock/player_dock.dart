@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/audio/stream_models.dart';
-import '../../core/storage/prefs.dart';
 import '../../features/downloads/download_manager.dart';
 import '../../features/jam/jam_client.dart';
 import '../../features/library/playlists.dart';
@@ -22,7 +21,6 @@ import '../theme/haze.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 import '../components/inputs.dart';
-import '../components/wave_timeline.dart';
 
 /// Coherent desktop music player — ONE object, 80px, three zones.
 ///
@@ -1124,7 +1122,6 @@ class _DockProgressState extends ConsumerState<_DockProgress> {
     ));
     final dark = waveIsDark(context);
     final accent = waveAccent(context);
-    final wavySeekbar = ref.watch(prefsProvider.select((p) => p.wavySeekbar));
     final clock = ref.watch(playbackServiceProvider.select((s) => (
           position: s.position,
           buffered: s.buffered,
