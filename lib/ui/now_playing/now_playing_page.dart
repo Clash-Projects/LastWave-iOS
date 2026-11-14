@@ -235,12 +235,8 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
       });
     }
 
-    // Motion-art lookup is the expensive half (iTunes/Deezer search plus a
-    // possible YTM album backfill) and is only ever rendered while the
-    // visualizer is on, so nothing prefetches it while this page is closed
-    // and nothing looks it up when the toggle is off. Re-arms on the toggle
-    // so flipping it on warms the current track instead of waiting for the
-    // first fade.
+    // Motion-art lookup uses the animated artwork provider and only runs
+    // while the visualizer is enabled. Re-arms when the toggle is enabled.
     if (visualizerEnabled && current.queueKey != _prefetchedMotionKey) {
       _prefetchedMotionKey = current.queueKey;
       final snap = ref.read(playbackServiceProvider);
