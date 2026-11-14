@@ -11,8 +11,13 @@ class Prefs {
   final SharedPreferences _sp;
   Prefs(this._sp);
 
-  static Future<Prefs> load() async =>
-      Prefs(await SharedPreferences.getInstance());
+  static Future<Prefs> load() async {
+    final preferences = await SharedPreferences.getInstance();
+    // Remove keys for settings that are no longer part of the app.
+    await preferences.remove('lw_wavy_seekbar');
+    await preferences.remove('lw_catalog_deezer_enabled');
+    return Prefs(preferences);
+  }
 
   // -- Last.fm BYOK (bring your own keys) ---------------------------------
   // No bundled API keys ship with the app: the user enters their own
@@ -382,10 +387,6 @@ class Prefs {
     await _sp.setString('lw_accent_mode', v);
   }
 
-  /// Wave-shaped progress bar in the mini player and full screen player.
-  bool get wavySeekbar => _sp.getBool('lw_wavy_seekbar') ?? false;
-  Future<void> setWavySeekbar(bool v) => _sp.setBool('lw_wavy_seekbar', v);
-
   // -- Scrobbler --------------------------------------------------------------
   bool get scrobblerEnabled => _sp.getBool('lw_scrobbler_enabled') ?? false;
   bool get scrobbleNowPlaying => _sp.getBool('lw_submit_now_playing') ?? true;
@@ -589,13 +590,6 @@ class Prefs {
 
   Future<void> setDownloadStructure(String id) =>
       _sp.setString('lw_download_structure', id);
-
-  // -- Catalog search providers ---------------------------------------------
-  // Deezer adds public discovery metadata to Search; it never provides audio.
-  bool get deezerCatalogSearchEnabled =>
-      _sp.getBool('lw_catalog_deezer_enabled') ?? true;
-  Future<void> setDeezerCatalogSearchEnabled(bool enabled) =>
-      _sp.setBool('lw_catalog_deezer_enabled', enabled);
 
   // -- Portable backup (non-secret prefs only) ------------------------------
   static bool isSecretPref(String key) {
