@@ -20,7 +20,6 @@ import '../../core/artwork/artwork_resolver.dart';
 import '../../core/audio/stream_models.dart';
 import '../../features/lyrics/karaoke_lyrics_view.dart';
 import '../../features/player/playback_service.dart';
-import 'related_media_panel.dart';
 import '../../features/downloads/download_manager.dart';
 import '../../features/library/playlists.dart';
 import '../../features/settings/theme_controller.dart';
@@ -60,7 +59,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
   // Focus mode: lyrics only, artwork column collapsed, lyrics centered.
   bool _focusMode = false;
   bool _controlsIdle = false;
-  bool _suggestionsVisible = false;
   Timer? _idleTimer;
   DateTime _lastHoverAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastArmAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -93,22 +91,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
     super.dispose();
   }
 
-
-  void _toggleSuggestions() {
-    _resetIdleTimer();
-    setState(() {
-      _suggestionsVisible = !_suggestionsVisible;
-      if (_suggestionsVisible) _focusMode = false;
-    });
-  }
-
-  Future<void> _playSuggestedTrack(PlayableTrack track) async {
-    setState(() => _suggestionsVisible = false);
-    await ref.read(playbackServiceProvider.notifier).play(
-          track,
-          sourceLabel: 'YouTube Music',
-        );
-  }
 
   void _resetIdleTimer() {
     // Touch interfaces do not have a persistent pointer hover. Keep the
@@ -231,14 +213,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
         ),
       );
     }
-
-    final alternatePanelVisible = _suggestionsVisible;
-    final alternatePanel = _suggestionsVisible
-        ? WaveRelatedSuggestionsPanel(
-            track: current,
-            onPlayTrack: _playSuggestedTrack,
-          )
-        : null;
 
     if (current.queueKey != _preloadedKey) {
       _preloadedKey = current.queueKey;
@@ -375,10 +349,7 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                             ? _DesktopDualPane(
                                 topInset: _kTopBarHeight + 48,
                                 track: current,
-                                lyricsVisible:
-                                    _lyricsVisible && !alternatePanelVisible,
-                                alternatePanel: alternatePanel,
-                                alternatePanelVisible: alternatePanelVisible,
+                                lyricsVisible: _lyricsVisible,
                                 focusMode: _focusMode,
                               )
                             : Padding(
@@ -387,23 +358,9 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                                 ),
                                 child: _NarrowCenteredPane(
                                   track: current,
-                                  lyricsVisible:
-                                      _lyricsVisible && !alternatePanelVisible,
-                                  alternatePanel: alternatePanel,
-                                  alternatePanelVisible: alternatePanelVisible,
+                                  lyricsVisible: _lyricsVisible,
                                 ),
                               ),
-                      ),
-                      Positioned(
-                        top: _kTopBarHeight + 5,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: _NowPlayingSuggestionsButton(
-                            active: _suggestionsVisible,
-                            onTap: _toggleSuggestions,
-                          ),
-                        ),
                       ),
                       Positioned(
                         top: 0,
@@ -510,74 +467,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
 /// Height of the top action bar (also the lyrics toolbar's row).
 const double _kTopBarHeight = 54;
 
-
-class _NowPlayingSuggestionsButton extends StatelessWidget {
-  final bool active;
-  final VoidCallback onTap;
-
-  const _NowPlayingSuggestionsButton({
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return WaveHaze(
-      level: LwHazeLevel.l2,
-      base: waveSurfaceRaised(context),
-      fillAlpha: 0.46,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: waveDivider(context)),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: _InfoTabButton(
-          label: 'Suggestions',
-          active: active,
-          onTap: onTap,
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoTabButton extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _InfoTabButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = waveAccent(context);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: waveMotion(context, WaveMotion.fast),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? accent.withValues(alpha: 0.16) : Colors.transparent,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: active ? accent.withValues(alpha: 0.3) : Colors.transparent,
-          ),
-        ),
-        child: Text(
-          label,
-          style: WaveType.meta.copyWith(
-            color: active ? accent : waveTextSecondary(context),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _TopActionsBar extends StatelessWidget {
   final bool lyricsVisible;
@@ -871,16 +760,12 @@ class _DesktopDualPane extends StatelessWidget {
   final double topInset;
   final PlayableTrack track;
   final bool lyricsVisible;
-  final Widget? alternatePanel;
-  final bool alternatePanelVisible;
   final bool focusMode;
 
   const _DesktopDualPane({
     required this.topInset,
     required this.track,
     required this.lyricsVisible,
-    this.alternatePanel,
-    this.alternatePanelVisible = false,
     this.focusMode = false,
   });
 
@@ -889,7 +774,7 @@ class _DesktopDualPane extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
-        final showRightPanel = lyricsVisible || alternatePanelVisible;
+        final showRightPanel = lyricsVisible;
         // [maxHeight] is the old body height (under the top bar); the lyrics
         // column is [fullHeight] tall because it also fills the top bar row.
         final maxHeight = math.max(
@@ -1051,21 +936,7 @@ class _DesktopDualPane extends StatelessWidget {
                               width: lyricsWidth,
                               child: Offstage(
                                 offstage: !showRightPanel,
-                                child: alternatePanelVisible &&
-                                        alternatePanel != null
-                                    ? Padding(
-                                        // Suggestions have their
-                                        // own heading, so keep them below both
-                                        // the top action bar and the info tabs.
-                                        padding: EdgeInsets.only(top: topInset),
-                                        child: SizedBox(
-                                          height: maxHeight,
-                                          child: RepaintBoundary(
-                                            child: alternatePanel!,
-                                          ),
-                                        ),
-                                      )
-                                    : _VisibleTicker(
+                                child: _VisibleTicker(
                                         enabled: lyricsVisible,
                                         child: RepaintBoundary(
                                           child: WaveKaraokeLyricsView(
@@ -1099,14 +970,10 @@ class _DesktopDualPane extends StatelessWidget {
 class _NarrowCenteredPane extends StatelessWidget {
   final PlayableTrack track;
   final bool lyricsVisible;
-  final Widget? alternatePanel;
-  final bool alternatePanelVisible;
 
   const _NarrowCenteredPane({
     required this.track,
     required this.lyricsVisible,
-    this.alternatePanel,
-    this.alternatePanelVisible = false,
   });
 
   @override
@@ -1170,11 +1037,10 @@ class _NarrowCenteredPane extends StatelessWidget {
     );
 
     return IndexedStack(
-      index: alternatePanelVisible ? 2 : lyricsVisible ? 1 : 0,
+      index: lyricsVisible ? 1 : 0,
       children: [
         coverArtSubtree,
         lyricsSubtree,
-        alternatePanel ?? const SizedBox.shrink(),
       ],
     );
   }
