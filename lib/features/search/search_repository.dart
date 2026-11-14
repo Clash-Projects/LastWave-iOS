@@ -3,10 +3,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/network/lastfm_api.dart';
 import '../../core/storage/app_database.dart';
-import '../../core/storage/prefs.dart';
 import '../innertube/innertube_api.dart';
 import '../lastfm/auth_repository.dart';
-import 'deezer_catalog.dart';
 import 'shared_providers.dart';
 
 enum SearchTab { tracks, videos, artists, albums, playlists, users }
@@ -36,29 +34,6 @@ class SearchResultItem {
     this.providerLabel = '',
   });
 
-  SearchResultItem copyWithCatalogMetadata({
-    required String providerLabel,
-    String? artist,
-    String? artworkUrl,
-    String? subtitle,
-    int? durationSeconds,
-  }) =>
-      SearchResultItem(
-        name: name,
-        artist: artist?.isNotEmpty == true ? artist! : this.artist,
-        artworkUrl: artworkUrl?.isNotEmpty == true
-            ? artworkUrl!
-            : this.artworkUrl,
-        subtitle: subtitle?.isNotEmpty == true ? subtitle! : this.subtitle,
-        videoId: videoId,
-        entityId: entityId,
-        tab: tab,
-        durationSeconds: durationSeconds != null && durationSeconds > 0
-            ? durationSeconds
-            : this.durationSeconds,
-        externalUrl: externalUrl,
-        providerLabel: providerLabel,
-      );
 }
 
 class SearchSuggestion {
@@ -105,8 +80,6 @@ class SearchRepository {
   final InnerTubeMusicApi _tube;
   final AppDatabase _db;
   final String Function() _apiKey;
-  final DeezerCatalogApi? _deezer;
-  final bool Function() _deezerEnabled;
 
   SearchRepository(
     this._api,
@@ -114,18 +87,11 @@ class SearchRepository {
     this._db,
     this._apiKey, {
     DateTime Function()? clock,
-    this._deezer,
-    bool Function()? deezerEnabled,
-  })  : _now = clock ?? DateTime.now,
-        _deezerEnabled = deezerEnabled ?? (() => false);
+  }) : _now = clock ?? DateTime.now;
   final DateTime Function() _now;
 
-  /// Deezer results are added when the metadata catalog setting is enabled.
-  bool get _deezerActive => _deezer != null && _deezerEnabled();
-
-  /// A failed YouTube Music request must not discard successful catalog
-  /// results from Deezer. Each source is isolated so the combined search
-  /// can still render whichever providers respond.
+  /// Search failures are isolated and logged so a provider error does not
+  /// crash the Search page.
   Future<List<T>> _searchSafely<T>(
     String provider,
     String category,
@@ -261,7 +227,7 @@ class SearchRepository {
     final q = query.trim();
     if (q.isEmpty) return Future.value(const []);
     return _memoized(
-      '${tab.name}|${q.toLowerCase()}|deezer=$_deezerActive',
+      '${tab.name}|${q.toLowerCase()}',
       () => _search(tab, q),
     );
   }
@@ -272,39 +238,23 @@ class SearchRepository {
   ) async {
     switch (tab) {
       case SearchTab.tracks:
-        final requests = <Future<List<SearchResultItem>>>[
-          _searchSafely<SearchResultItem>(
-            'YouTube Music',
-            'songs',
-            () async => (await _tube.searchSongs(q, limit: 60))
-                .map((t) => SearchResultItem(
-                      name: t.title,
-                      artist: t.artist,
-                      artworkUrl: t.artworkUrl,
-                      subtitle: t.album,
-                      videoId: t.videoId,
-                      entityId: t.videoId,
-                      tab: SearchTab.tracks,
-                      durationSeconds: t.durationSeconds,
-                       providerLabel: 'YouTube Music',
-                    ))
-                .toList(),
-          ),
-        ];
-        if (_deezerActive) {
-          requests.add(_searchSafely<SearchResultItem>(
-            'Deezer',
-            'tracks',
-            () async => _deezerItems(
-              await _deezer!.searchCatalog(
-                q,
-                kind: DeezerCatalogKind.track,
-              ),
-              SearchTab.tracks,
-            ),
-          ));
-        }
-        return _mergeCatalogItems(await Future.wait(requests), SearchTab.tracks);
+        return _searchSafely<SearchResultItem>(
+          'YouTube Music',
+          'songs',
+          () async => (await _tube.searchSongs(q, limit: 60))
+              .map((t) => SearchResultItem(
+                    name: t.title,
+                    artist: t.artist,
+                    artworkUrl: t.artworkUrl,
+                    subtitle: t.album,
+                    videoId: t.videoId,
+                    entityId: t.videoId,
+                    tab: SearchTab.tracks,
+                    durationSeconds: t.durationSeconds,
+                    providerLabel: 'YouTube Music',
+                  ))
+              .toList(),
+        );
 
       case SearchTab.videos:
         final videos = await _tube.searchVideos(q, limit: 60);
@@ -322,69 +272,37 @@ class SearchRepository {
             .toList();
 
       case SearchTab.artists:
-        final requests = <Future<List<SearchResultItem>>>[
-          _searchSafely<SearchResultItem>(
-            'YouTube Music',
-            'artists',
-            () async => (await _tube.searchArtists(q))
-                .map((e) => SearchResultItem(
-                      name: e.name,
-                      subtitle: e.subtitle,
-                      artworkUrl: e.artworkUrl,
-                      entityId: e.browseId,
-                      tab: tab,
-                      providerLabel: 'YouTube Music',
-                    ))
-                .toList(),
-          ),
-        ];
-        if (_deezerActive) {
-          requests.add(_searchSafely<SearchResultItem>(
-            'Deezer',
-            'artists',
-            () async => _deezerItems(
-              await _deezer!.searchCatalog(
-                q,
-                kind: DeezerCatalogKind.artist,
-              ),
-              SearchTab.artists,
-            ),
-          ));
-        }
-        return _mergeCatalogItems(await Future.wait(requests), SearchTab.artists);
+        return _searchSafely<SearchResultItem>(
+          'YouTube Music',
+          'artists',
+          () async => (await _tube.searchArtists(q))
+              .map((e) => SearchResultItem(
+                    name: e.name,
+                    subtitle: e.subtitle,
+                    artworkUrl: e.artworkUrl,
+                    entityId: e.browseId,
+                    tab: tab,
+                    providerLabel: 'YouTube Music',
+                  ))
+              .toList(),
+        );
 
       case SearchTab.albums:
-        final requests = <Future<List<SearchResultItem>>>[
-          _searchSafely<SearchResultItem>(
-            'YouTube Music',
-            'albums',
-            () async => (await _tube.searchAlbums(q))
-                .map((e) => SearchResultItem(
-                      name: e.name,
-                      artist: e.artist,
-                      subtitle: e.subtitle,
-                      artworkUrl: e.artworkUrl,
-                      entityId: e.browseId,
-                      tab: tab,
-                      providerLabel: 'YouTube Music',
-                    ))
-                .toList(),
-          ),
-        ];
-        if (_deezerActive) {
-          requests.add(_searchSafely<SearchResultItem>(
-            'Deezer',
-            'albums',
-            () async => _deezerItems(
-              await _deezer!.searchCatalog(
-                q,
-                kind: DeezerCatalogKind.album,
-              ),
-              SearchTab.albums,
-            ),
-          ));
-        }
-        return _mergeCatalogItems(await Future.wait(requests), SearchTab.albums);
+        return _searchSafely<SearchResultItem>(
+          'YouTube Music',
+          'albums',
+          () async => (await _tube.searchAlbums(q))
+              .map((e) => SearchResultItem(
+                    name: e.name,
+                    artist: e.artist,
+                    subtitle: e.subtitle,
+                    artworkUrl: e.artworkUrl,
+                    entityId: e.browseId,
+                    tab: tab,
+                    providerLabel: 'YouTube Music',
+                  ))
+              .toList(),
+        );
 
       case SearchTab.playlists:
         final playlists = await _tube.searchPlaylists(q, limit: 30);
@@ -407,8 +325,8 @@ class SearchRepository {
     }
   }
 
-  /// Resolve a metadata-only Deezer album to its matching YouTube Music
-  /// browse entry. The Deezer ID is never passed to playback or routing.
+  /// Resolve an album search hit to a YouTube Music browse entry when its
+  /// initial result did not include a browse ID.
   Future<SearchResultItem?> resolveAlbumForOpening(
     SearchResultItem album,
   ) async {
@@ -469,83 +387,8 @@ class SearchRepository {
       subtitle: album.subtitle,
       entityId: match.browseId,
       tab: SearchTab.albums,
-      providerLabel: 'YouTube Music · Deezer',
+      providerLabel: 'YouTube Music',
     );
-  }
-
-  List<SearchResultItem> _deezerItems(
-    List<DeezerCatalogHit> hits,
-    SearchTab tab,
-  ) =>
-      hits
-          .map((hit) => SearchResultItem(
-                name: hit.title,
-                artist: hit.artist,
-                artworkUrl: hit.artworkUrl,
-                subtitle: hit.album,
-                // Deezer IDs and links are metadata only. Playback resolves
-                // by title/artist through the existing lossless/YouTube chain.
-                entityId: '',
-                externalUrl: '',
-                providerLabel: 'Deezer',
-                tab: tab,
-                durationSeconds: hit.durationSeconds,
-              ))
-          .toList();
-
-  List<SearchResultItem> _mergeCatalogItems(
-    List<List<SearchResultItem>> batches,
-    SearchTab tab,
-  ) {
-    final out = <SearchResultItem>[];
-    final indexByKey = <String, int>{};
-    String normalize(String value) =>
-        value.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
-    for (final batch in batches) {
-      for (final item in batch) {
-        final artistKey = tab == SearchTab.artists
-            ? ''
-            : normalize(item.artist.isNotEmpty ? item.artist : item.subtitle);
-        final key = '${tab.name}|${normalize(item.name)}|$artistKey';
-        final existingIndex = indexByKey[key];
-        if (existingIndex != null) {
-          final existing = out[existingIndex];
-          final labels = <String>{
-            ...existing.providerLabel
-                .split(' · ')
-                .where((label) => label.isNotEmpty),
-            ...item.providerLabel
-                .split(' · ')
-                .where((label) => label.isNotEmpty),
-          };
-          final existingLabels = existing.providerLabel
-              .split(' · ')
-              .where((label) => label.isNotEmpty)
-              .toSet();
-          if (labels.length != existingLabels.length ||
-              existing.artworkUrl.isEmpty ||
-              existing.subtitle.isEmpty ||
-              existing.durationSeconds <= 0 ||
-              existing.artist.isEmpty) {
-            out[existingIndex] = existing.copyWithCatalogMetadata(
-              providerLabel: labels.join(' · '),
-              artist: existing.artist.isEmpty ? item.artist : null,
-              artworkUrl:
-                  existing.artworkUrl.isEmpty ? item.artworkUrl : null,
-              subtitle: existing.subtitle.isEmpty ? item.subtitle : null,
-              durationSeconds: existing.durationSeconds <= 0
-                  ? item.durationSeconds
-                  : null,
-            );
-          }
-          continue;
-        }
-        indexByKey[key] = out.length;
-        out.add(item);
-        if (out.length >= 100) return out;
-      }
-    }
-    return out;
   }
 
   /// A single token of length 2+ is treated as a Last.fm username.
@@ -831,13 +674,10 @@ List<SearchResultItem> rankSearchPlaylistsByTaste(
 }
 
 final searchRepositoryProvider = Provider<SearchRepository>((ref) {
-  final prefs = ref.watch(prefsProvider);
   return SearchRepository(
     ref.watch(lastFmApiProvider),
     ref.watch(innerTubeProvider),
     ref.watch(databaseProvider),
     () => ref.watch(prefsApiKeyProvider),
-    deezer: ref.read(deezerCatalogApiProvider),
-    deezerEnabled: () => prefs.deezerCatalogSearchEnabled,
   );
 });
