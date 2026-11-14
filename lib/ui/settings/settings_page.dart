@@ -2400,60 +2400,93 @@ class _Sources extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final urls = ref.watch(prefsProvider).addonUrls;
+    final prefs = ref.watch(prefsProvider);
+    final urls = prefs.addonUrls;
     final src = ref.watch(losslessApiProvider);
     final quotas = src is AddonApi
         ? src.quotaByBase
         : const <String, AddonQuota>{};
-    return _Group(
-      id: 'sources.addons',
-      title: 'Addon sources',
-      subtitle: urls.isEmpty
-          ? 'No addon configured — playback uses YouTube only. Add an addon URL to enable the lossless tier.'
-          : 'Addons serve the lossless tier; tracks they cannot match play from YouTube',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (AppEnv.addonClientSecret.isEmpty &&
-              urls.any((u) => AddonApi.tokenOfRoot(u).isNotEmpty))
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text(
-                'This build has no addon app key — official addons may fail. '
-                'Rebuild with ADDON_CLIENT_SECRET set.',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Group(
+          id: 'sources.catalog',
+          title: 'Catalog providers',
+          subtitle:
+              'Add discovery and metadata results to search. These sources do not provide audio playback.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SwitchRow(
+                value: prefs.itunesCatalogSearchEnabled,
+                onChanged: (v) =>
+                    onUpdate((p) => p.setItunesCatalogSearchEnabled(v)),
+                title: 'iTunes Search',
+                subtitle:
+                    'Search Apple’s public music storefront catalog for songs, albums and artists.',
+              ),
+              _SwitchRow(
+                value: prefs.musicBrainzCatalogSearchEnabled,
+                onChanged: (v) =>
+                    onUpdate((p) => p.setMusicBrainzCatalogSearchEnabled(v)),
+                title: 'MusicBrainz',
+                subtitle:
+                    'Add community-maintained recordings, artists and releases. Requests are rate-limited.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Group(
+          id: 'sources.addons',
+          title: 'Addon sources',
+          subtitle: urls.isEmpty
+              ? 'No addon configured — playback uses YouTube only. Add an addon URL to enable the lossless tier.'
+              : 'Addons serve the lossless tier; tracks they cannot match play from YouTube',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (AppEnv.addonClientSecret.isEmpty &&
+                  urls.any((u) => AddonApi.tokenOfRoot(u).isNotEmpty))
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'This build has no addon app key — official addons may fail. '
+                    'Rebuild with ADDON_CLIENT_SECRET set.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              for (final u in urls)
+                _AddonRow(
+                  url: u,
+                  quota: quotas[u],
+                  onRemove: () async {
+                    await onUpdate(
+                      (p) => p.setAddonUrls(urls.where((e) => e != u).toList()),
+                    );
+                    ref.invalidate(losslessApiProvider);
+                  },
+                ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: WaveFilledButton(
+                  onPressed: () => _addAddonDialog(context, ref, urls, onUpdate),
+                  child: const Text('Add addon'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Paste the full addon URL from your dashboard. Anyone holding '
+                'it plays on your quota — keep the dashboard backup safe.',
                 style: TextStyle(fontSize: 12),
               ),
-            ),
-          for (final u in urls)
-            _AddonRow(
-              url: u,
-              quota: quotas[u],
-              onRemove: () async {
-                await onUpdate(
-                  (p) => p.setAddonUrls(urls.where((e) => e != u).toList()),
-                );
-                ref.invalidate(losslessApiProvider);
-              },
-            ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: WaveFilledButton(
-              onPressed: () => _addAddonDialog(context, ref, urls, onUpdate),
-              child: const Text('Add addon'),
-            ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Paste the full addon URL from your dashboard. Anyone holding '
-            'it plays on your quota — keep the dashboard backup safe.',
-            style: TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-
   Future<void> _addAddonDialog(
     BuildContext context,
     WidgetRef ref,
