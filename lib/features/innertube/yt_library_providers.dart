@@ -105,6 +105,9 @@ final ytHomeFeedProvider = FutureProvider<YtHomeFeed>((ref) async {
 /// a Dart record, so reselecting a category reuses its in-memory response.
 final ytHomeBrowseProvider =
     FutureProvider.family<YtHomeFeed, YtHomeBrowseKey>((ref, key) async {
+  // A profile or channel switch changes the authenticated recommendations
+  // even though the shared InnerTube client instance remains the same.
+  ref.watch(ytConnectionProvider);
   if (key.browseId.trim().isEmpty) return const YtHomeFeed();
   return ref.watch(innerTubeProvider).fetchHomeFeed(
         browseId: key.browseId,
