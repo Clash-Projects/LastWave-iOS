@@ -14,7 +14,6 @@ enum BitPerfectReason {
   formatUnsupported,
   sharedMode,
   speedNotUnity,
-  crossfadeActive,
   pitchNotUnity,
   loudnessActive,
   autoMixActive;
@@ -39,8 +38,6 @@ enum BitPerfectReason {
             : 'Shared — mixer in path',
         BitPerfectReason.speedNotUnity =>
           'Bit-Perfect unavailable — playback speed ≠ 1.0.',
-        BitPerfectReason.crossfadeActive =>
-          'Bit-Perfect unavailable — crossfade is enabled.',
         BitPerfectReason.pitchNotUnity =>
           'Bit-Perfect unavailable — pitch ≠ 1.0.',
         BitPerfectReason.loudnessActive =>
@@ -83,7 +80,6 @@ class OutputPathStatus {
   final bool peqActive;
   final bool softwareVolume;
   final bool hardwareVolume;
-  final bool crossfade;
   final double speed;
   final BitPerfectReason reason;
   final String? error;
@@ -101,7 +97,6 @@ class OutputPathStatus {
     this.peqActive = false,
     this.softwareVolume = true,
     this.hardwareVolume = false,
-    this.crossfade = false,
     this.speed = 1.0,
     this.reason = BitPerfectReason.sharedMode,
     this.error,
@@ -125,7 +120,6 @@ class OutputPathStatus {
     bool? peqActive,
     bool? softwareVolume,
     bool? hardwareVolume,
-    bool? crossfade,
     double? speed,
     BitPerfectReason? reason,
     String? error,
@@ -144,7 +138,6 @@ class OutputPathStatus {
         peqActive: peqActive ?? this.peqActive,
         softwareVolume: softwareVolume ?? this.softwareVolume,
         hardwareVolume: hardwareVolume ?? this.hardwareVolume,
-        crossfade: crossfade ?? this.crossfade,
         speed: speed ?? this.speed,
         reason: reason ?? this.reason,
         error: clearError ? null : (error ?? this.error),
