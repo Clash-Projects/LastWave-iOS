@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' hide RepeatMode;
@@ -201,7 +200,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
   /// True while bit-perfect / WASAPI exclusive must stay off.
   bool get processingBlocksExclusive {
-    if (_prefs.crossfadeEnabled || _prefs.autoMixEnabled) return true;
+    if (_prefs.autoMixEnabled) return true;
     if (_prefs.loudnessMode != 'off') return true;
     if (_headphoneActive) return true;
     if (_prefs.equalizerEnabled || _prefs.studioClarityEnabled) return true;
@@ -216,23 +215,14 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       _prefs.losslessQuality == AudioQualityTiers.dataSaver;
 
   bool get _overlapEnabled =>
-      (_timedMixEnabled || _prefs.crossfadeEnabled) &&
-      _mixFaults.overlapAllowed;
+      _timedMixEnabled && _mixFaults.overlapAllowed;
 
-  Duration _overlapLength() {
-    if (_timedMixEnabled) {
-      return Duration(seconds: _prefs.autoMixSeconds.clamp(12, 18));
-    }
-    return Duration(seconds: _prefs.crossfadeSeconds.clamp(3, 12));
-  }
+  Duration _overlapLength() =>
+      Duration(seconds: _prefs.autoMixSeconds.clamp(12, 18));
 
-  /// AutoMix plan for the current track into [next]. Crossfade mode keeps
-  /// its fixed, user-chosen blend.
+  /// Plans the timed AutoMix transition from the current track into [next].
   MixPlan _planFor(PlayableTrack next) {
     final requested = _overlapLength();
-    if (!_timedMixEnabled) {
-      return MixPlan(style: MixStyle.blend, overlap: requested);
-    }
     final cur = state.current;
     final sb = _standbyPlayer;
     final incomingDur =
@@ -283,7 +273,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     return plan.mixes ? plan.overlap : Duration.zero;
   }
 
-  // -- Dual-engine Crossfade & Standby state -------------------------------
+  // -- Dual-engine Mix transition & Standby state -------------------------------
   Player? _standbyPlayer;
   bool _standbyArmed = false;
 
@@ -302,18 +292,18 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   PlayableTrack? _standbyTrack;
   ResolvedStream? _standbyStream;
   int _standbyIndex = -1;
-  bool _crossfading = false;
-  DateTime? _crossfadeStartTime;
-  Duration? _crossfadeDuration;
-  Timer? _crossfadeTimer;
-  double _crossfadeTargetVolume = 1.0;
-  String _crossfadeResolvedKey = '';
+  bool _mixTransitionActive = false;
+  DateTime? _mixStartTime;
+  Duration? _mixDuration;
+  Timer? _mixTimer;
+  double _mixTargetVolume = 1.0;
+  String _mixResolvedKey = '';
   // Short release trace after a deck handoff; helps distinguish a native
   // playback stall from stale events emitted by the retired player.
   String _handoffWatchKey = '';
   DateTime? _handoffWatchUntil;
   int _handoffLastLoggedSecond = -1;
-  DateTime _lastCrossfadeResolveAttempt =
+  DateTime _lastMixResolveAttempt =
       DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Whether this libmpv build can run the AutoMix low/high-pass sweep.
@@ -507,7 +497,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
             faults: _mixFaults.faults,
             primaryVolume: _player?.state.volume ?? -1,
             standbyVolume: _standbyPlayer?.state.volume,
-            mixing: _crossfading,
+            mixing: _mixTransitionActive,
           );
 
   Future<void> _initializeIosAudioBridge() async {
@@ -711,7 +701,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
           // prefetch is once-per-track. Saves 60Hz DateTime+prefs wakes.
           _tickScrobble(v);
           _maybePrefetchFromPosition(v);
-          _updateCrossfadeSchedule(v);
+          _updateAutoMixSchedule(v);
           state = state.copyWith(position: v);
           // Persist the latest listening position while playback advances so
           // an iOS force-quit or app restart can resume close to this point.
@@ -771,7 +761,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
                 'key=$_handoffWatchKey player=${identityHashCode(p)}');
           }
           // A deck can emit its final completion event while it is being
-          // retired after a crossfade. Only the currently active deck may
+          // retired after a mix transition. Only the currently active deck may
           // complete the queue's current track.
           if (done) _onTrackCompleted();
         });
@@ -833,7 +823,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     }
   }
 
-  // -- Crossfade & Standby hand-off engine ---------------------------------
+  // -- Mix transition & Standby hand-off engine ---------------------------------
 
   Future<void> _ensureStandbyPlayer() async {
     if (_standbyPlayer != null) return;
@@ -893,15 +883,15 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     }
   }
 
-  void cancelCrossfade() {
-    _crossfadeTimer?.cancel();
-    _crossfadeTimer = null;
+  void cancelMixTransition() {
+    _mixTimer?.cancel();
+    _mixTimer = null;
     final ramping = _rateRampTimer != null;
     _rateRampTimer?.cancel();
     _rateRampTimer = null;
     _armedBeatPlan = null;
-    final restoreChain = _crossfading || _standbyArmed || ramping;
-    if (_crossfading || _standbyArmed) {
+    final restoreChain = _mixTransitionActive || _standbyArmed || ramping;
+    if (_mixTransitionActive || _standbyArmed) {
       try {
         _standbyPlayer?.stop();
         _standbyPlayer?.setVolume(0);
@@ -911,7 +901,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       } catch (_) {}
     }
     _mixStartedAt = null;
-    _crossfading = false;
+    _mixTransitionActive = false;
     _standbyArmed = false;
     _standbyReady = false;
     _standbyTrack = null;
@@ -924,7 +914,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   /// Reloads headphone correction, loudness, and the overlap mode from
-  /// prefs. Enabling AutoMix clears crossfade and the reverse, in prefs.
+  /// prefs. Enabling AutoMix clears mix transition and the reverse, in prefs.
   Future<void> applyAudioPrefs() async {
     _rebuildProcessingFilter();
     if (!exclusiveApplied) {
@@ -937,47 +927,46 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
   void refreshOverlapPrefs() {
     if (!_overlapEnabled || exclusiveApplied) {
-      cancelCrossfade();
+      cancelMixTransition();
     }
   }
 
-  void _updateCrossfadeSchedule(Duration position) {
-    // Crossfade (3–12s) and AutoMix (12–30s, planned per pair) share the
-    // standby deck.
+  void _updateAutoMixSchedule(Duration position) {
+    // Timed AutoMix (12–18s, planned per pair) uses the standby deck.
     if (!_overlapEnabled) {
-      if (_standbyArmed || _crossfading) cancelCrossfade();
+      if (_standbyArmed || _mixTransitionActive) cancelMixTransition();
       return;
     }
     if (exclusiveApplied) {
-      if (_standbyArmed || _crossfading) cancelCrossfade();
+      if (_standbyArmed || _mixTransitionActive) cancelMixTransition();
       return;
     }
     if (state.repeatMode == RepeatMode.one) {
-      if (_standbyArmed || _crossfading) cancelCrossfade();
+      if (_standbyArmed || _mixTransitionActive) cancelMixTransition();
       return;
     }
     if (!state.isPlaying || _resolving || state.error != null) return;
     // Once the overlap runs, the timer owns it; re-planning mid-mix (the
     // incoming duration just became known) must not disturb it.
-    if (_crossfading) return;
+    if (_mixTransitionActive) return;
     final duration = state.duration;
     if (duration.inSeconds < 10) return;
 
     final nextIndex = _nextIndex();
     if (nextIndex == null || !_queueIndexValid(nextIndex)) {
-      if (_standbyArmed) cancelCrossfade();
+      if (_standbyArmed) cancelMixTransition();
       return;
     }
     final nextTrack = state.queue[nextIndex];
     if (_standbyArmed && _standbyTrack?.queueKey != nextTrack.queueKey) {
-      cancelCrossfade();
+      cancelMixTransition();
     }
 
     final plan = _planFor(nextTrack);
     if (!plan.mixes) {
       // Album continuity / live / too short: the normal track change
       // happens at EOF, no overlap.
-      if (_standbyArmed) cancelCrossfade();
+      if (_standbyArmed) cancelMixTransition();
       return;
     }
     if (_timedMixEnabled) {
@@ -986,7 +975,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     }
     final fadeDuration = plan.overlap;
     if (duration < fadeDuration + const Duration(seconds: 8)) {
-      if (_standbyArmed) cancelCrossfade();
+      if (_standbyArmed) cancelMixTransition();
       return;
     }
     final remaining = duration - position;
@@ -1013,7 +1002,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         _standbyArmed &&
         _standbyReady &&
         _standbyPlayer != null) {
-      _startCrossfade(fadeDuration, sweep: plan.style == MixStyle.filterSweep);
+      _startMixTransition(fadeDuration, sweep: plan.style == MixStyle.filterSweep);
     }
 
     // 4. Deck still not ready with the window nearly gone: give up on the
@@ -1024,7 +1013,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         remaining <= fadeDuration - const Duration(seconds: 3)) {
       _mixGaveUpFor = nextTrack.queueKey;
       _crumb('automix gave up key=${nextTrack.queueKey} (deck not ready)');
-      cancelCrossfade();
+      cancelMixTransition();
     }
   }
 
@@ -1033,12 +1022,12 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     if (_playCache.get(cacheKey) != null) return;
     if (_resolveInflight.containsKey(cacheKey)) return;
     final now = DateTime.now();
-    if (nextTrack.queueKey == _crossfadeResolvedKey &&
-        now.difference(_lastCrossfadeResolveAttempt).inSeconds < 10) {
+    if (nextTrack.queueKey == _mixResolvedKey &&
+        now.difference(_lastMixResolveAttempt).inSeconds < 10) {
       return;
     }
-    _crossfadeResolvedKey = nextTrack.queueKey;
-    _lastCrossfadeResolveAttempt = now;
+    _mixResolvedKey = nextTrack.queueKey;
+    _lastMixResolveAttempt = now;
     unawaited(_resolveRemote(nextTrack).then((stream) {
       if (stream != null) {
         final currentNext = _nextIndex();
@@ -1053,7 +1042,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         final fade = _currentOverlap();
         if (fade > Duration.zero &&
             rem <= fade + _armLead &&
-            !_crossfading &&
+            !_mixTransitionActive &&
             !_standbyArmed &&
             _mixGaveUpFor != nextTrack.queueKey &&
             state.isPlaying) {
@@ -1065,7 +1054,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
   Future<void> _armStandbyForNext(PlayableTrack nextTrack, int nextIndex,
       {BeatMixPlan? beatPlan, ResolvedStream? withStream}) async {
-    if (_standbyArmed || _crossfading) return;
+    if (_standbyArmed || _mixTransitionActive) return;
     if (exclusiveApplied) return;
     if (state.repeatMode == RepeatMode.one) return;
 
@@ -1294,7 +1283,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     if (_standbyArmed && !_standbyReady && pos >= bp.mixOutStart + 2) {
       _mixGaveUpFor = next.queueKey;
       _mixFault('gave up key=${next.queueKey} (deck not ready)');
-      cancelCrossfade();
+      cancelMixTransition();
     }
     return true;
   }
@@ -1304,11 +1293,11 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   /// OUTGOING deck's own clock — so a stall or a late start shifts the
   /// whole mix instead of tearing the beats apart.
   void _startBeatMix(BeatMixPlan plan, {bool sweep = false}) {
-    if (_crossfading || !_standbyArmed || _standbyPlayer == null) return;
+    if (_mixTransitionActive || !_standbyArmed || _standbyPlayer == null) return;
     final sb = _standbyPlayer!;
-    _crossfading = true;
+    _mixTransitionActive = true;
     _mixStartedAt = DateTime.now();
-    _crossfadeTargetVolume = _fullDeckVolume / 100;
+    _mixTargetVolume = _fullDeckVolume / 100;
     _mixSweepFailed = false;
     _lastMixSweep = DateTime.fromMillisecondsSinceEpoch(0);
     _beatMixWallStart = DateTime.now();
@@ -1326,7 +1315,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       if (plan.beatMatched) sb.setRate(speed * plan.rate);
       unawaited(sb.play());
     } catch (_) {
-      cancelCrossfade();
+      cancelMixTransition();
       return;
     }
     var spectralStarted = false;
@@ -1339,10 +1328,10 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         milliseconds: (((plan.mixOutEnd - plan.triggerAt) / speed + 6) * 1000)
             .round());
 
-    _crossfadeTimer?.cancel();
-    _crossfadeTimer = Timer.periodic(const Duration(milliseconds: 25),
+    _mixTimer?.cancel();
+    _mixTimer = Timer.periodic(const Duration(milliseconds: 25),
         (timer) => _guardedTick(timer, 'beat mix', () {
-      if (!_crossfading) {
+      if (!_mixTransitionActive) {
         timer.cancel();
         return;
       }
@@ -1371,17 +1360,17 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         timer.cancel();
         _mixFault('incoming deck stalled at ${inPosNow.toStringAsFixed(1)}s');
         _mixGaveUpFor = _standbyTrack?.queueKey ?? '';
-        cancelCrossfade();
+        cancelMixTransition();
         return;
       }
       if (tickNow.difference(outMovedAt) > stall) {
         // Outgoing deck is stuck: the incoming one is fine, take it now.
         timer.cancel();
         _mixFault('outgoing deck stalled at ${outPos.toStringAsFixed(1)}s');
-        _completeCrossfade();
+        _completeMixTransition();
         return;
       }
-      final master = (_crossfadeTargetVolume * 100).clamp(0.0, 100.0);
+      final master = (_mixTargetVolume * 100).clamp(0.0, 100.0);
       final (og, ig) = plan.beatMatched
           ? MixPlanner.djGains(progress)
           : MixPlanner.gains(progress);
@@ -1399,7 +1388,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
           try {
             final o = await _deckClock(out);
             final i = await _deckClock(sb);
-            if (!_crossfading || !identical(_beatLock, lock)) return;
+            if (!_mixTransitionActive || !identical(_beatLock, lock)) return;
             lock.sample(o, i);
             final action = lock.step(DateTime.now());
             final seekTo = action.seekTo;
@@ -1431,7 +1420,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
       if (progress >= 1.0 || now.difference(_beatMixWallStart) > maxWall) {
         timer.cancel();
-        _completeCrossfade();
+        _completeMixTransition();
       }
     }));
   }
@@ -1472,11 +1461,11 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   /// state the flags were in, end with one audible deck at full level.
   void _abortMixSafely() {
     try {
-      cancelCrossfade();
+      cancelMixTransition();
     } catch (_) {}
-    _crossfadeTimer?.cancel();
-    _crossfadeTimer = null;
-    _crossfading = false;
+    _mixTimer?.cancel();
+    _mixTimer = null;
+    _mixTransitionActive = false;
     _standbyArmed = false;
     _standbyReady = false;
     _armedBeatPlan = null;
@@ -1505,7 +1494,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     final sb = _standbyPlayer;
     final started = _mixStartedAt;
     final repairs = checkMix(MixGuardInput(
-      mixing: _crossfading,
+      mixing: _mixTransitionActive,
       armed: _standbyArmed,
       ramping: _rateRampTimer != null,
       fullVolume: _fullDeckVolume,
@@ -1533,7 +1522,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       switch (r) {
         case MixRepair.abortStuckMix:
           if (_standbyReady && _standbyTrack != null) {
-            _completeCrossfade();
+            _completeMixTransition();
           } else {
             _abortMixSafely();
           }
@@ -1626,7 +1615,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       _crumb('filter rejected (not a stream error): '
           '${text.length > 120 ? text.substring(0, 120) : text}');
     }
-    final mixing = _crossfading || _standbyArmed || _mixSweepBusy;
+    final mixing = _mixTransitionActive || _standbyArmed || _mixSweepBusy;
     if (!mixing) {
       // A rejected EQ / headphone graph leaves the track with NO audio
       // (mpv ends the file). Drop processing for the session and reopen
@@ -1663,13 +1652,13 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     }());
   }
 
-  void _startCrossfade(Duration fadeDuration, {bool sweep = false}) {
-    if (_crossfading || !_standbyArmed || _standbyPlayer == null) return;
-    _crossfading = true;
-    _crossfadeDuration = fadeDuration;
-    _crossfadeStartTime = DateTime.now();
+  void _startMixTransition(Duration fadeDuration, {bool sweep = false}) {
+    if (_mixTransitionActive || !_standbyArmed || _standbyPlayer == null) return;
+    _mixTransitionActive = true;
+    _mixDuration = fadeDuration;
+    _mixStartTime = DateTime.now();
     _mixStartedAt = DateTime.now();
-    _crossfadeTargetVolume = _fullDeckVolume / 100;
+    _mixTargetVolume = _fullDeckVolume / 100;
     _mixSweepFailed = false;
     _lastMixSweep = DateTime.fromMillisecondsSinceEpoch(0);
     final spectral = sweep &&
@@ -1687,30 +1676,28 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     try {
       unawaited(_standbyPlayer!.play());
     } catch (_) {
-      cancelCrossfade();
+      cancelMixTransition();
       return;
     }
     if (spectral) {
       unawaited(_writeMixSweep(0));
     }
 
-    _crossfadeTimer?.cancel();
-    _crossfadeTimer = Timer.periodic(const Duration(milliseconds: 25),
-        (timer) => _guardedTick(timer, 'crossfade', () {
-      if (!_crossfading) {
+    _mixTimer?.cancel();
+    _mixTimer = Timer.periodic(const Duration(milliseconds: 25),
+        (timer) => _guardedTick(timer, 'mix transition', () {
+      if (!_mixTransitionActive) {
         timer.cancel();
         return;
       }
-      final elapsed = DateTime.now().difference(_crossfadeStartTime!);
+      final elapsed = DateTime.now().difference(_mixStartTime!);
       final progress = (elapsed.inMilliseconds /
-              _crossfadeDuration!.inMilliseconds)
+              _mixDuration!.inMilliseconds)
           .clamp(0.0, 1.0);
-      final masterVol100 = (_crossfadeTargetVolume * 100).clamp(0.0, 100.0);
+      final masterVol100 = (_mixTargetVolume * 100).clamp(0.0, 100.0);
 
       // Smoothed equal-power curve: level loudness, gentle at both ends.
-      final (outGain, inGain) = _timedMixEnabled
-          ? MixPlanner.gains(progress)
-          : (math.cos(progress * math.pi / 2), math.sin(progress * math.pi / 2));
+      final (outGain, inGain) = MixPlanner.gains(progress);
       final outVol = outGain * masterVol100;
       final inVol = inGain * masterVol100;
 
@@ -1730,7 +1717,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
       if (progress >= 1.0) {
         timer.cancel();
-        _completeCrossfade();
+        _completeMixTransition();
       }
     }));
   }
@@ -1762,20 +1749,20 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     await (dyn as dynamic).setProperty('af', af);
   }
 
-  void _completeCrossfade() {
+  void _completeMixTransition() {
     try {
-      _completeCrossfadeUnsafe();
+      _completeMixTransitionUnsafe();
     } catch (e) {
       _mixFault('hand-off threw ${e.runtimeType}');
       _abortMixSafely();
     }
   }
 
-  void _completeCrossfadeUnsafe() {
-    if (!_crossfading) return;
+  void _completeMixTransitionUnsafe() {
+    if (!_mixTransitionActive) return;
     _mixStartedAt = null;
-    _crossfadeTimer?.cancel();
-    _crossfadeTimer = null;
+    _mixTimer?.cancel();
+    _mixTimer = null;
 
     final incomingTrack = _standbyTrack;
     final incomingIndex = _standbyIndex;
@@ -1783,7 +1770,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     final sb = _standbyPlayer;
 
     if (incomingTrack == null || sb == null) {
-      cancelCrossfade();
+      cancelMixTransition();
       return;
     }
 
@@ -1886,7 +1873,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
     _beginScrobbleWindow(incomingTrack);
 
-    _crossfading = false;
+    _mixTransitionActive = false;
     _standbyArmed = false;
     _standbyReady = false;
     _standbyTrack = null;
@@ -1908,7 +1895,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     _mixWatchdog = null;
     // Flush any past-threshold window before tearing down (manual pause/
     // app close would otherwise leave it only as “Scrobbling now”).
-    cancelCrossfade();
+    cancelMixTransition();
     _flushScrobble(completed: false);
     // Flush the most recent queue and position before tearing down the player.
     _persistNow();
@@ -1965,7 +1952,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     bool startShuffled = false,
     bool endlessRadio = false,
   }) async {
-    cancelCrossfade();
+    cancelMixTransition();
     await ensurePlayer();
     if (tracks.isEmpty) return;
     var index = startIndex.clamp(0, tracks.length - 1);
@@ -2125,8 +2112,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     }
     // Pausing mid-mix must silence the incoming deck too, not just the
     // outgoing one; the mix re-plans from where playback resumes.
-    if (state.isPlaying && (_crossfading || _standbyArmed)) {
-      cancelCrossfade();
+    if (state.isPlaying && (_mixTransitionActive || _standbyArmed)) {
+      cancelMixTransition();
     }
     try {
       await _player?.playOrPause();
@@ -2149,7 +2136,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> pause() async {
-    cancelCrossfade();
+    cancelMixTransition();
     try {
       await _player?.pause();
     } catch (_) {}
@@ -2157,7 +2144,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> seek(Duration position) async {
-    cancelCrossfade();
+    cancelMixTransition();
     await _player?.seek(position);
     state = state.copyWith(position: position);
     _schedulePersist();
@@ -2177,8 +2164,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       await _player?.setVolume(100);
       return;
     }
-    if (_crossfading) {
-      _crossfadeTargetVolume = _fullDeckVolume / 100;
+    if (_mixTransitionActive) {
+      _mixTargetVolume = _fullDeckVolume / 100;
       return;
     }
     await _player?.setVolume(_fullDeckVolume);
@@ -2204,7 +2191,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     _lockSoftwareVolume = lockSoftwareVolume;
     _currentAudioDevice = mpvDevice;
     if (exclusive) {
-      cancelCrossfade();
+      cancelMixTransition();
       final standby = _standbyPlayer;
       _standbyPlayer = null;
       if (standby != null) {
@@ -2508,7 +2495,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> next() async {
-    cancelCrossfade();
+    cancelMixTransition();
     final nextIndex = _nextIndex();
     if (nextIndex == null) return;
     state = state.copyWith(
@@ -2523,7 +2510,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> previous() async {
-    cancelCrossfade();
+    cancelMixTransition();
     if (state.position > const Duration(seconds: 5)) {
       await seek(Duration.zero);
       return;
@@ -2550,7 +2537,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
   Future<void> seekToQueueItem(int index) async {
     if (index < 0 || index >= state.queue.length) return;
-    cancelCrossfade();
+    cancelMixTransition();
     _unavailable.remove(state.queue[index].queueKey);
     state = state.copyWith(
       currentIndex: index,
@@ -2564,7 +2551,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> toggleShuffle() async {
-    cancelCrossfade();
+    cancelMixTransition();
     final enabled = !state.shuffleEnabled;
     _rebuildShuffleOrder(state.queue.length, state.currentIndex);
     state = state.copyWith(shuffleEnabled: enabled);
@@ -2572,7 +2559,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> cycleRepeat() async {
-    cancelCrossfade();
+    cancelMixTransition();
     final next = switch (state.repeatMode) {
       RepeatMode.off => RepeatMode.all,
       RepeatMode.all => RepeatMode.one,
@@ -2618,7 +2605,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
     final resumeAt = state.position;
     final shouldPlay = state.isPlaying;
-    cancelCrossfade();
+    cancelMixTransition();
     await _prefs.setStreamingQuality(quality);
     _unavailable.remove(track.queueKey);
     _losslessBypass.remove(track.queueKey);
@@ -2686,7 +2673,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> stopAndClear() async {
-    cancelCrossfade();
+    cancelMixTransition();
     _flushScrobble(completed: false);
     _resolveGeneration++;
     _resolving = false;
@@ -3336,7 +3323,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
                 wantedQueueKey)) {
       return;
     }
-    cancelCrossfade();
+    cancelMixTransition();
 
     // Upgrade track artwork if lossless stream supplied official studio artwork
     var effectiveTrack = track;
@@ -3545,10 +3532,10 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     // The outgoing deck died during an AutoMix overlap: the incoming deck
     // is already playing, so finish the hand-off instead of restarting
     // the song that was ending anyway.
-    if (_crossfading && _standbyReady && _standbyTrack != null) {
+    if (_mixTransitionActive && _standbyReady && _standbyTrack != null) {
       _crumb('automix outgoing error -> early handoff '
           'key=${_standbyTrack?.queueKey}');
-      _completeCrossfade();
+      _completeMixTransition();
       return;
     }
     final track = state.current;
@@ -3618,11 +3605,11 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   void _onTrackCompleted() {
-    if (_crossfading) {
-      _completeCrossfade();
+    if (_mixTransitionActive) {
+      _completeMixTransition();
       return;
     }
-    cancelCrossfade();
+    cancelMixTransition();
     if (_resolving || state.error != null) return;
     // A late EOF from the stream that was just torn down (retry, skip)
     // lands after the new open has reset position/duration to zero.
@@ -4238,8 +4225,6 @@ class PrefsHandle {
   int get scrobblePercent => _prefs.scrobblePercent;
   bool get scrobblerEnabled => _prefs.scrobblerEnabled;
   bool get syncYtHistory => _prefs.syncYtHistory;
-  bool get crossfadeEnabled => _prefs.crossfadeEnabled;
-  int get crossfadeSeconds => _prefs.crossfadeSeconds;
   bool get wasapiExclusive => _prefs.wasapiExclusive;
   String get loudnessMode => _prefs.loudnessMode;
   String get headphoneProfile => _prefs.headphoneProfile;
