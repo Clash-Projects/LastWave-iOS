@@ -432,7 +432,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
       slivers.addAll(renderShelf(shelf, i));
     }
 
-    if (feed.shelves.isEmpty) {
+    if (feed.shelves.isEmpty && feed.chips.isEmpty) {
       slivers.add(
         SliverPadding(
           padding: EdgeInsets.fromLTRB(side, 26, side, 32),
