@@ -125,7 +125,6 @@ class FormatNegotiator {
     required bool dspActive,
     required bool peqActive,
     required bool softwareVolume,
-    required bool crossfade,
     required double speed,
     bool loudness = false,
     bool autoMix = false,
@@ -136,7 +135,6 @@ class FormatNegotiator {
     if (loudness) return BitPerfectReason.loudnessActive;
     if (autoMix) return BitPerfectReason.autoMixActive;
     if (dspActive) return BitPerfectReason.dspActive;
-    if (crossfade) return BitPerfectReason.crossfadeActive;
     if ((speed - 1.0).abs() > 0.001) return BitPerfectReason.speedNotUnity;
     if ((pitch - 1.0).abs() > 0.005) return BitPerfectReason.pitchNotUnity;
     if (!exclusiveRequested || !exclusiveActive) {
