@@ -1465,13 +1465,13 @@ class _YtShelfRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WaveRail(
-      height: 228,
+      height: waveMediaRailHeight(context),
       itemCount: entities.length,
       separatorBuilder: (_, _) => const SizedBox(width: 12),
       itemBuilder: (context, i) {
         final e = entities[i];
         return SizedBox(
-          width: 160,
+          width: waveMediaCardWidth(context),
           child: WaveMediaCard(
             title: e.name,
             subtitle: e.subtitle,
@@ -1510,7 +1510,7 @@ class _YtSongCardRow extends ConsumerWidget {
           sourceLabel: sourceLabel,
         );
     return WaveRail(
-      height: 228,
+      height: waveMediaRailHeight(context),
       itemCount: tracks.length,
       separatorBuilder: (_, _) => const SizedBox(width: 12),
       itemBuilder: (context, i) {
