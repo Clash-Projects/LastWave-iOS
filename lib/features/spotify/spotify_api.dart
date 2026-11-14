@@ -536,30 +536,65 @@ class SpotifyApi {
     return null;
   }
 
-  /// Largest page the Web API search is asked for. Kept small on purpose:
-  /// Spotify has been lowering the maximum, and this only supplements the
-  /// YouTube Music results.
+  /// Spotify currently permits up to 10 results per type for each search.
   static const _catalogLimit = 10;
 
-  /// Catalog search for the Search page: songs, artists or albums from the
-  /// Spotify Web API, using the connected account's session. Empty when no
-  /// account is connected or Spotify refuses the request (the outcome is
-  /// written to the diagnostics log; never tokens).
+  /// All three Search-page categories share one Web API request. Spotify's
+  /// Search endpoint accepts comma-separated types, so requesting tracks,
+  /// artists and albums together avoids three simultaneous quota-consuming
+  /// requests for the same query.
+  final Map<String,
+          Future<Map<SpotifyCatalogKind, List<SpotifyCatalogHit>>>>
+      _catalogRequests = {};
+
+  /// Catalog search for the Search page. Parallel category providers for the
+  /// same query share one HTTP request and then select their own result set.
   Future<List<SpotifyCatalogHit>> searchCatalog(
     String query, {
     required SpotifyCatalogKind kind,
   }) async {
-    final tag = 'spotify catalog kind=${kind.name}';
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+
+    final key = q.toLowerCase();
+    var request = _catalogRequests[key];
+    if (request == null) {
+      late final Future<
+          Map<SpotifyCatalogKind, List<SpotifyCatalogHit>>> started;
+      started = _fetchCatalogBatch(q).whenComplete(() {
+        if (identical(_catalogRequests[key], started)) {
+          _catalogRequests.remove(key);
+        }
+      });
+      request = started;
+      _catalogRequests[key] = started;
+    }
+
+    try {
+      final results = await request;
+      return results[kind] ?? const [];
+    } catch (e) {
+      DiagnosticsLog.info(
+        'spotify catalog batch error=${e.runtimeType}',
+      );
+      return const [];
+    }
+  }
+
+  Future<Map<SpotifyCatalogKind, List<SpotifyCatalogHit>>>
+      _fetchCatalogBatch(String query) async {
+    const tag = 'spotify catalog batch';
     final headers = await _authHeaders();
     if (headers == null) {
       DiagnosticsLog.info('$tag session=false');
-      return const [];
+      return const {};
     }
+
     try {
       final res = await _dio.get<String>(
         'https://api.spotify.com/v1/search',
         queryParameters: {
-          'type': kind.name,
+          'type': 'track,artist,album',
           'q': query,
           'limit': _catalogLimit,
         },
@@ -569,16 +604,49 @@ class SpotifyApi {
           validateStatus: (_) => true,
         ),
       );
+
       if ((res.statusCode ?? 0) ~/ 100 != 2) {
-        DiagnosticsLog.info('$tag http=${res.statusCode}');
-        return const [];
+        var reason = '';
+        var message = '';
+        try {
+          final body = jsonDecode(res.data ?? '{}');
+          final error = body is Map ? body['error'] : null;
+          if (error is Map) {
+            reason = error['reason']?.toString() ?? '';
+            message = error['message']?.toString() ?? '';
+          }
+        } catch (_) {
+          // Do not log an unparseable response body.
+        }
+        final retryAfter = res.headers.value('retry-after') ?? '';
+        DiagnosticsLog.info(
+          '$tag http=${res.statusCode} '
+          'reason=${reason.isEmpty ? 'unspecified' : reason} '
+          'retryAfter=${retryAfter.isEmpty ? 'missing' : retryAfter} '
+          'message=${message.isEmpty ? 'unspecified' : message}',
+        );
+        return const {};
       }
-      final hits = parseCatalog(jsonDecode(res.data ?? '{}'), kind);
-      DiagnosticsLog.info('$tag hits=${hits.length}');
-      return hits;
+
+      final body = jsonDecode(res.data ?? '{}');
+      final results = <SpotifyCatalogKind, List<SpotifyCatalogHit>>{
+        SpotifyCatalogKind.track:
+            parseCatalog(body, SpotifyCatalogKind.track),
+        SpotifyCatalogKind.artist:
+            parseCatalog(body, SpotifyCatalogKind.artist),
+        SpotifyCatalogKind.album:
+            parseCatalog(body, SpotifyCatalogKind.album),
+      };
+      DiagnosticsLog.info(
+        '$tag '
+        'tracks=${results[SpotifyCatalogKind.track]!.length} '
+        'artists=${results[SpotifyCatalogKind.artist]!.length} '
+        'albums=${results[SpotifyCatalogKind.album]!.length}',
+      );
+      return results;
     } catch (e) {
       DiagnosticsLog.info('$tag error=${e.runtimeType}');
-      return const [];
+      return const {};
     }
   }
 
