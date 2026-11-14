@@ -938,6 +938,10 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
     // track and let endless radio (Settings → Playback) pick what
     // follows, instead of the next-best search match.
     final e = _songs[start.clamp(0, _songs.length - 1)];
+    if (e.externalUrl.isNotEmpty) {
+      await _openExternalCatalogItem(e);
+      return;
+    }
     await ref.read(playbackServiceProvider.notifier).playQueue(
       [playableFromSearch(e)],
       0,
@@ -958,6 +962,10 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
   }
 
   Future<void> _playSingle(WidgetRef ref, SearchResultItem hero) async {
+    if (hero.externalUrl.isNotEmpty) {
+      await _openExternalCatalogItem(hero);
+      return;
+    }
     await ref.read(playbackServiceProvider.notifier).playQueue(
       [playableFromSearch(hero)],
       0,
@@ -976,8 +984,7 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
   }
 
   void _primary(SearchResultItem hero) {
-    if (hero.externalUrl.isNotEmpty &&
-        (hero.tab == SearchTab.artists || hero.tab == SearchTab.albums)) {
+    if (hero.externalUrl.isNotEmpty) {
       unawaited(_openExternalCatalogItem(hero));
       return;
     }
@@ -1329,6 +1336,7 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                         : a.subtitle,
                     art: a.artworkUrl,
                     size: 124,
+                    providerLabel: a.providerLabel,
                     onTap: () {
                       if (a.externalUrl.isNotEmpty) {
                         unawaited(_openExternalCatalogItem(a));
@@ -1410,6 +1418,17 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                               textAlign: TextAlign.center,
                               style: WaveType.trackTitle
                                   .copyWith(fontSize: 12)),
+                          if (a.providerLabel.isNotEmpty)
+                            Text(
+                              a.providerLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: WaveType.overline.copyWith(
+                                fontSize: 9,
+                                color: waveAccent(context),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -1676,18 +1695,41 @@ class _TopResult extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: (dark ? Colors.white : Colors.black)
-                          .withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      hero.tab.name.toUpperCase(),
-                      style: WaveType.overline.copyWith(fontSize: 9),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (dark ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          hero.tab.name.toUpperCase(),
+                          style: WaveType.overline.copyWith(fontSize: 9),
+                        ),
+                      ),
+                      if (hero.providerLabel.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: waveAccent(context).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            hero.providerLabel,
+                            style: WaveType.overline.copyWith(
+                              fontSize: 9,
+                              color: waveAccent(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(hero.name,
@@ -1758,7 +1800,10 @@ class _SongsTable extends ConsumerWidget {
       items: shown,
       keyOf: keyOf,
       titleOf: (e) => e.name,
-      subtitleOf: (e) => e.artist,
+      subtitleOf: (e) => [
+        if (e.artist.isNotEmpty) e.artist,
+        if (e.providerLabel.isNotEmpty) e.providerLabel,
+      ].join(' · '),
       albumOf: (e) => e.subtitle,
       artworkOf: (e) => e.artworkUrl,
       playableOf: (e) => playableFromSearch(e),
@@ -1767,8 +1812,11 @@ class _SongsTable extends ConsumerWidget {
           : '',
       durationSortOf: (e) => e.durationSeconds,
       titleSortOf: (e) => e.name.toLowerCase(),
-      isCurrent: (e) => playingKey == keyOf(e),
-      isPlaying: (e) => playingKey == keyOf(e) && isPlaying,
+      isCurrent: (e) => e.externalUrl.isEmpty && playingKey == keyOf(e),
+      isPlaying: (e) =>
+          e.externalUrl.isEmpty && playingKey == keyOf(e) && isPlaying,
+      menuBuilder: (ref, item) =>
+          item.externalUrl.isNotEmpty ? const <WaveMenuEntry>[] : null,
       onPlay: onPlay,
     );
   }
@@ -1779,12 +1827,14 @@ class _CoverCard extends StatelessWidget {
   final String subtitle;
   final String art;
   final double size;
+  final String providerLabel; 
   final VoidCallback onTap;
   const _CoverCard(
       {required this.title,
       required this.subtitle,
       required this.art,
       required this.size,
+      this.providerLabel = '',
       required this.onTap});
   @override
   Widget build(BuildContext context) {
@@ -1812,6 +1862,19 @@ class _CoverCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: WaveType.meta.copyWith(fontSize: 11)),
+            if (providerLabel.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  providerLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: WaveType.overline.copyWith(
+                    fontSize: 9,
+                    color: waveAccent(context),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
