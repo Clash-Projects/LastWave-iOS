@@ -40,181 +40,122 @@ import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 import 'discovery_sections.dart';
 
-/// Rich editorial Home — every section has a distinct representation.
-///
-/// Songs = compact rows · Albums = 152px artwork grid · Mixes = 220px
-/// editorial cards · Charts = ranked numeral rows · New releases = dense
-/// 124px grid. Real feed data only; skeletons while loading, actions on
-/// empty — never a blank "Loading music…" or a giant spinner.
-class WaveHomePage extends ConsumerWidget {
+/// YouTube Music-style Home, backed by the live InnerTube Home browse.
+class WaveHomePage extends ConsumerStatefulWidget {
   const WaveHomePage({super.key});
 
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 5) return 'Good night';
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
-  }
+  @override
+  ConsumerState<WaveHomePage> createState() => _WaveHomePageState();
+}
 
-  /// Reshuffles the daily rotation and reloads every Home source.
+class _WaveHomePageState extends ConsumerState<WaveHomePage> {
+  YtHomeBrowseKey? _selectedBrowse;
+  String _selectedTitle = 'Home';
+
   static void _refreshHome(WidgetRef ref) {
     feedRefreshSalt++;
-    ref.invalidate(feedProvider);
+    ref.invalidate(ytHomeFeedProvider);
     ref.invalidate(ytHomeShelvesProvider);
+    ref.invalidate(feedProvider);
     ref.invalidate(newAlbumsProvider);
     ref.invalidate(personalMixProvider);
     ref.invalidate(friendsActivityProvider);
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final feed = ref.watch(feedProvider);
-    // Watched at build top (never inside the `when` branches): the
-    // empty-state copy is honest about connectivity only when the
-    // device state is actually observed.
-    final online = ref.watch(networkMonitorProvider);
-    final viewport = MediaQuery.sizeOf(context).width;
+  void _selectHomeChip(YtHomeChip chip) {
+    final id = HomeShelfCatalog.idForTitle(chip.title);
+    if (id == HomeShelfId.home) {
+      setState(() {
+        _selectedBrowse = null;
+        _selectedTitle = 'Home';
+      });
+      return;
+    }
+    final browseId = chip.browseId.isNotEmpty
+        ? chip.browseId
+        : chip.params.isNotEmpty
+            ? InnerTubeMusicApi.homeBrowseId
+            : '';
+    if (browseId.isEmpty) return;
+    setState(() {
+      _selectedBrowse = (
+        browseId: browseId,
+        params: chip.params.isEmpty ? null : chip.params,
+      );
+      _selectedTitle = chip.title;
+    });
+  }
 
-    // Native FeedScreen uses a centered 920dp content rail on phones and tablets.
+  @override
+  Widget build(BuildContext context) {
+    final homeFeed = ref.watch(ytHomeFeedProvider);
+    final activeFeed = _selectedBrowse == null
+        ? homeFeed
+        : ref.watch(ytHomeBrowseProvider(_selectedBrowse!));
+    final baseChips = homeFeed.valueOrNull?.chips ?? const <YtHomeChip>[];
+    final layout = ref.watch(homeShelfLayoutProvider);
+    final legacyFeed = ref.watch(feedProvider);
+    final viewport = MediaQuery.sizeOf(context).width;
     final contentWidth = viewport < 920 ? viewport : 920.0;
     const side = 16.0;
-    final quickCols =
-        contentWidth < 600 ? 1 : contentWidth < 840 ? 2 : 3;
 
-    final date = DateFormat('EEEE, MMMM d').format(DateTime.now());
-
-    // One shared WinUI entrance timeline for the whole page: it starts
-    // the moment feed data lands, so sections cascade in together and
-    // lazily-built rows never replay the animation during scroll.
     return Align(
       alignment: Alignment.topCenter,
       child: SizedBox(
         width: contentWidth,
         child: WaveEntranceGroup(
-          start: feed.hasValue,
+          start: activeFeed.hasValue,
           child: CustomScrollView(
             slivers: [
-        const WaveChromeSliver.top(),
-        SliverPadding(
-          padding: const EdgeInsets.only(top: 12),
-          sliver: SliverToBoxAdapter(
-            child: WaveEntrance(
-              local: true,
-              child: _Header(
-                greeting: _greeting,
-                date: date,
-                onRefresh: () => _refreshHome(ref),
-              ),
-            ),
-          ),
-        ),
-        feed.when(
-          skipLoadingOnRefresh: false,
-          loading: () => SliverPadding(
-            padding: EdgeInsets.fromLTRB(side, 18, side, 32),
-            sliver: const SliverToBoxAdapter(child: _HomeSkeleton()),
-          ),
-          error: (e, _) => SliverPadding(
-            padding: EdgeInsets.fromLTRB(side, 18, side, 32),
-            sliver: SliverToBoxAdapter(
-              child: WaveError(
-                title: 'Could not load your feed',
-                message: '$e',
-                onRetry: () => _refreshHome(ref),
-              ),
-            ),
-          ),
-          data: (data) {
-            final connected = ref.watch(ytConnectionProvider).connected;
-            final ytShelves = ref.watch(ytHomeShelvesProvider);
-            if (connected && ytShelves.isLoading && !ytShelves.hasValue) {
-              return SliverPadding(
-                padding: EdgeInsets.fromLTRB(side, 18, side, 32),
-                sliver: const SliverToBoxAdapter(child: _HomeSkeleton()),
-              );
-            }
-            final blend = connected
-                ? blendHomeFeed(
-                    shelves: ytShelves.valueOrNull ?? const [],
-                    feed: data,
-                    excluded:
-                        ref.watch(databaseProvider).loadExclusionKeys(),
-                  )
-                : null;
-            if (blend != null && blend.hasYouTube) {
-              return _blendedSlivers(
-                  context, ref, data, blend, side, quickCols);
-            }
-            if (data.isEmpty) {
-              // Honest empty state: the repository recorded which legs
-              // failed; offline always wins, otherwise the recorded
-              // reason picks the copy — a non-network cause never says
-              // "offline" and never pushes Last.fm setup on users who
-              // didn't ask for it.
-              final reason = resolveEmptyReason(
-                online: online,
-                data: data,
-              );
-              final copy = switch (reason) {
-                FeedEmptyReason.offline => (
-                    title: "Couldn't load your feed",
-                    subtitle: 'Try again in a moment.',
-                    action: 'Retry',
-                  ),
-                FeedEmptyReason.lastfmError => (
-                    title: "Couldn't load your picks",
-                    subtitle:
-                        'Last.fm returned an error. Check your API key or retry.',
-                    action: 'Check Last.fm',
-                  ),
-                FeedEmptyReason.chartsError => (
-                    title: 'Charts are unavailable right now',
-                    subtitle:
-                        'YouTube charts failed to load — retry in a bit.',
-                    action: 'Retry',
-                  ),
-                FeedEmptyReason.allFailed => (
-                    title: "Couldn't reach music services",
-                    subtitle:
-                        'Last.fm and charts both failed — check your connection and retry.',
-                    action: 'Retry',
-                  ),
-                _ => (
-                    title: 'Nothing to play yet',
-                    subtitle:
-                        'Like songs, play anything, or connect YouTube Music and Home will fill in.',
-                    action: 'Discover',
-                  ),
-              };
-              return SliverPadding(
-                padding: EdgeInsets.fromLTRB(side, 18, side, 32),
+              const WaveChromeSliver.top(),
+              SliverPadding(
+                padding: const EdgeInsets.only(top: 12),
                 sliver: SliverToBoxAdapter(
-                  child: WaveEmpty(
-                    icon: FluentIcons.music_note,
-                    title: copy.title,
-                    subtitle: copy.subtitle,
-                    actionLabel: copy.action,
-                    onAction: () {
-                      switch (reason) {
-                        case FeedEmptyReason.lastfmError:
-                          context.go(
-                              '/settings?section=lastfm');
-                        case FeedEmptyReason.noTaste:
-                          context.go('/search');
-                        default:
-                          _refreshHome(ref);
-                      }
-                    },
+                  child: WaveEntrance(
+                    local: true,
+                    child: _Header(
+                      greeting: _selectedTitle,
+                      date: '',
+                      onRefresh: () => _refreshHome(ref),
+                    ),
                   ),
                 ),
-              );
-            }
-            return _feedSlivers(context, ref, data, side);
-          },
-        ),
-        const WaveChromeSliver.bottom(),
-      ],
+              ),
+              activeFeed.when(
+                skipLoadingOnRefresh: false,
+                loading: () => SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(side, 18, side, 32),
+                  sliver: const SliverToBoxAdapter(child: _HomeSkeleton()),
+                ),
+                error: (error, _) => SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(side, 18, side, 32),
+                  sliver: SliverToBoxAdapter(
+                    child: WaveError(
+                      title: 'Could not load YouTube Music Home',
+                      message: error.toString(),
+                      onRetry: () => _refreshHome(ref),
+                    ),
+                  ),
+                ),
+                data: (feed) {
+                  if (feed.isEmpty && _selectedBrowse == null) {
+                    final fallback = legacyFeed.valueOrNull;
+                    if (fallback != null && !fallback.isEmpty) {
+                      return _feedSlivers(context, ref, fallback, side);
+                    }
+                  }
+                  return _homeApiSlivers(
+                    context,
+                    ref,
+                    feed,
+                    baseChips,
+                    layout,
+                    side,
+                  );
+                },
+              ),
+              const WaveChromeSliver.bottom(),
+            ],
           ),
         ),
       ),
@@ -240,199 +181,279 @@ class WaveHomePage extends ConsumerWidget {
     ];
   }
 
-  /// Home while YouTube Music is connected: YouTube's layout and shelves,
-  /// ordered by Last.fm taste. See [blendHomeFeed].
-  Widget _blendedSlivers(BuildContext context, WidgetRef ref, FeedData data,
-      HomeBlend blend, double side, int quickCols) {
-    final layout = ref.watch(homeShelfLayoutProvider);
-    final sections = <String, List<Widget>>{};
-    var slot = 0;
+  List<Widget> _homeApiSlivers(
+    BuildContext context,
+    WidgetRef ref,
+    YtHomeFeed feed,
+    List<YtHomeChip> sourceChips,
+    HomeShelfLayout layout,
+    double side,
+  ) {
+    final hidden = layout.hidden;
+    final topIds = HomeShelfCatalog.topNavigationIds;
+    final homeChip = sourceChips.cast<YtHomeChip?>().firstWhere(
+          (chip) => HomeShelfCatalog.idForTitle(chip!.title) == HomeShelfId.home,
+          orElse: () => null,
+        ) ??
+        const YtHomeChip(title: 'Home', browseId: InnerTubeMusicApi.homeBrowseId);
+    YtHomeChip? fromApiOr(String title, YtHomeChip fallback) {
+      for (final chip in sourceChips) {
+        if (HomeShelfCatalog.idForTitle(chip.title) ==
+            HomeShelfCatalog.idForTitle(title)) {
+          return chip;
+        }
+      }
+      return fallback;
+    }
 
-    List<Widget> header({
-      required String title,
-      String? overline,
-      int? count,
-      String? actionLabel,
-      VoidCallback? onAction,
-    }) =>
-        [
-          const SliverToBoxAdapter(child: SizedBox(height: 28)),
+    final tabs = <YtHomeChip>[
+      homeChip,
+      fromApiOr('Samples', const YtHomeChip(title: 'Samples'))!,
+      fromApiOr(
+        'Explore',
+        const YtHomeChip(title: 'Explore', browseId: 'FEmusic_explore'),
+      )!,
+      fromApiOr(
+        'Library',
+        const YtHomeChip(
+          title: 'Library',
+          browseId: 'FEmusic_library_landing',
+        ),
+      )!,
+    ].where((chip) {
+      final id = HomeShelfCatalog.idForTitle(chip.title);
+      return id == null || !hidden.contains(id);
+    }).toList();
+    tabs.sort((a, b) {
+      final aIndex = layout.order.indexOf(
+        HomeShelfCatalog.idForTitle(a.title) ?? HomeShelfId.home,
+      );
+      final bIndex = layout.order.indexOf(
+        HomeShelfCatalog.idForTitle(b.title) ?? HomeShelfId.home,
+      );
+      return aIndex.compareTo(bIndex);
+    });
+
+    final moodChips = sourceChips.where((chip) {
+      final id = HomeShelfCatalog.idForTitle(chip.title);
+      return id != null &&
+          !topIds.contains(id) &&
+          !hidden.contains(id);
+    }).toList()
+      ..sort((a, b) {
+        final aIndex = layout.order.indexOf(
+          HomeShelfCatalog.idForTitle(a.title) ?? '',
+        );
+        final bIndex = layout.order.indexOf(
+          HomeShelfCatalog.idForTitle(b.title) ?? '',
+        );
+        return aIndex.compareTo(bIndex);
+      });
+
+    final slivers = <Widget>[
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(side, 6, side, 0),
+          child: SizedBox(
+            height: 42,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: tabs.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final chip = tabs[index];
+                return _YtmHomeChipPill(
+                  title: chip.title,
+                  selected: _selectedTitle == chip.title,
+                  enabled: chip.title == 'Home' ||
+                      chip.browseId.isNotEmpty || chip.params.isNotEmpty,
+                  onTap: () => _selectHomeChip(chip),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+      if (moodChips.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(side, 10, side, 2),
+            child: SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: moodChips.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final chip = moodChips[index];
+                  return _YtmHomeChipPill(
+                    title: chip.title,
+                    selected: _selectedTitle == chip.title,
+                    enabled: chip.browseId.isNotEmpty || chip.params.isNotEmpty,
+                    compact: true,
+                    onTap: () => _selectHomeChip(chip),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+    ];
+
+    final renderedShelfIndexes = <int>{};
+    final personalMix = ref.watch(personalMixProvider).valueOrNull;
+    var entrance = 0;
+
+    List<Widget> renderShelf(YtHomeShelf shelf, int index) {
+      final tracks = shelf.tracks.isNotEmpty ? shelf.tracks : shelf.trackCards;
+      final generated = tracks
+          .map((track) => GeneratedTrack(
+                name: track.title,
+                artist: track.artist,
+                album: track.album,
+                artworkUrl: track.artworkUrl,
+                videoId: track.videoId,
+                durationSeconds: track.durationSeconds,
+              ))
+          .toList();
+      return [
+        const SliverToBoxAdapter(child: SizedBox(height: 22)),
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: side),
+          sliver: SliverToBoxAdapter(
+            child: WaveEntrance(
+              index: entrance++,
+              rise: 8,
+              child: LWSectionHeader(
+                overline: shelf.subtitle.isEmpty ? null : shelf.subtitle,
+                title: shelf.title,
+                count: tracks.isNotEmpty
+                    ? tracks.length
+                    : shelf.entities.length,
+                actionLabel: _selectedBrowse == null ? 'See all' : null,
+                onAction: _selectedBrowse == null
+                    ? () => context.go(
+                          '/ytshelf/${Uri.encodeComponent(shelf.title)}',
+                        )
+                    : null,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.only(left: side, right: side, top: 10),
+          sliver: SliverToBoxAdapter(
+            child: WaveEntrance(
+              index: index,
+              rise: 10,
+              child: generated.isNotEmpty
+                  ? _YtSongCardRow(
+                      tracks: generated,
+                      sourceLabel: shelf.title,
+                    )
+                  : _YtShelfRow(entities: shelf.entities),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    for (final id in layout.order) {
+      if (hidden.contains(id) ||
+          topIds.contains(id) ||
+          const {
+            HomeShelfId.energize,
+            HomeShelfId.workout,
+            HomeShelfId.relax,
+            HomeShelfId.focus,
+            HomeShelfId.commute,
+            HomeShelfId.feelGood,
+            HomeShelfId.party,
+            HomeShelfId.romance,
+            HomeShelfId.sad,
+            HomeShelfId.sleep,
+          }.contains(id)) {
+        continue;
+      }
+
+      if (id == HomeShelfId.speedDial) {
+        slivers.addAll([
+          const SliverToBoxAdapter(child: SizedBox(height: 22)),
           SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: side),
             sliver: SliverToBoxAdapter(
               child: WaveEntrance(
-                index: slot++,
+                index: entrance++,
                 rise: 8,
-                child: LWSectionHeader(
-                  overline: overline,
-                  title: title,
-                  count: count,
-                  actionLabel: actionLabel,
-                  onAction: onAction,
-                ),
+                child: const LWSectionHeader(title: 'Speed dial'),
               ),
             ),
           ),
-        ];
+          SliverToBoxAdapter(
+            child: _NativeQuickAccess(hasHero: false),
+          ),
+        ]);
+        continue;
+      }
 
-    Widget songGrid(List<GeneratedTrack> tracks) => SliverPadding(
-          padding: EdgeInsets.only(left: side, right: side, top: 10),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: quickCols,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 8,
-              mainAxisExtent: 56,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, i) => WaveEntrance(
-                index: i,
-                rise: 10,
-                child: _QuickTile(track: tracks[i]),
+      if (id == HomeShelfId.recommendedRadio &&
+          personalMix != null && personalMix.tracks.isNotEmpty) {
+        slivers.addAll([
+          const SliverToBoxAdapter(child: SizedBox(height: 22)),
+          SliverToBoxAdapter(
+            child: WaveEntrance(
+              index: entrance++,
+              rise: 10,
+              child: _InfiniteRadioHero(
+                tracks: [personalMix.seed, ...personalMix.tracks],
               ),
-              childCount: tracks.length,
             ),
           ),
-        );
-
-    Widget rail(Widget child) => SliverPadding(
-          padding: EdgeInsets.only(left: side, right: side, top: 10),
-          sliver: SliverToBoxAdapter(child: child),
-        );
-
-    GeneratedTrack fromYt(YouTubeMusicTrack t) => GeneratedTrack(
-          name: t.title,
-          artist: t.artist,
-          album: t.album,
-          artworkUrl: t.artworkUrl,
-          videoId: t.videoId,
-          durationSeconds: t.durationSeconds,
-        );
-
-    List<Widget> shelfSlivers(YtHomeShelf shelf) {
-      void seeAll() =>
-          context.go('/ytshelf/${Uri.encodeComponent(shelf.title)}');
-      final head = header(
-        title: shelf.title,
-        actionLabel: 'See all',
-        onAction: seeAll,
-      );
-      if (shelf.isTrackShelf) {
-        return [
-          ...head,
-          songGrid(shelf.tracks.take(quickCols * 3).map(fromYt).toList()),
-        ];
+        ]);
       }
-      if (shelf.isTrackCardShelf) {
-        return [
-          ...head,
-          rail(_YtSongCardRow(
-            tracks: shelf.trackCards.take(20).map(fromYt).toList(),
-            sourceLabel: shelf.title,
-          )),
-        ];
+
+      for (var i = 0; i < feed.shelves.length; i++) {
+        final shelf = feed.shelves[i];
+        if (renderedShelfIndexes.contains(i) ||
+            HomeShelfCatalog.idForTitle(shelf.title) != id ||
+            !shelf.isRenderable) {
+          continue;
+        }
+        renderedShelfIndexes.add(i);
+        slivers.addAll(renderShelf(shelf, i));
       }
-      return [
-        ...head,
-        rail(_YtShelfRow(entities: shelf.entities.take(20).toList())),
-      ];
     }
 
-    final personalMix = ref.watch(personalMixProvider).valueOrNull;
-    final infiniteRadioTracks = personalMix != null &&
-            personalMix.tracks.isNotEmpty
-        ? <GeneratedTrack>[personalMix.seed, ...personalMix.tracks]
-        : blend.quickPicks;
-    sections[HomeShelfId.mixes] =
-        _nativeFeedPrelude(context, ref, infiniteRadioTracks);
-    sections[HomeShelfId.taste] = [
-      SliverToBoxAdapter(child: _NativeTasteStrip()),
-    ];
-    if (blend.quickPicks.isNotEmpty) {
-      sections[HomeShelfId.quickPicks] = [
-        SliverToBoxAdapter(
-          child: _NativeQuickPicksPanel(tracks: blend.quickPicks),
-        ),
-      ];
+    // Keep new or localized shelves that do not yet have a matching Edit
+    // Home slot. YouTube's own ordering is preserved for this remainder.
+    for (var i = 0; i < feed.shelves.length; i++) {
+      final shelf = feed.shelves[i];
+      if (renderedShelfIndexes.contains(i) || !shelf.isRenderable) continue;
+      if (HomeShelfCatalog.idForTitle(shelf.title) != null) continue;
+      renderedShelfIndexes.add(i);
+      slivers.addAll(renderShelf(shelf, i));
     }
-    if (blend.listenAgain.isNotEmpty) {
-      sections[HomeShelfId.continueListening] = [
-        ...header(
-          title: 'Listen again',
-          actionLabel: 'See all',
-          onAction: () => context.go('/history'),
-        ),
-        rail(_YtSongCardRow(
-          tracks: blend.listenAgain,
-          sourceLabel: 'Listen again',
-        )),
-      ];
-    }
-    sections[HomeShelfId.youtube] = [
-      for (final shelf in blend.personal) ...shelfSlivers(shelf),
-    ];
-    // Named after a real seed or not shown: an unexplained row is just noise.
-    if (data.becauseSeed.isNotEmpty && data.becauseYouListened.length >= 3) {
-      sections[HomeShelfId.because] = [
-        ...header(
-          overline: 'From your Last.fm',
-          title: 'Because you listened to ${data.becauseSeed}',
-        ),
-        rail(_YtSongCardRow(
-          tracks: data.becauseYouListened.take(12).toList(),
-          sourceLabel: 'Because you listened to ${data.becauseSeed}',
-        )),
-      ];
-    }
-    if (blend.artists.length >= 3) {
-      sections[HomeShelfId.artists] = [
-        ...header(
-          title: 'Artists you love',
-          actionLabel: 'See all',
-          onAction: () => context.go('/artists'),
-        ),
-        rail(_ArtistShelf(tracks: blend.artists)),
-      ];
-    }
-    sections[HomeShelfId.youtubeMore] = [
-      for (final shelf in blend.general) ...shelfSlivers(shelf),
-    ];
-    final activities =
-        ref.watch(friendsActivityProvider).valueOrNull ?? const [];
-    if (activities.isNotEmpty) {
-      sections[HomeShelfId.friends] = [
-        ...header(
-          title: 'Friends listening',
-          actionLabel: 'See all',
-          onAction: () => context.go('/friends'),
-        ),
-        rail(_FriendsStrip(activities: activities)),
-      ];
-    }
-    if (ref.watch(podcastHomeProvider).valueOrNull?.any(
-              (s) => s.shows.isNotEmpty || s.episodes.isNotEmpty,
-            ) ==
-        true) {
-      sections[HomeShelfId.podcasts] = [
-        const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
+    if (feed.shelves.isEmpty) {
+      slivers.add(
         SliverPadding(
-          padding: EdgeInsets.symmetric(horizontal: side),
-          sliver: const SliverToBoxAdapter(child: PodcastHomeShelf()),
+          padding: EdgeInsets.fromLTRB(side, 26, side, 32),
+          sliver: SliverToBoxAdapter(
+            child: WaveEmpty(
+              icon: FluentIcons.music_note,
+              title: 'Nothing here yet',
+              subtitle: 'YouTube Music did not return any shelves for this category.',
+              actionLabel: _selectedBrowse == null ? 'Refresh' : null,
+              onAction: _selectedBrowse == null
+                  ? () => _refreshHome(ref)
+                  : null,
+            ),
+          ),
         ),
-      ];
+      );
     }
-
-    // Untouched layout: the connected order. Edited: the user's order wins.
-    final edited = !listEquals(layout.order, HomeShelfCatalog.defaults);
-    final order = edited ? layout.order : HomeShelfCatalog.connected;
-    final prelude = sections.remove(HomeShelfId.mixes) ?? const <Widget>[];
-    return SliverMainAxisGroup(slivers: [
-      ...prelude,
-      for (final id in order)
-        if (id != HomeShelfId.mixes && !layout.hidden.contains(id))
-          ...?sections[id],
-      const SliverToBoxAdapter(child: SizedBox(height: 28)),
-    ]);
+    slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 32)));
+    return SliverMainAxisGroup(slivers: slivers);
   }
 
   Widget _feedSlivers(BuildContext context, WidgetRef ref, FeedData data,
