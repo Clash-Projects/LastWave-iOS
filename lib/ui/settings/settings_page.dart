@@ -328,12 +328,12 @@ class _More extends StatelessWidget {
   const _More();
 
   static const _destinations = <(String, String, IconData)>[
-    ('/home-layout', 'Edit Home', FluentIcons.edit),
-    ('/artists', 'Artists', FluentIcons.contact),
-    ('/stats', 'Stats', FluentIcons.bar_chart_vertical),
-    ('/podcasts', 'Podcasts', FluentIcons.headset),
-    ('/mixes', 'Mix Lab', FluentIcons.lightbulb),
-    ('/history', 'Listening history', FluentIcons.history),
+    ('/home-layout', 'Edit Home', WaveIcons.edit),
+    ('/artists', 'Artists', WaveIcons.artists),
+    ('/stats', 'Stats', WaveIcons.stats),
+    ('/podcasts', 'Podcasts', WaveIcons.podcasts),
+    ('/mixes', 'Mix Lab', WaveIcons.mixes),
+    ('/history', 'Listening history', WaveIcons.history),
     ('/friends', 'Friends', WaveIcons.friends),
   ];
 
