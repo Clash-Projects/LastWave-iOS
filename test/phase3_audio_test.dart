@@ -94,7 +94,6 @@ void main() {
         dspActive: false,
         peqActive: false,
         softwareVolume: false,
-        crossfade: false,
         speed: speed,
         loudness: loudness,
         autoMix: autoMix,
