@@ -304,7 +304,6 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
     ];
 
     final renderedShelfIndexes = <int>{};
-    final personalMix = ref.watch(personalMixProvider).valueOrNull;
     var entrance = 0;
 
     List<Widget> renderShelf(YtHomeShelf shelf, int index) {
@@ -411,22 +410,6 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
           ),
         ]);
         continue;
-      }
-
-      if (id == HomeShelfId.recommendedRadio &&
-          personalMix != null && personalMix.tracks.isNotEmpty) {
-        slivers.addAll([
-          const SliverToBoxAdapter(child: SizedBox(height: 22)),
-          SliverToBoxAdapter(
-            child: WaveEntrance(
-              index: entrance++,
-              rise: 10,
-              child: _InfiniteRadioHero(
-                tracks: [personalMix.seed, ...personalMix.tracks],
-              ),
-            ),
-          ),
-        ]);
       }
 
       for (var i = 0; i < feed.shelves.length; i++) {
