@@ -26,17 +26,5 @@ String mergeEqualizerAndHeadphone(String equalizerAf, String headphoneAf) {
   return 'format=floatp,lavfi=[${inner.join(',')}]';
 }
 
-/// Appends one lavfi filter (a sweep) without dropping the chain already
-/// built for EQ, headphone correction, or scaletempo.
-String afWithSweep(String baseAf, String sweepFilter) {
-  final sweep = sweepFilter.trim();
-  if (sweep.isEmpty) return baseAf;
-  if (baseAf.isEmpty) return 'lavfi=[$sweep]';
-  final lavfi = RegExp(r'lavfi=\[(.*)\]$').firstMatch(baseAf);
-  if (lavfi != null) {
-    final body = lavfi.group(1)!;
-    final merged = body.isEmpty ? sweep : '$body,$sweep';
-    return baseAf.replaceRange(lavfi.start, lavfi.end, 'lavfi=[$merged]');
-  }
   return '$baseAf,lavfi=[$sweep]';
 }
