@@ -15,7 +15,7 @@ void main() {
 
   test('finds a card by a setting inside it', () {
     expect(titles('crossfade'), contains('Playback'));
-    expect(titles('amoled'), contains('Surfaces'));
+    expect(titles('amoled'), isEmpty);
     expect(titles('reorganize'), contains('Offline'));
     expect(titles('export'), contains('Backup'));
   });
@@ -29,6 +29,15 @@ void main() {
   test('title matches rank above keyword matches', () {
     // "theme" is Theme's title, but only a keyword of Surfaces.
     expect(titles('theme').first, 'Theme');
+  });
+
+  test('removed timeline and catalog settings are not searchable', () {
+    expect(titles('wavy timeline'), isEmpty);
+    expect(titles('deezer'), isEmpty);
+  });
+
+  test('new destinations are searchable', () {
+    expect(titles('edit home'), contains('More'));
   });
 
   test('the removed Experimental section is not searchable', () {
@@ -72,11 +81,13 @@ void main() {
       'playback',
       'audio',
       'downloads',
+      'library',
       'lyrics',
       'appearance',
       'lastfm',
       'integrations',
       'sources',
+      'more',
       'about',
     };
     for (final e in settingsSearchEntries) {
