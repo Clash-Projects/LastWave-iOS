@@ -981,8 +981,7 @@ class _NarrowCenteredPane extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Center(
         child: ConstrainedBox(
-          constraints:
-              BoxConstraints(maxWidth: 440),
+          constraints: const BoxConstraints(maxWidth: 440),
           child: Column(
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1035,12 +1034,68 @@ class _NarrowCenteredPane extends StatelessWidget {
       ),
     );
 
-    return IndexedStack(
-      index: lyricsVisible ? 1 : 0,
-      children: [
-        coverArtSubtree,
-        lyricsSubtree,
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Most app routes already scroll vertically. Now Playing is a fixed
+        // artwork stage, so give short phone-sized viewports a scrollable
+        // cover/metadata layout instead of squeezing or clipping its content.
+        final needsPhoneScroll =
+            constraints.maxWidth < 600 && constraints.maxHeight < 680;
+        if (!needsPhoneScroll) {
+          return IndexedStack(
+            index: lyricsVisible ? 1 : 0,
+            children: [coverArtSubtree, lyricsSubtree],
+          );
+        }
+
+        final artSize = math.max(
+          180.0,
+          math.min(
+            math.min(constraints.maxWidth - 48, 340.0),
+            constraints.maxHeight * 0.62,
+          ),
+        );
+
+        final scrollableCover = SingleChildScrollView(
+          key: const ValueKey('now-playing-phone-auto-scroll'),
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: artSize,
+                        height: artSize,
+                        child: _HeroArtworkCard(track: track, size: artSize),
+                      ),
+                      const SizedBox(height: 16),
+                      _TrackSwap(
+                        child: _TrackMetadataSection(
+                          key: ValueKey(track.queueKey),
+                          track: track,
+                          alignCenter: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        return IndexedStack(
+          index: lyricsVisible ? 1 : 0,
+          children: [scrollableCover, lyricsSubtree],
+        );
+      },
     );
   }
 }
