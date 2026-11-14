@@ -735,6 +735,10 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       }),
       p.stream.completed.listen((done) {
         runGuarded('player.completed', () {
+          // A deck can emit its final completion event while it is being
+          // retired after a crossfade. Only the currently active deck may
+          // complete the queue's current track.
+          if (!identical(_player, p)) return;
           if (done) _onTrackCompleted();
         });
       }),
@@ -1740,10 +1744,6 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     _flushScrobble(completed: true);
 
     final oldPrimary = _player;
-    try {
-      oldPrimary?.stop();
-      oldPrimary?.setVolume(0);
-    } catch (_) {}
 
     final beatPlan = _armedBeatPlan;
     _armedBeatPlan = null;
@@ -1765,13 +1765,19 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       }
       unawaited(_applyLoudnessTo(sb, album: incomingTrack.album));
     } catch (_) {}
+    // Promote the incoming deck before stopping the outgoing one. Stopping
+    // the old deck can emit a final completion event; its listener now checks
+    // player identity, so that stale event cannot end the newly active track.
     _player = sb;
     _standbyPlayer = oldPrimary;
+    _rebindPlayerStreams();
+    try {
+      unawaited(oldPrimary?.stop());
+      oldPrimary?.setVolume(0);
+    } catch (_) {}
     // The deck that just faded out still carries the low-pass sweep; clear
     // it so the next mix does not start from a darkened signal.
     unawaited(_setAf(oldPrimary, _playbackAf()).catchError((_) {}));
-
-    _rebindPlayerStreams();
     if (beatPlan != null && beatPlan.beatMatched) {
       _rampRateBack(sb, sb.state.rate);
     }
