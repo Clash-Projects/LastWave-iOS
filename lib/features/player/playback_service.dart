@@ -203,15 +203,6 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   bool get _preferSmallestYoutube =>
       _prefs.losslessQuality == AudioQualityTiers.dataSaver;
 
-  /// Repairs seen on the previous watchdog pass. A repair is applied only
-  /// when it shows up twice in a row, so an in-flight change (a speed tap,
-  /// a volume drag) is never "fixed" and never counted as a fault.
-  Set<MixRepair> _pendingRepairs = {};
-  DateTime _beatMixWallStart = DateTime.fromMillisecondsSinceEpoch(0);
-  String _nextStreamMemoKey = '';
-  ResolvedStream? _nextStreamMemo;
-  DateTime _nextStreamMemoAt = DateTime.fromMillisecondsSinceEpoch(0);
-
   /// Where an error-retry of the same track should resume, so a
   /// transient stream failure does not restart the song from 0:00.
   Duration? _resumeAt;
@@ -619,94 +610,6 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     ]);
   }
 
-  Future<void> _ensureStandbyPlayer() async {
-    if (_standbyPlayer != null) return;
-    MediaKit.ensureInitialized();
-    final sb = Player(
-      configuration: const PlayerConfiguration(
-        vo: 'null',
-        title: 'LastWave Standby',
-        bufferSize: 16 * 1024 * 1024,
-      ),
-    );
-    _standbyPlayer = sb;
-    await _applyDebugAudioOutput(sb);
-    try {
-      final platform = sb.platform as dynamic;
-      if (platform != null) {
-        try {
-          await platform.setProperty('gapless-audio', 'yes');
-        } catch (_) {}
-        try {
-          await platform.setProperty('cache', 'yes');
-        } catch (_) {}
-        try {
-          await platform.setProperty('cache-on-disk', 'yes');
-        } catch (_) {}
-        final cacheDir = mpvCacheDirPath();
-        await ensureDirExists(cacheDir);
-        try {
-          await platform.setProperty('cache-dir', cacheDir);
-        } catch (_) {}
-        try {
-          await platform.setProperty(
-              'demuxer-max-bytes', '${16 * 1024 * 1024}');
-        } catch (_) {}
-        try {
-          await platform.setProperty('vid', 'no');
-        } catch (_) {}
-        try {
-          await platform.setProperty('stream-lavf-o', 'timeout=15000000');
-        } catch (_) {}
-        if (_currentAudioDevice.isNotEmpty && _currentAudioDevice != 'auto') {
-          try {
-            await sb.setAudioDevice(AudioDevice(_currentAudioDevice, ''));
-          } catch (_) {}
-        }
-        if (_currentAudioFilter.isNotEmpty) {
-          try {
-            await platform.setProperty('af', _currentAudioFilter);
-          } catch (_) {}
-        }
-      }
-    } catch (_) {}
-    if (!exclusiveApplied) {
-      await _applyLoudness(album: _standbyTrack?.album ?? '');
-      final ready = _standbyPlayer;
-      if (ready != null) await _applyRateAndPitchTo(ready);
-    }
-  }
-
-  void cancelMixTransition() {
-    _mixTimer?.cancel();
-    _mixTimer = null;
-    final ramping = _rateRampTimer != null;
-    _armedBeatPlan = null;
-    final restoreChain = _mixTransitionActive || _standbyArmed || ramping;
-    if (_mixTransitionActive || _standbyArmed) {
-      try {
-        _standbyPlayer?.stop();
-        _standbyPlayer?.setVolume(0);
-      } catch (_) {}
-      try {
-        _player?.setVolume(_fullDeckVolume);
-      } catch (_) {}
-    }
-    _mixStartedAt = null;
-    _mixTransitionActive = false;
-    _standbyArmed = false;
-    _standbyReady = false;
-    _standbyTrack = null;
-    _standbyStream = null;
-    _standbyIndex = -1;
-    _mixSweepBusy = false;
-    if (restoreChain && !exclusiveApplied) {
-      unawaited(_applyRateAndPitch());
-    }
-  }
-
-  /// Reloads headphone correction, loudness, and the overlap mode from
-  /// prefs. Enabling AutoMix clears mix transition and the reverse, in prefs.
   Future<void> applyAudioPrefs() async {
     _rebuildProcessingFilter();
     if (!exclusiveApplied) {
@@ -3018,9 +2921,6 @@ class PrefsHandle {
   bool get wasapiExclusive => _prefs.wasapiExclusive;
   String get loudnessMode => _prefs.loudnessMode;
   String get headphoneProfile => _prefs.headphoneProfile;
-  bool get autoMixEnabled => _prefs.autoMixEnabled;
-  int get autoMixSeconds => _prefs.autoMixSeconds;
-  bool get autoMixSpectral => _prefs.autoMixSpectral;
   bool get equalizerEnabled => _prefs.equalizerEnabled;
   bool get studioClarityEnabled => _prefs.studioClarityEnabled;
   Prefs get rawPrefs => _prefs;
