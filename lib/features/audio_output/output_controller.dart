@@ -85,7 +85,6 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
   String? _lastWasapiError;
   String? _lastDeviceId;
   bool? _lastExclusiveRequested;
-  bool? _lastCrossfade;
   // Last non-zero volume, so unmute restores the pre-mute level
   // instead of full blast. Updated on every audible setVolume and
   // on every mute press (covers slider-dragged-to-zero too).
@@ -170,7 +169,7 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
   void refreshPath() => _rebuildPath();
 
   /// Drops or restores WASAPI exclusive when DSP, loudness, pitch,
-  /// speed, crossfade, or timed AutoMix changes. Exclusive stays off
+  /// speed or timed AutoMix changes. Exclusive stays off
   /// while any of those are active.
   Future<void> syncExclusiveGate() async {
     final playback = _ref.read(playbackServiceProvider.notifier);
@@ -299,8 +298,7 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
     return playback.exclusiveApplied == _lastExclusiveApplied &&
         playback.wasapiError == _lastWasapiError &&
         (state.selected?.id ?? '') == (_lastDeviceId ?? '') &&
-        state.exclusiveRequested == _lastExclusiveRequested &&
-        _ref.read(prefsProvider).crossfadeEnabled == _lastCrossfade;
+        state.exclusiveRequested == _lastExclusiveRequested;
   }
 
   void _rememberPathInputs(PlayerSnapshot snap) {
@@ -309,7 +307,6 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
     _lastWasapiError = playback.wasapiError;
     _lastDeviceId = state.selected?.id ?? '';
     _lastExclusiveRequested = state.exclusiveRequested;
-    _lastCrossfade = _ref.read(prefsProvider).crossfadeEnabled;
   }
 
   Future<void> _onPlayback(PlayerSnapshot? prev, PlayerSnapshot next) async {
@@ -435,7 +432,6 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
       dspActive: headphone,
       peqActive: peq,
       softwareVolume: softwareVol,
-      crossfade: prefs.crossfadeEnabled,
       speed: snap.speed,
       loudness: loudnessOn,
       autoMix: autoMix,
@@ -461,7 +457,6 @@ class AudioOutputController extends StateNotifier<AudioOutputState> {
       peqActive: peq,
       softwareVolume: softwareVol,
       hardwareVolume: hw,
-      crossfade: prefs.crossfadeEnabled,
       speed: snap.speed,
       reason: reason,
       error: playback.wasapiError,
