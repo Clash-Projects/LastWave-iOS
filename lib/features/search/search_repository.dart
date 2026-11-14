@@ -361,7 +361,7 @@ class SearchRepository {
     final out = <SearchResultItem>[];
     final seen = <String>{};
     String normalize(String value) =>
-        value.toLowerCase().trim().replaceAll(RegExp(r'\\s+'), ' ');
+        value.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
     for (final batch in batches) {
       for (final item in batch) {
         final artistKey = tab == SearchTab.artists
