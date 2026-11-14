@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="LastWave_Desktop_v7_1440p.png" alt="LastWave Desktop Banner" width="100%" style="border-radius: 16px;" />
+<img src="LastWave_Desktop_v7_1440p.png" alt="LastWave Banner" width="100%" style="border-radius: 16px;" />
 
-<h1>LastWave</h1>
+<h1>LastWave for iOS</h1>
 
-**Simple Desktop YouTube Music client with WinUI, Bit-Perfect playback, Automix, Lossless addons & advanced audiophile features.**
+**A YouTube Music client for iPhone and iPad, built with Flutter. Automix, lossless addons, synced lyrics and more.**
 
 <br/>
 
@@ -20,9 +20,9 @@
 
 ## Overview
 
-LastWave Desktop is a fast, native desktop YouTube Music client with modern WinUI styling for Windows, Linux, and macOS. It delivers high-fidelity audio playback and a fluid interface that adapts to your music.
+LastWave for iOS is the iPhone and iPad port of [LastWave Desktop](https://github.com/Clash-Projects/LastWave-Desktop). It shares the Flutter codebase with the desktop app, and its mobile interface follows the design of the Android app, [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native). See [UPSTREAM_NOTICES.md](UPSTREAM_NOTICES.md) for what was adapted from where.
 
-For audio lovers, LastWave Desktop packs Bit-Perfect audio output, Lossless FLAC addon support, 15-band parametric equalizer, smooth Automix transitions, Spotify Canvas & integration, and real-time synchronized lyrics, all in a lightweight desktop application.
+The port is a work in progress. The feature list below comes from the shared codebase, and not everything on it has been verified on iOS yet. In particular, background playback is declared but still needs on-device testing, and desktop-only items (Bit-Perfect output, system tray, global hotkeys, Discord Rich Presence, mini-player window) do not apply on iPhone or iPad.
 
 ---
 
@@ -105,48 +105,55 @@ For audio lovers, LastWave Desktop packs Bit-Perfect audio output, Lossless FLAC
 
 ### Installation
 
-| Channel | Source | Compatibility |
-|:---|:---|:---|
-| **Windows** | [GitHub Releases](https://github.com/Clash-Projects/LastWave-Desktop/releases) | Windows 10 & 11 (.exe / .msix installer) |
-| **Linux** | [GitHub Releases](https://github.com/Clash-Projects/LastWave-Desktop/releases) | AppImage / Flatpak / deb packages |
-| **macOS** | [GitHub Releases](https://github.com/Clash-Projects/LastWave-Desktop/releases) | Apple Silicon & Intel (.dmg) |
-| **Android App** | [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) | Official mobile client for Android devices |
+There is no App Store release. The GitHub Actions workflow **LastWave iOS** builds an unsigned `.ipa` on every push to `main`; download it from the workflow run's artifacts (kept for 14 days). An unsigned build has to be signed before it will install on a device, for example with Xcode or a sideloading tool. It requires iOS 15 or later.
+
+| Platform | Source |
+|:---|:---|
+| **iPhone / iPad** | This repository (unsigned `.ipa` from CI, or build from source below) |
+| **Windows, Linux, macOS** | [LastWave-Desktop](https://github.com/Clash-Projects/LastWave-Desktop/releases) |
+| **Android** | [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) |
 
 ### Quick Setup
 
-1. Download and run the installer for your operating system.
-2. *(Optional)* Navigate to **Settings → Audio** to configure:
-   - **Bit-Perfect Output:** Enable exclusive output mode for bit-perfect audio.
+1. Install the signed build on your device.
+2. *(Optional)* Open **Settings → Audio** to configure:
    - **Equalizer Presets:** Apply parametric EQ curves or headphone correction.
    - **Lossless Addons:** Enable the modular addon service for Hi-Res FLAC playback.
-3. Start streaming music, exploring smart radios, and enjoying synced lyrics!
+3. Start streaming music, exploring smart radios, and enjoying synced lyrics.
 
 ---
 
 ## Building from Source
 
 ### Prerequisites
-- **Flutter SDK:** Version 3.13+ or higher
-- **C++ Build Tools:** Visual Studio (Windows), build-essential (Linux), or Xcode (macOS)
+- **macOS** with **Xcode** and **CocoaPods** installed (iOS builds only run on a Mac)
+- **Flutter SDK 3.47.9**, the version CI uses (Dart `^3.13.3`, see `pubspec.yaml`)
 
 ### Build Instructions
 
 ```bash
 # Clone the repository
-git clone https://github.com/Clash-Projects/LastWave-Desktop.git
-cd LastWave-Desktop
+git clone https://github.com/Clash-Projects/LastWave-iOS.git
+cd LastWave-iOS
+
+# Generate the build-time secrets file (lib/core/env/secrets.g.dart).
+# Works without a .env; see .env.example for the optional values.
+dart tool/obfuscate_secrets.dart
+
+# Generate and configure the iOS host project
+bash tool/prepare_ios.sh
 
 # Install dependencies
 flutter pub get
 
-# Build release executable for your platform
-flutter build windows --release   # Windows
-flutter build linux --release     # Linux
-flutter build macos --release     # macOS
+# Build an unsigned release
+flutter build ios --release --no-codesign
 ```
 
+`lib/core/env/secrets.g.dart` is gitignored, so the app will not compile until the `obfuscate_secrets.dart` step has run.
+
 > [!TIP]
-> For local development and hot reload, connect your target environment and run `flutter run -d windows` (or `-d linux` / `-d macos`).
+> For local development and hot reload, connect a device or start a simulator and run `flutter run`.
 
 ---
 
@@ -174,7 +181,7 @@ If LastWave has been useful to you, consider supporting its development.
 
 ## Acknowledgements
 
-LastWave Desktop is made possible thanks to these open-source projects:
+LastWave for iOS builds on [LastWave-Desktop](https://github.com/Clash-Projects/LastWave-Desktop) and adapts UI from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native), both by Clash-Projects. It is made possible thanks to these open-source projects:
 
 - **[media_kit](https://github.com/media-kit/media-kit)** — Audio playback engine powered by libmpv
 - **[Limusic](https://github.com/chenyandian/Limusic)** — InnerTube client registry & stream resolution fast path
@@ -189,8 +196,8 @@ LastWave Desktop is made possible thanks to these open-source projects:
 LastWave wouldn't be possible without our incredible community of contributors. Thank you for making it better every day!
 
 <p align="center">
-  <a href="https://github.com/Clash-Projects/LastWave-Desktop/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=Clash-Projects/LastWave-Desktop" alt="Contributors" />
+  <a href="https://github.com/Clash-Projects/LastWave-iOS/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=Clash-Projects/LastWave-iOS" alt="Contributors" />
   </a>
 </p>
 
