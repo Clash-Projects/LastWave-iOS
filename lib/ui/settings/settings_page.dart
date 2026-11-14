@@ -48,7 +48,6 @@ import '../theme/brand_icons.dart';
 import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/equalizer/headphone_profiles.dart';
 import '../../features/player/playback_service.dart';
-import '../../features/search/search_repository.dart';
 import '../../features/presence/discord_presence_service.dart';
 import '../../features/updates/update_service.dart';
 import '../updates/update_dialog.dart';
@@ -853,17 +852,6 @@ class _Appearance extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _Group(
-          id: 'appearance.wavy_timeline',
-          title: 'Timeline',
-          subtitle: 'Progress bar in the mini player and full screen player',
-          child: _SwitchRow(
-            value: ref.watch(prefsProvider.select((p) => p.wavySeekbar)),
-            onChanged: (v) => onUpdate((p) => p.setWavySeekbar(v)),
-            title: 'Wavy timeline',
-            subtitle: 'Draw the progress bar as a wave.',
-          ),
-        ),
       ],
     );
   }
@@ -2410,28 +2398,6 @@ class _Sources extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Group(
-          id: 'sources.catalog',
-          title: 'Catalog providers',
-          subtitle:
-              'Add discovery and metadata results to search. These sources do not provide audio playback.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _SwitchRow(
-                value: prefs.deezerCatalogSearchEnabled,
-                onChanged: (v) async {
-                  await onUpdate((p) => p.setDeezerCatalogSearchEnabled(v));
-                  ref.invalidate(searchRepositoryProvider);
-                },
-                title: 'Deezer',
-                subtitle:
-                    'Add songs, albums and artists from Deezer. Metadata only; playback stays with your existing sources.',
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
         _Group(
           id: 'sources.addons',
           title: 'Addon sources',
