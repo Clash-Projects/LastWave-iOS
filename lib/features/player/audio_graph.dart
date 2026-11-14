@@ -1,5 +1,5 @@
 /// Joins libmpv `af` pieces so equalizer, headphone correction, pitch,
-/// and a mix sweep occupy one chain instead of replacing each other.
+/// occupy one chain instead of replacing each other.
 String mergeEqualizerAndHeadphone(String equalizerAf, String headphoneAf) {
   final inner = <String>[];
   void absorb(String af) {
@@ -26,5 +26,3 @@ String mergeEqualizerAndHeadphone(String equalizerAf, String headphoneAf) {
   return 'format=floatp,lavfi=[${inner.join(',')}]';
 }
 
-  return '$baseAf,lavfi=[$sweep]';
-}
