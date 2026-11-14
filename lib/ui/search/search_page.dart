@@ -975,16 +975,7 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
           waveOpen(context, '/artist/${Uri.encodeComponent(hero.name)}');
         }
       case SearchTab.albums:
-        if (hero.entityId.isNotEmpty) {
-          waveOpen(
-              context,
-              waveAlbumLocation(
-                browseId: hero.entityId,
-                title: hero.name,
-                artist: hero.artist,
-                artworkUrl: hero.artworkUrl,
-              ));
-        }
+        unawaited(_openAlbumResult(hero));
       case SearchTab.playlists:
         _openPlaylist(hero);
       case SearchTab.tracks:
@@ -993,6 +984,39 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
       case SearchTab.users:
         _openUser(hero);
     }
+  }
+
+  Future<void> _openAlbumResult(SearchResultItem album) async {
+    var resolved = album;
+    if (resolved.entityId.isEmpty) {
+      resolved = await ref
+              .read(searchRepositoryProvider)
+              .resolveAlbumForOpening(album) ??
+          album;
+      if (!mounted) return;
+      if (resolved.entityId.isEmpty) {
+        displayInfoBar(
+          context,
+          builder: (context, close) => InfoBar(
+            title: const Text(
+              'This album could not be matched on YouTube Music.',
+            ),
+            severity: InfoBarSeverity.warning,
+            onClose: close,
+          ),
+        );
+        return;
+      }
+    }
+    waveOpen(
+      context,
+      waveAlbumLocation(
+        browseId: resolved.entityId,
+        title: resolved.name,
+        artist: resolved.artist,
+        artworkUrl: resolved.artworkUrl,
+      ),
+    );
   }
 
   void _openUser(SearchResultItem user) {
@@ -1318,20 +1342,7 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                     art: a.artworkUrl,
                     size: 124,
                     providerLabel: a.providerLabel,
-                    onTap: () {
-                      if (a.entityId.isNotEmpty) {
-                        waveOpen(
-                            context,
-                            waveAlbumLocation(
-                              browseId: a.entityId,
-                              title: a.name,
-                              artist: a.artist.isNotEmpty
-                                  ? a.artist
-                                  : a.subtitle,
-                              artworkUrl: a.artworkUrl,
-                            ));
-                      }
-                    },
+                    onTap: () => unawaited(_openAlbumResult(a)),
                   ),
                   );
                 },
@@ -1638,7 +1649,7 @@ class _TopResult extends StatelessWidget {
     final hero = artist ?? album ?? song;
     if (hero == null) return const SizedBox.shrink();
     final isArtist = hero == artist;
-    final playable = hero.videoId.isNotEmpty;
+    final playable = hero.tab == SearchTab.tracks || hero.videoId.isNotEmpty;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
