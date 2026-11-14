@@ -4,7 +4,7 @@
 
 <h1>LastWave for iOS</h1>
 
-**A YouTube Music client for iPhone and iPad, built with Flutter. Automix, lossless addons, synced lyrics and more.**
+**A YouTube Music client for iPhone and iPad, built with Flutter. Lossless addons, synced lyrics and more.**
 
 <br/>
 
@@ -46,7 +46,6 @@ The port is a work in progress. The feature list below comes from the shared cod
 - Bit-Perfect audio output (direct hardware bypass)
 - Lossless FLAC addon support (up to 24-bit Hi-Res)
 - 15-band Parametric Equalizer & AutoEQ presets
-- Timed AutoMix transitions with optional beat matching
 - Audio normalization (ReplayGain / LUFS)
 - Real-time tempo & pitch control
 
