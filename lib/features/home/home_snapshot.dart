@@ -29,7 +29,7 @@ const homeCacheGroup = 'home';
 const homeSnapshotMaxAge = Duration(days: 7);
 
 const _feedKeyPrefix = 'home_feed_v1|';
-const _shelvesKeyPrefix = 'home_yt_v1|';
+const _shelvesKeyPrefix = 'home_yt_v2|';
 const _version = 1;
 
 /// Cache key for a Last.fm user's feed; null when there is no user.
@@ -38,14 +38,15 @@ String? homeFeedSnapshotKey(String username) {
   return u.isEmpty ? null : '$_feedKeyPrefix$u';
 }
 
-/// Cache key for a YouTube Music identity (login + channel); null when
-/// signed out.
-String? homeShelvesSnapshotKey({
+/// Cache key for the YouTube Music Home feed. Signed-out users share the
+/// public feed snapshot; authenticated users are scoped to their active
+/// channel so one account never sees another account's recommendations.
+String homeShelvesSnapshotKey({
   required bool connected,
   required String profileEmail,
   required String activePageId,
 }) {
-  if (!connected) return null;
+  if (!connected) return '${_shelvesKeyPrefix}public';
   return '$_shelvesKeyPrefix${profileEmail.trim().toLowerCase()}|$activePageId';
 }
 
@@ -232,6 +233,58 @@ final shelvesSnapshotCodec = SnapshotCodec<List<YtHomeShelf>>(
   encode: _encodeShelves,
   decode: _decodeShelves,
   isEmpty: (s) => s.isEmpty,
+);
+
+Map<String, dynamic> _encodeYtHomeFeed(YtHomeFeed feed) {
+  final shelfEnvelope = jsonDecode(_encodeShelves(feed.shelves)) as Map;
+  return {
+    'v': 2,
+    'chips': [
+      for (final chip in feed.chips)
+        {
+          't': chip.title,
+          'b': chip.browseId,
+          'p': chip.params,
+        },
+    ],
+    'shelves': shelfEnvelope['shelves'] ?? const [],
+  };
+}
+
+YtHomeFeed? _decodeYtHomeFeed(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map || decoded['v'] != 2) return null;
+    final shelfRaw = jsonEncode({
+      'v': _version,
+      'shelves': decoded['shelves'] ?? const [],
+    });
+    final shelves = _decodeShelves(shelfRaw);
+    if (shelves == null) return null;
+    final chips = <YtHomeChip>[];
+    final rawChips = decoded['chips'];
+    if (rawChips is List) {
+      for (final rawChip in rawChips) {
+        if (rawChip is! Map) continue;
+        final title = rawChip['t']?.toString() ?? '';
+        if (title.isEmpty) continue;
+        chips.add(YtHomeChip(
+          title: title,
+          browseId: rawChip['b']?.toString() ?? '',
+          params: rawChip['p']?.toString() ?? '',
+        ));
+      }
+    }
+    return YtHomeFeed(chips: chips, shelves: shelves);
+  } catch (_) {
+    return null;
+  }
+}
+
+final ytHomeFeedSnapshotCodec = SnapshotCodec<YtHomeFeed>(
+  encode: (feed) => jsonEncode(_encodeYtHomeFeed(feed)),
+  decode: _decodeYtHomeFeed,
+  isEmpty: (feed) => feed.isEmpty,
 );
 
 // -- stale-while-revalidate --------------------------------------------------
