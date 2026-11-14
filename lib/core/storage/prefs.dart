@@ -591,12 +591,11 @@ class Prefs {
       _sp.setString('lw_download_structure', id);
 
   // -- Catalog search providers ---------------------------------------------
-  // Spotify adds discovery results to Search when an account is connected.
-  // This affects metadata results only; playback remains unchanged.
-  bool get spotifyCatalogSearchEnabled =>
-      _sp.getBool('lw_catalog_spotify_enabled') ?? true;
-  Future<void> setSpotifyCatalogSearchEnabled(bool enabled) =>
-      _sp.setBool('lw_catalog_spotify_enabled', enabled);
+  // Deezer adds public discovery metadata to Search; it never provides audio.
+  bool get deezerCatalogSearchEnabled =>
+      _sp.getBool('lw_catalog_deezer_enabled') ?? true;
+  Future<void> setDeezerCatalogSearchEnabled(bool enabled) =>
+      _sp.setBool('lw_catalog_deezer_enabled', enabled);
 
   // -- Portable backup (non-secret prefs only) ------------------------------
   static bool isSecretPref(String key) {
