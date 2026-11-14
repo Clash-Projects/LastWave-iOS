@@ -96,6 +96,9 @@ abstract final class HomeShelfCatalog {
     HomeShelfId.charts,
   ];
 
+  /// Compatibility order for the legacy Last.fm fallback renderer.
+  static const connected = defaults;
+
   static const labels = <String, String>{
     HomeShelfId.home: 'Home',
     HomeShelfId.samples: 'Samples',
