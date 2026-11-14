@@ -35,34 +35,12 @@ const _phoneDestinations = <WaveDestination>[
   WaveDestination('/settings', 'Settings', WaveIcons.settings),
 ];
 
-const _phoneMoreDestinations = <WaveDestination>[
-  WaveDestination('/home-layout', 'Edit Home', WaveIcons.edit),
-  WaveDestination('/albums', 'Albums', WaveIcons.albums),
-  WaveDestination('/artists', 'Artists', WaveIcons.artists),
-  WaveDestination('/downloads', 'Downloads', WaveIcons.downloads),
-  WaveDestination('/stats', 'Stats', WaveIcons.stats),
-  WaveDestination('/podcasts', 'Podcasts', WaveIcons.podcasts),
-  WaveDestination('/mixes', 'Mix Lab', WaveIcons.mixes),
-  WaveDestination('/history', 'Listening history', WaveIcons.history),
-  WaveDestination('/friends', 'Friends', WaveIcons.friends),
-];
-
 /// iPad uses the same four primary destinations in the same order.
 const _tabletDestinations = <WaveDestination>[
   WaveDestination('/home', 'Home', WaveIcons.home),
   WaveDestination('/search', 'Search', WaveIcons.search),
   WaveDestination('/playlists', 'Playlists', WaveIcons.playlists),
   WaveDestination('/settings', 'Settings', WaveIcons.settings),
-];
-
-const _tabletMoreDestinations = <WaveDestination>[
-  WaveDestination('/home-layout', 'Edit Home', WaveIcons.edit),
-  WaveDestination('/artists', 'Artists', WaveIcons.artists),
-  WaveDestination('/stats', 'Stats', WaveIcons.stats),
-  WaveDestination('/podcasts', 'Podcasts', WaveIcons.podcasts),
-  WaveDestination('/mixes', 'Mix Lab', WaveIcons.mixes),
-  WaveDestination('/history', 'Listening history', WaveIcons.history),
-  WaveDestination('/friends', 'Friends', WaveIcons.friends),
 ];
 
 /// Touch-first shell for iPhone and iPad. It reuses the existing routes,
@@ -93,7 +71,6 @@ class WaveMobileShell extends ConsumerStatefulWidget {
 }
 
 class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
-  bool _showMore = false;
   bool _showEqualizer = false;
   bool _showQueue = false;
   FluentThemeData? _artworkPlayerTheme;
@@ -130,11 +107,10 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   void didUpdateWidget(WaveMobileShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.location != widget.location &&
-        (_showMore || _showEqualizer || _showQueue)) {
+        (_showEqualizer || _showQueue)) {
       // Route changes can also come from deep links, browser callbacks, or
       // the Now Playing stage. Never leave a stale overlay covering the
       // destination page.
-      _showMore = false;
       _showEqualizer = false;
       _showQueue = false;
     }
@@ -142,7 +118,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
 
   void _go(String path) {
     setState(() {
-      _showMore = false;
       _showEqualizer = false;
       _showQueue = false;
     });
@@ -180,7 +155,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
     if (!_route.startsWith('/now')) context.push('/now');
   }
 
-  void _back(List<WaveDestination> more) {
+  void _back() {
     if (_showEqualizer || _showQueue) {
       setState(() {
         _showEqualizer = false;
@@ -188,16 +163,8 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
       });
       return;
     }
-    if (_showMore) {
-      // Back from the More list just closes it.
-      setState(() => _showMore = false);
-      return;
-    }
     if (context.canPop()) {
       context.pop();
-    } else if (more.any((d) => d.path == _route)) {
-      // A library page reached from the More list goes back to that list.
-      setState(() => _showMore = true);
     } else {
       _go('/home');
     }
@@ -209,8 +176,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
     ref.listen<String?>(nowPlayingOverlayRequestProvider, (previous, action) {
       if (action == null || !mounted) return;
       setState(() {
-        _showMore = false;
-        _showQueue = action == 'queue';
+          _showQueue = action == 'queue';
         _showEqualizer = action == 'equalizer';
       });
       ref.read(nowPlayingOverlayRequestProvider.notifier).state = null;
@@ -243,19 +209,13 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
           _ => WaveHazeIntensity.medium,
         };
         final tabs = tablet ? _tabletDestinations : _phoneDestinations;
-        final moreDestinations =
-            tablet ? _tabletMoreDestinations : _phoneMoreDestinations;
-        final moreActive = _showMore ||
-            moreDestinations.any((d) =>
-                activePath == d.path ||
-                _route.startsWith('${d.path}/'));
         // Collection subpages live inside the Playlists destination.
         final libraryRoot = _route == '/liked' ||
             _route == '/albums' ||
             _route == '/downloads';
         final showBack = !nowPlaying &&
             !libraryRoot &&
-            (_showMore || !tabs.any((d) => d.path == _route));
+            !tabs.any((d) => d.path == _route);
 
         final systemMedia = MediaQuery.of(context);
         final safe = systemMedia.padding;
@@ -269,11 +229,10 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             _TabletTopBar(
               destinations: tabs,
               activePath: activePath,
-              moreActive: moreActive,
               showBack: showBack,
               showLabels: constraints.maxWidth >= 1000,
               onGo: _go,
-              onBack: () => _back(moreDestinations),
+              onBack: _back,
             ),
           if (!tablet && !nowPlaying)
             _DockFrame(
@@ -281,7 +240,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
               child: _MobileMiniPlayer(onOpen: _openNowPlaying),
             ),
           if (!tablet && !nowPlaying && showBack)
-            _BackHeader(onBack: () => _back(moreDestinations)),
+            _BackHeader(onBack: _back),
         ];
         final bottomChrome = nowPlaying
             ? _DockFrame(
@@ -358,26 +317,14 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                               // kept) instead of painting an opaque box, so the
                               // full-screen gradient behind them is never cut.
                               Offstage(
-                                offstage: (_showMore && !nowPlaying) ||
-                                    (_showQueue && nowPlaying),
+                                offstage: _showQueue && nowPlaying,
                                 child: widget.child,
                               ),
-                              if (_showMore && !nowPlaying)
-                                Positioned.fill(
-                                  child: Padding(
-                                    padding: chromeInsets,
-                                    child: _MorePage(
-                                      tablet: tablet,
-                                      destinations: moreDestinations,
-                                      onGo: _go,
-                                    ),
-                                  ),
-                                ),
                               if (_showEqualizer && nowPlaying)
                                 Positioned.fill(
                                   child: WaveEqualizerPanel(
                                     embedded: true,
-                                    onClose: () => _back(moreDestinations),
+                                    onClose: () => _back(),
                                   ),
                                 ),
                               if (_showQueue && nowPlaying)
@@ -387,12 +334,12 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                                       _MobileOverlayHeader(
                                         title: 'Queue',
                                         onClose: () =>
-                                            _back(moreDestinations),
+                                            _back(),
                                       ),
                                       Expanded(
                                         child: WaveQueuePanel(
                                           onClose: () =>
-                                              _back(moreDestinations),
+                                              _back(),
                                           embedded: true,
                                         ),
                                       ),
@@ -1519,101 +1466,4 @@ class _WaveAutoScrollTextState extends State<_WaveAutoScrollText> {
           );
         },
       );
-}
-
-/// Library destinations that don't earn a tab: a large-title list of
-/// shared-material rows.
-class _MorePage extends StatelessWidget {
-  final bool tablet;
-  final List<WaveDestination> destinations;
-  final void Function(String) onGo;
-
-  const _MorePage({
-    required this.tablet,
-    required this.destinations,
-    required this.onGo,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final destination in destinations)
-          Padding(
-            padding: const EdgeInsets.only(bottom: WaveSpacing.x4),
-            child: Semantics(
-              button: true,
-              label: destination.label,
-              excludeSemantics: true,
-              child: WavePressable(
-                onTap: () => onGo(destination.path),
-                pressedScale: 0.98,
-                child: WaveFloatingSurface(
-                  base: waveSurfaceRaised(context),
-                  fillAlpha: 0.30,
-                  borderRadius: WaveRadius.floatingRadius,
-                  child: SizedBox(
-                    height: 60,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: WaveSpacing.x12,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            destination.icon,
-                            size: WaveTouch.iconSecondary,
-                            color: waveTextPrimary(context),
-                          ),
-                          const SizedBox(width: WaveSpacing.x12),
-                          Expanded(
-                            child: Text(
-                              destination.label,
-                              style: WaveTouchType.rowTitle.copyWith(
-                                color: waveTextPrimary(context),
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            WaveIcons.chevronRight,
-                            size: 16,
-                            color: waveTextTertiary(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, viewport) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          WaveSpacing.x12,
-          WaveSpacing.x2,
-          WaveSpacing.x12,
-          WaveSpacing.x20,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: viewport.maxHeight),
-          child: Align(
-            alignment: tablet ? Alignment.center : Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints:
-                  const BoxConstraints(maxWidth: WaveTouch.floatMaxWidth),
-              child: SizedBox(
-                width: double.infinity,
-                child: rows,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
