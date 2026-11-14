@@ -48,6 +48,7 @@ import '../theme/brand_icons.dart';
 import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/equalizer/headphone_profiles.dart';
 import '../../features/player/playback_service.dart';
+import '../../features/search/search_repository.dart';
 import '../../features/presence/discord_presence_service.dart';
 import '../../features/updates/update_service.dart';
 import '../updates/update_dialog.dart';
@@ -2419,16 +2420,20 @@ class _Sources extends ConsumerWidget {
             children: [
               _SwitchRow(
                 value: prefs.itunesCatalogSearchEnabled,
-                onChanged: (v) =>
-                    onUpdate((p) => p.setItunesCatalogSearchEnabled(v)),
+                onChanged: (v) async {
+                  await onUpdate((p) => p.setItunesCatalogSearchEnabled(v));
+                  ref.invalidate(searchRepositoryProvider);
+                },
                 title: 'iTunes Search',
                 subtitle:
                     'Search Apple’s public music storefront catalog for songs, albums and artists.',
               ),
               _SwitchRow(
                 value: prefs.musicBrainzCatalogSearchEnabled,
-                onChanged: (v) =>
-                    onUpdate((p) => p.setMusicBrainzCatalogSearchEnabled(v)),
+                onChanged: (v) async {
+                  await onUpdate((p) => p.setMusicBrainzCatalogSearchEnabled(v));
+                  ref.invalidate(searchRepositoryProvider);
+                },
                 title: 'MusicBrainz',
                 subtitle:
                     'Add community-maintained recordings, artists and releases. Requests are rate-limited.',
