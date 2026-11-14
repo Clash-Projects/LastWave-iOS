@@ -173,7 +173,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
     ];
   }
 
-  List<Widget> _homeApiSlivers(
+  Widget _homeApiSlivers(
     BuildContext context,
     WidgetRef ref,
     YtHomeFeed feed,
