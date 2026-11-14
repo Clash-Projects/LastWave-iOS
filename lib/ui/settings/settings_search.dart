@@ -162,13 +162,6 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     keywords: 'amoled black dynamic artwork theme tint now playing contrast',
   ),
   SettingsSearchEntry(
-    id: 'appearance.ui_scale',
-    section: 'appearance',
-    title: 'Interface scale',
-    subtitle: 'Scale the UI down to fit smaller screens',
-    keywords: 'scale zoom size smaller fit iphone phone screen interface ui automatic manual',
-  ),
-  SettingsSearchEntry(
     id: 'appearance.wavy_timeline',
     section: 'appearance',
     title: 'Wavy timeline',

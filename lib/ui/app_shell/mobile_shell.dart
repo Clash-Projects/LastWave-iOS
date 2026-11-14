@@ -202,6 +202,8 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             ? '/playlists'
             : routeActivePath;
         final theme = ref.watch(themeControllerProvider);
+        final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
+        final interfaceScale = tablet ? 1.0 : 0.97;
         final material = switch (theme.hazeMaterial) {
           'haze' => WaveMaterialMode.haze,
           'solid' => WaveMaterialMode.solid,
@@ -291,7 +293,9 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             : EdgeInsets.zero;
 
         return MediaQuery(
-          data: systemMedia,
+          data: systemMedia.copyWith(
+            textScaler: TextScaler.linear(systemTextScale * interfaceScale),
+          ),
           child: WaveHazeScope(
             material: material,
             intensity: intensity,

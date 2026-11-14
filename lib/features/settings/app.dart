@@ -12,7 +12,6 @@ import '../../app/window_lifecycle.dart';
 import '../../core/artwork/official_artwork_service.dart';
 import '../../core/storage/prefs.dart';
 import '../../design_system/fluent/lw_scrollbar.dart';
-import '../../ui/components/ui_scale.dart';
 import '../../ui/theme/fluent_theme.dart';
 import '../../ui/theme/tokens.dart';
 import '../../ui/theme/haze.dart';
@@ -220,9 +219,7 @@ class _LastWaveAppState extends ConsumerState<LastWaveApp> {
           // solid flyouts read identically. (Own haze system untouched.)
           builder: (context, child) => WaveSurfacesScope(
             surfaces: activeSurfaces,
-            child: WaveUiScale(
-              child: DisableAcrylic(child: child ?? const SizedBox.shrink()),
-            ),
+            child: DisableAcrylic(child: child ?? const SizedBox.shrink()),
           ),
         ),
       ),
