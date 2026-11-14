@@ -79,6 +79,37 @@ void main() {
       expect(s.entities.single.playlistId, 'RDx');
     });
 
+    test('YouTube Home feed round-trips its category endpoints', () {
+      const feed = YtHomeFeed(
+        chips: [
+          YtHomeChip(
+            title: 'Energise',
+            browseId: 'FEmusic_moods_and_genres_category',
+            params: 'energy',
+          ),
+        ],
+        shelves: [
+          YtHomeShelf(
+            title: 'Quick picks',
+            tracks: [
+              YouTubeMusicTrack(
+                videoId: 'quick-1',
+                title: 'Song',
+                artist: 'Artist',
+              ),
+            ],
+          ),
+        ],
+      );
+      final decoded = ytHomeFeedSnapshotCodec.decode(
+        ytHomeFeedSnapshotCodec.encode(feed),
+      )!;
+      expect(decoded.chips.single.title, 'Energise');
+      expect(decoded.chips.single.browseId, 'FEmusic_moods_and_genres_category');
+      expect(decoded.chips.single.params, 'energy');
+      expect(decoded.shelves.single.tracks.single.videoId, 'quick-1');
+    });
+
     test('garbage and other versions decode to null, never throw', () {
       expect(feedSnapshotCodec.decode('not json'), isNull);
       expect(feedSnapshotCodec.decode('{"v":99}'), isNull);
@@ -169,7 +200,7 @@ void main() {
       expect(
         homeShelvesSnapshotKey(
             connected: false, profileEmail: 'a@b.c', activePageId: ''),
-        isNull,
+        'home_yt_v2|public',
       );
       expect(
         homeShelvesSnapshotKey(
