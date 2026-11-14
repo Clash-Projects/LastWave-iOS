@@ -216,8 +216,8 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     id: 'sources.catalog',
     section: 'sources',
     title: 'Catalog providers',
-    subtitle: 'Spotify discovery results in search',
-    keywords: 'spotify catalog search provider metadata songs albums artists',
+    subtitle: 'Deezer metadata results in search',
+    keywords: 'deezer catalog search provider metadata songs albums artists',
   ),
   SettingsSearchEntry(
     id: 'sources.addons',
