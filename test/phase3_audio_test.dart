@@ -7,7 +7,6 @@ import 'package:lastwave_desktop/features/audio_output/pcm_format.dart';
 import 'package:lastwave_desktop/features/equalizer/headphone_profiles.dart';
 import 'package:lastwave_desktop/features/player/audio_graph.dart';
 import 'package:lastwave_desktop/features/player/loudness.dart';
-import 'package:lastwave_desktop/features/player/timed_mix.dart';
 
 void main() {
   test('data saver is a persisted quality with a short label', () {
@@ -64,16 +63,7 @@ void main() {
     expect(swept, contains('lowpass=f=1000'));
   });
 
-  test('timed mix sweep moves and is not a beat grid', () {
-    expect(TimedMixSweep.outgoing(0), contains('lowpass'));
-    expect(TimedMixSweep.incoming(1), contains('highpass'));
-    expect(
-      TimedMixSweep.hz(16000, 180, 1).round(),
-      180,
-    );
-  });
-
-  test('loudness, automix, and pitch block bit-perfect', () {
+  test('loudness and pitch block bit-perfect', () {
     final negotiator = FormatNegotiator();
     final decision = negotiator.negotiate(
       source: const PcmFormat(sampleRateHz: 44100, bitDepth: 16),
@@ -82,7 +72,6 @@ void main() {
     );
     BitPerfectReason reason({
       bool loudness = false,
-      bool autoMix = false,
       double pitch = 1,
       double speed = 1,
     }) {
@@ -96,13 +85,11 @@ void main() {
         softwareVolume: false,
         speed: speed,
         loudness: loudness,
-        autoMix: autoMix,
         pitch: pitch,
       );
     }
 
     expect(reason(loudness: true), BitPerfectReason.loudnessActive);
-    expect(reason(autoMix: true), BitPerfectReason.autoMixActive);
     expect(reason(pitch: 1.2), BitPerfectReason.pitchNotUnity);
     expect(reason(speed: 1.25), BitPerfectReason.speedNotUnity);
   });
