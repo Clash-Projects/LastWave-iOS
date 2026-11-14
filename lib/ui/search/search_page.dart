@@ -9,6 +9,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../components/text_selection.dart';
 import '../components/buttons.dart' show LWTooltip, WaveLink;
 import '../components/inputs.dart';
@@ -968,7 +969,18 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
   /// Primary action keeps hierarchy: artist → artist page, album →
   /// album page, song → play. (Previous build re-searched on artist tap
   /// and dwarfed the hero at 92px.)
+  Future<void> _openExternalCatalogItem(SearchResultItem item) async {
+    final uri = Uri.tryParse(item.externalUrl);
+    if (uri == null || !uri.hasScheme) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   void _primary(SearchResultItem hero) {
+    if (hero.externalUrl.isNotEmpty &&
+        (hero.tab == SearchTab.artists || hero.tab == SearchTab.albums)) {
+      _openExternalCatalogItem(hero);
+      return;
+    }
     switch (hero.tab) {
       case SearchTab.artists:
         if (hero.name.isNotEmpty) {
@@ -1318,7 +1330,9 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                     art: a.artworkUrl,
                     size: 124,
                     onTap: () {
-                      if (a.entityId.isNotEmpty) {
+                      if (a.externalUrl.isNotEmpty) {
+                        _openExternalCatalogItem(a);
+                      } else if (a.entityId.isNotEmpty) {
                         waveOpen(
                             context,
                             waveAlbumLocation(
@@ -1368,8 +1382,16 @@ class _CombinedResultsState extends ConsumerState<_CombinedResults> {
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: GestureDetector(
-                    onTap: () => waveOpen(
-                        context, '/artist/${Uri.encodeComponent(a.name)}'),
+                    onTap: () {
+                      if (a.externalUrl.isNotEmpty) {
+                        _openExternalCatalogItem(a);
+                      } else {
+                        waveOpen(
+                          context,
+                          '/artist/${Uri.encodeComponent(a.name)}',
+                        );
+                      }
+                    },
                     child: SizedBox(
                       width: 96,
                       child: Column(
