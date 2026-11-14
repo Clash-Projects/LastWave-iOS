@@ -91,6 +91,39 @@ void main() {
     expect(labels, ['Chill', 'New playlist…']);
   });
 
+  testWidgets('narrow menu sheet wraps long source names', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    late BuildContext pageContext;
+    await tester.pumpWidget(
+      FluentApp(
+        themeMode: ThemeMode.dark,
+        home: Builder(
+          builder: (context) {
+            pageContext = context;
+            return GestureDetector(
+              onTap: () => showWaveMenuSheet(pageContext, [
+                WaveMenuAction(
+                  label: 'Kugou KRC (Word-Sync)',
+                  hint: 'Word-synchronized lyrics provider',
+                  onPressed: () {},
+                ),
+              ]),
+              child: const Text('Open lyrics sources'),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open lyrics sources'));
+    await tester.pumpAndSettle();
+
+    final label = tester.widget<Text>(find.text('Kugou KRC (Word-Sync)'));
+    expect(label.maxLines, 3);
+    expect(label.softWrap, isTrue);
+    expect(find.text('Word-synchronized lyrics provider'), findsOneWidget);
+  });
+
   testWidgets('hovering a submenu row opens its nested panel', (tester) async {
     await _pumpPanel(tester, [
       WaveMenuAction(label: 'Play', onPressed: () {}),
