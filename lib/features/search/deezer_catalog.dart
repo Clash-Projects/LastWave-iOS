@@ -35,7 +35,7 @@ class DeezerCatalogApi {
   static const _cacheLimit = 80;
 
   final Map<String, ({DateTime at, List<DeezerCatalogHit> hits})> _cache = {};
-  final Map<String, Future<List<DeezerCatalogHit>>> _requests = {};
+  final Map<String, Future<List<DeezerCatalogHit>?>> _requests = {};
   DateTime? _retryAt;
 
   Future<List<DeezerCatalogHit>> searchCatalog(
@@ -53,10 +53,11 @@ class DeezerCatalogApi {
     }
 
     final pending = _requests[key];
-    if (pending != null) return pending;
+    if (pending != null) return await pending ?? const [];
 
-    late final Future<List<DeezerCatalogHit>> started;
+    late final Future<List<DeezerCatalogHit>?> started;
     started = _fetch(q, kind).then((hits) {
+      if (hits == null) return null;
       _cache[key] = (at: DateTime.now(), hits: hits);
       if (_cache.length > _cacheLimit) _cache.remove(_cache.keys.first);
       return hits;
@@ -64,10 +65,10 @@ class DeezerCatalogApi {
       if (identical(_requests[key], started)) _requests.remove(key);
     });
     _requests[key] = started;
-    return started;
+    return await started ?? const [];
   }
 
-  Future<List<DeezerCatalogHit>> _fetch(
+  Future<List<DeezerCatalogHit>?> _fetch(
     String query,
     DeezerCatalogKind kind,
   ) async {
@@ -78,7 +79,7 @@ class DeezerCatalogApi {
       DiagnosticsLog.info(
         '$tag kind=${kind.name} status=cooldown seconds=$remaining',
       );
-      return const [];
+      return null;
     }
 
     final endpoint = kind == DeezerCatalogKind.track
@@ -107,14 +108,14 @@ class DeezerCatalogApi {
           'retryAfter=${retryAfter.isEmpty ? 'missing' : retryAfter} '
           'cooldownSeconds=$seconds',
         );
-        return const [];
+        return null;
       }
 
       if (status < 200 || status >= 300) {
         DiagnosticsLog.info(
           '$tag kind=${kind.name} status=http_$status',
         );
-        return const [];
+        return null;
       }
 
       final decoded = jsonDecode(response.data ?? '{}');
@@ -122,7 +123,7 @@ class DeezerCatalogApi {
         DiagnosticsLog.info(
           '$tag kind=${kind.name} status=invalid_response',
         );
-        return const [];
+        return null;
       }
 
       final apiError = decoded['error'];
@@ -133,7 +134,7 @@ class DeezerCatalogApi {
         DiagnosticsLog.info(
           '$tag kind=${kind.name} status=api_error code=$code message=$message',
         );
-        return const [];
+        return null;
       }
 
       final rows = decoded['data'];
@@ -141,7 +142,7 @@ class DeezerCatalogApi {
         DiagnosticsLog.info(
           '$tag kind=${kind.name} status=invalid_response',
         );
-        return const [];
+        return null;
       }
 
       final hits = <DeezerCatalogHit>[];
@@ -164,13 +165,13 @@ class DeezerCatalogApi {
         '$tag kind=${kind.name} status=network_error '
         'http=${status ?? 'none'} type=${error.type.name}',
       );
-      return const [];
+      return null;
     } catch (error) {
       DiagnosticsLog.info(
         '$tag kind=${kind.name} status=parse_error '
         'errorType=${error.runtimeType}',
       );
-      return const [];
+      return null;
     }
   }
 
