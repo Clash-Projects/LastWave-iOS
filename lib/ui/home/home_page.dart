@@ -95,7 +95,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
     final legacyFeed = ref.watch(feedProvider);
     final viewport = MediaQuery.sizeOf(context).width;
     final contentWidth = viewport < 920 ? viewport : 920.0;
-    const side = 16.0;
+    final side = viewport < 390 ? 12.0 : 16.0;
 
     return Align(
       alignment: Alignment.topCenter,
@@ -209,7 +209,6 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
 
     final tabs = <YtHomeChip>[
       homeChip,
-      fromApiOr('Samples', const YtHomeChip(title: 'Samples')),
       fromApiOr(
         'Explore',
         const YtHomeChip(title: 'Explore', browseId: 'FEmusic_explore'),
@@ -388,11 +387,14 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
       if (id == HomeShelfId.podcasts) {
         slivers.addAll([
           const SliverToBoxAdapter(child: SizedBox(height: 22)),
-          SliverToBoxAdapter(
-            child: WaveEntrance(
-              index: entrance++,
-              rise: 8,
-              child: const PodcastHomeShelf(),
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: side),
+            sliver: SliverToBoxAdapter(
+              child: WaveEntrance(
+                index: entrance++,
+                rise: 8,
+                child: const PodcastHomeShelf(),
+              ),
             ),
           ),
         ]);
@@ -1318,8 +1320,9 @@ class _NativeQuickAccess extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalInset = MediaQuery.sizeOf(context).width < 390 ? 12.0 : 16.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 3),
+      padding: EdgeInsets.fromLTRB(horizontalInset, 0, horizontalInset, 3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
