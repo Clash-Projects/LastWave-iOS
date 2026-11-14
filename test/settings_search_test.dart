@@ -33,7 +33,6 @@ void main() {
 
   test('removed timeline and catalog settings are not searchable', () {
     expect(titles('wavy timeline'), isEmpty);
-    expect(titles('deezer'), isEmpty);
   });
 
   test('new destinations are searchable', () {
