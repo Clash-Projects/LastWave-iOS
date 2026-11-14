@@ -139,36 +139,6 @@ const settingsSearchEntries = <SettingsSearchEntry>[
         'accent colour color picker palette mode personalize',
   ),
   SettingsSearchEntry(
-    id: 'appearance.haze',
-    section: 'appearance',
-    title: 'Haze material',
-    subtitle: 'Blur and translucency of panels',
-    keywords: 'haze blur acrylic mica glass transparency intensity solid',
-  ),
-  SettingsSearchEntry(
-    id: 'appearance.ambient',
-    section: 'appearance',
-    title: 'Now Playing ambient',
-    subtitle: 'Background behind the cover and lyrics',
-    keywords:
-        'ambient apple music winui background visualizer blur aura stage '
-        'now playing lyrics colours colors',
-  ),
-  SettingsSearchEntry(
-    id: 'appearance.surfaces',
-    section: 'appearance',
-    title: 'Surfaces',
-    subtitle: 'Contrast and artwork tinting',
-    keywords: 'amoled black dynamic artwork theme tint now playing contrast',
-  ),
-  SettingsSearchEntry(
-    id: 'appearance.wavy_timeline',
-    section: 'appearance',
-    title: 'Wavy timeline',
-    subtitle: 'Draw the progress bar as a wave',
-    keywords: 'wavy wave seekbar progress bar timeline mini player full screen',
-  ),
-  SettingsSearchEntry(
     id: 'lastfm.connection',
     section: 'lastfm',
     title: 'Last.fm connection',
@@ -213,18 +183,18 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     keywords: 'discord rich presence status activity',
   ),
   SettingsSearchEntry(
-    id: 'sources.catalog',
-    section: 'sources',
-    title: 'Catalog providers',
-    subtitle: 'Deezer metadata results in search',
-    keywords: 'deezer catalog search provider metadata songs albums artists',
-  ),
-  SettingsSearchEntry(
     id: 'sources.addons',
     section: 'sources',
     title: 'Addon sources',
     subtitle: 'Lossless catalog addons',
     keywords: 'addon url source lossless catalog provider server',
+  ),
+  SettingsSearchEntry(
+    id: 'more.destinations',
+    section: 'more',
+    title: 'More',
+    subtitle: 'Additional pages and tools',
+    keywords: 'edit home artist browse listening history friends mixes podcasts speed dial quick access',
   ),
   SettingsSearchEntry(
     id: 'about.main',
