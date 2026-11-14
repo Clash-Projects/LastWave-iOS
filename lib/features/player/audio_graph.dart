@@ -1,4 +1,4 @@
-/// Joins libmpv `af` pieces so equalizer, headphone correction, pitch,
+/// Joins libmpv `af` pieces so equalizer, headphone correction, and pitch
 /// occupy one chain instead of replacing each other.
 String mergeEqualizerAndHeadphone(String equalizerAf, String headphoneAf) {
   final inner = <String>[];
