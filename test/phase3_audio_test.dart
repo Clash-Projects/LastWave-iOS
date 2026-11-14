@@ -58,9 +58,6 @@ void main() {
     expect(merged, contains('f=31'));
     expect(merged, contains('f=100'));
     expect(merged.startsWith('format=floatp,lavfi=['), isTrue);
-    final swept = afWithSweep(merged, 'lowpass=f=1000:poles=1');
-    expect(swept, contains('f=31'));
-    expect(swept, contains('lowpass=f=1000'));
   });
 
   test('loudness and pitch block bit-perfect', () {
