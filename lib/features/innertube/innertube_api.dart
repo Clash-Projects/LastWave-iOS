@@ -197,6 +197,35 @@ class YtHomeShelf {
   bool get isRenderable => isTrackShelf || isTrackCardShelf || isCardShelf;
 }
 
+/// A filter chip returned by YouTube Music's Home browse.
+///
+/// Keep the endpoint identity from the response; chip titles can be localized
+/// and must never be used to guess a browse id.
+class YtHomeChip {
+  final String title;
+  final String browseId;
+  final String params;
+
+  const YtHomeChip({
+    required this.title,
+    this.browseId = '',
+    this.params = '',
+  });
+}
+
+/// One Home response: its category chips and ordered recommendation shelves.
+class YtHomeFeed {
+  final List<YtHomeChip> chips;
+  final List<YtHomeShelf> shelves;
+
+  const YtHomeFeed({
+    this.chips = const [],
+    this.shelves = const [],
+  });
+
+  bool get isEmpty => chips.isEmpty && shelves.isEmpty;
+}
+
 /// A YouTube Music artist page: the full song list plus every carousel
 /// (Albums, Singles & EPs, Videos, Featured on, Playlists, Fans might also
 /// like, …) in YouTube's own order, each with its complete contents.
@@ -2734,42 +2763,44 @@ class InnerTubeMusicApi {
   /// on any failure - callers render their normal state rather than an
   /// error, matching the other account surfaces.
   ///
-  /// [authenticated] is opt-out rather than opt-in because the whole
-  /// point of the home browse is personalization: YTM only returns
-  /// "For you" style shelves when the account jar rides along. Signed
-  /// out, `_post` drops the cookies and YouTube serves its anonymous
-  /// shelves, which is a useful fallback rather than an error.
-  Future<List<YtHomeShelf>> fetchHomeShelves({
-    int maxShelves = 20,
-    int maxItemsPerShelf = 20,
-    int maxPages = 4,
+  /// Fetches one YouTube Music Home-style browse page, including its
+  /// server-provided filter chips and all renderable recommendation shelves.
+  ///
+  /// The browse id and params are taken directly from a Home chip. This lets
+  /// the Home screen switch between Home, Explore, Library, mood filters, and
+  /// other categories without inventing endpoint ids from their labels.
+  Future<YtHomeFeed> fetchHomeFeed({
+    String browseId = homeBrowseId,
+    String? params,
+    int maxShelves = 40,
+    int maxItemsPerShelf = 24,
+    int maxPages = 6,
     bool authenticated = true,
   }) async {
+    if (browseId.trim().isEmpty) return const YtHomeFeed();
     try {
       await _ensureConfig();
       final root = await _post(
         '$musicApi/browse?key=$_apiKey&prettyPrint=false',
         body: {
           'context': _webContext(_clientVersion, _visitorData),
-          'browseId': homeBrowseId,
+          'browseId': browseId,
+          if (params != null && params.isNotEmpty) 'params': params,
         },
         clientName: 'WEB_REMIX',
         clientVersion: _clientVersion,
         userAgent: webUserAgent,
         authenticated: authenticated,
       );
+      final chips = parseHomeChips(root);
       final shelves = parseHomeShelves(
         root,
         maxShelves: maxShelves,
         maxItemsPerShelf: maxItemsPerShelf,
       );
-      // Home loads in pages, like scrolling music.youtube.com. A failed page
-      // keeps what is already in hand.
       var page = root;
       final seenTokens = <String>{};
-      for (var i = 1;
-          i < maxPages && shelves.length < maxShelves;
-          i++) {
+      for (var i = 1; i < maxPages && shelves.length < maxShelves; i++) {
         final token = _homeContinuationToken(page);
         if (token == null || !seenTokens.add(token)) break;
         try {
@@ -2788,11 +2819,25 @@ class InnerTubeMusicApi {
           ),
         );
       }
-      return shelves;
+      return YtHomeFeed(chips: chips, shelves: shelves);
     } catch (_) {
-      return const [];
+      return const YtHomeFeed();
     }
   }
+
+  /// Compatibility wrapper for pages that only need the Home shelves.
+  Future<List<YtHomeShelf>> fetchHomeShelves({
+    int maxShelves = 20,
+    int maxItemsPerShelf = 20,
+    int maxPages = 4,
+    bool authenticated = true,
+  }) async =>
+      (await fetchHomeFeed(
+        maxShelves: maxShelves,
+        maxItemsPerShelf: maxItemsPerShelf,
+        maxPages: maxPages,
+        authenticated: authenticated,
+      )).shelves;
 
   /// First `browseEndpoint` anywhere under [node] (id + optional params).
   Map<String, dynamic>? _firstBrowseEndpoint(Object? node) {
@@ -2976,6 +3021,47 @@ class InnerTubeMusicApi {
   static bool isLikedMusicId(String id) {
     final bare = id.startsWith('VL') ? id.substring(2) : id;
     return bare == 'LM';
+  }
+
+  /// Read the ordered chip cloud from a YouTube Music browse response.
+  ///
+  /// The endpoint is authoritative; localized labels are display-only.
+  List<YtHomeChip> parseHomeChips(Map<String, dynamic> root) {
+    final clouds = <Map<String, dynamic>>[];
+    _collectObjects(root, 'chipCloudRenderer', clouds);
+    final chips = <YtHomeChip>[];
+    final seen = <String>{};
+    for (final cloud in clouds) {
+      final rawChips = cloud['chips'];
+      if (rawChips is! List) continue;
+      for (final raw in rawChips) {
+        if (raw is! Map<String, dynamic>) continue;
+        final renderer = raw['chipCloudChipRenderer'];
+        if (renderer is! Map<String, dynamic>) continue;
+        final title = _homeShelfTitle(renderer['text']) ?? '';
+        if (title.isEmpty) continue;
+        final navigation = renderer['navigationEndpoint'];
+        final endpoint = navigation is Map
+            ? navigation['browseEndpoint']
+            : null;
+        final browseId = endpoint is Map
+            ? endpoint['browseId']?.toString() ?? ''
+            : '';
+        final params = endpoint is Map
+            ? endpoint['params']?.toString() ?? ''
+            : '';
+        // Repeated labels can point at the same feed. Preserve the first
+        // occurrence and its server order.
+        final key = '$browseId|$params|${title.toLowerCase()}';
+        if (!seen.add(key)) continue;
+        chips.add(YtHomeChip(
+          title: title,
+          browseId: browseId,
+          params: params,
+        ));
+      }
+    }
+    return chips;
   }
 
   /// Parse a home-browse response into titled shelves. Pure - no
