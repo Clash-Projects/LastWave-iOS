@@ -1218,26 +1218,7 @@ class _DockProgressState extends ConsumerState<_DockProgress> {
                       // Dimmed + thumbless: reads as disabled, not draggable.
                       opacity: jamLive ? 0.45 : 1,
                       child: RepaintBoundary(
-                      child: wavySeekbar
-                          ? WaveTimeline(
-                              progress: clock.position,
-                              buffered: clock.buffered,
-                              total: clock.duration,
-                              showThumb: hasDuration && !jamLive,
-                              onSeek: jamLive ? null : notifier.seek,
-                              baseColor:
-                                  (dark ? Colors.white : Colors.black)
-                                      .withValues(alpha: 0.12),
-                              bufferedColor:
-                                  (dark ? Colors.white : Colors.black)
-                                      .withValues(alpha: 0.18),
-                              progressColor:
-                                  dark ? Colors.white : Colors.black,
-                              thumbColor: dark ? Colors.white : Colors.black,
-                              thumbGlowColor:
-                                  accent.withValues(alpha: 0.25),
-                            )
-                          : avp.ProgressBar(
+                      child: avp.ProgressBar(
                               progress: clock.position,
                               buffered: clock.buffered,
                               total: clock.duration,
