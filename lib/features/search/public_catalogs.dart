@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// A catalog-only result. It deliberately has no playback or stream fields.
 class PublicCatalogResult {
@@ -20,22 +21,6 @@ class PublicCatalogResult {
     this.id = '',
     this.externalUrl = '',
     this.durationSeconds = 0,
-  });
-}
-
-class _ItunesTrackRecord {
-  final PublicCatalogResult track;
-  final String artistId;
-  final String artistUrl;
-  final String albumId;
-  final String albumUrl;
-
-  const _ItunesTrackRecord({
-    required this.track,
-    required this.artistId,
-    required this.artistUrl,
-    required this.albumId,
-    required this.albumUrl,
   });
 }
 
@@ -59,7 +44,6 @@ class PublicMusicCatalogs {
             );
 
   final Dio _dio;
-  final Map<String, Future<List<_ItunesTrackRecord>>> _itunesMemo = {};
 
   static const _musicBrainzUserAgent =
       'LastWave-iOS/1.0.0 (https://github.com/Clash-Projects/LastWave-iOS)';
@@ -93,91 +77,33 @@ class PublicMusicCatalogs {
     return completer.future;
   }
 
-  Future<List<PublicCatalogResult>> searchItunesSongs(
-    String query, {
-    int limit = 40,
-  }) async =>
-      (await _searchItunesTrackData(query, limit: limit))
-          .map((record) => record.track)
-          .toList();
-
-  Future<List<PublicCatalogResult>> searchItunesArtists(
-    String query, {
-    int limit = 25,
-  }) async {
-    final records = await _searchItunesTrackData(query, limit: 40);
-    final seen = <String>{};
-    final results = <PublicCatalogResult>[];
-    for (final record in records) {
-      final name = record.track.artist;
-      final key = record.artistId.isEmpty ? name.toLowerCase() : record.artistId;
-      if (name.isEmpty || !seen.add(key)) continue;
-      results.add(PublicCatalogResult(
-        title: name,
-        artist: name,
-        id: record.artistId,
-        externalUrl: record.artistUrl,
-      ));
-      if (results.length >= limit) break;
-    }
-    return results;
+  void _logSuccess(String provider, String category, int count) {
+    debugPrint(
+      '[CatalogSearch] provider=$provider category=$category '
+      'status=success results=$count',
+    );
   }
 
-  Future<List<PublicCatalogResult>> searchItunesAlbums(
-    String query, {
-    int limit = 30,
-  }) async {
-    final records = await _searchItunesTrackData(query, limit: 40);
-    final seen = <String>{};
-    final results = <PublicCatalogResult>[];
-    for (final record in records) {
-      final album = record.track.album;
-      final key = record.albumId.isEmpty
-          ? '${album.toLowerCase()}|${record.track.artist.toLowerCase()}'
-          : record.albumId;
-      if (album.isEmpty || !seen.add(key)) continue;
-      results.add(PublicCatalogResult(
-        title: album,
-        artist: record.track.artist,
-        artworkUrl: record.track.artworkUrl,
-        id: record.albumId,
-        externalUrl: record.albumUrl,
-      ));
-      if (results.length >= limit) break;
-    }
-    return results;
+  void _logFailure(String provider, String category, Object error) {
+    final statusCode =
+        error is DioException ? error.response?.statusCode : null;
+    final errorType =
+        error is DioException ? error.type.toString() : error.runtimeType.toString();
+    debugPrint(
+      '[CatalogSearch] provider=$provider category=$category '
+      'status=error errorType=$errorType'
+      '${statusCode == null ? '' : ' httpStatus=$statusCode'}',
+    );
   }
 
-  Future<List<_ItunesTrackRecord>> _searchItunesTrackData(
+  Future<List<Map<String, dynamic>>> _searchItunesRows(
     String query, {
-    int limit = 40,
-  }) {
-    final key = query.trim().toLowerCase();
-    final cached = _itunesMemo[key];
-    if (cached != null) return cached;
-    final future = _fetchItunesTrackData(query, limit: limit);
-    _itunesMemo[key] = future;
-    if (_itunesMemo.length > 80) {
-      _itunesMemo.remove(_itunesMemo.keys.first);
-    }
-    future.then((value) {
-      if (value.isEmpty && identical(_itunesMemo[key], future)) {
-        _itunesMemo.remove(key);
-      }
-    }, onError: (Object _) {
-      if (identical(_itunesMemo[key], future)) _itunesMemo.remove(key);
-    });
-    return future;
-  }
-
-  Future<List<_ItunesTrackRecord>> _fetchItunesTrackData(
-    String query, {
+    required String category,
+    required String entity,
+    required String attribute,
     required int limit,
   }) async {
     try {
-      // One track-search response also carries the matching artist and album
-      // IDs, so All-search can populate all three tabs without three bursts
-      // against Apple's storefront endpoint.
       final uri = Uri.https(
         'itunes.apple.com',
         '/search',
@@ -185,40 +111,103 @@ class PublicMusicCatalogs {
           'term': query,
           'country': 'us',
           'media': 'music',
-          'entity': 'song',
+          'entity': entity,
+          'attribute': attribute,
           'limit': '$limit',
         },
       );
       final response = await _dio.getUri(uri);
       final root = _asMap(response.data);
       final rows = _asMapList(root?['results']);
-      return rows
-          .where((row) =>
-              _string(row['kind']).isEmpty ||
-              _string(row['kind']) == 'song')
-          .map((row) {
-        final track = PublicCatalogResult(
-          title: _string(row['trackName']),
-          artist: _string(row['artistName']),
-          album: _string(row['collectionName']),
-          artworkUrl: _string(row['artworkUrl100']),
-          id: _string(row['trackId']),
-          externalUrl: _string(row['trackViewUrl']),
-          durationSeconds:
-              ((_int(row['trackTimeMillis']) ?? 0) / 1000).round(),
-        );
-        return _ItunesTrackRecord(
-          track: track,
-          artistId: _string(row['artistId']),
-          artistUrl: _string(row['artistViewUrl']),
-          albumId: _string(row['collectionId']),
-          albumUrl: _string(row['collectionViewUrl']),
-        );
-      }).where((record) => record.track.title.isNotEmpty).toList();
-    } catch (_) {
-      // Catalog outages and rate limits must not take down YouTube search.
+      _logSuccess('iTunes', category, rows.length);
+      return rows;
+    } catch (error) {
+      _logFailure('iTunes', category, error);
       return const [];
     }
+  }
+
+  /// Searches the iTunes song entity directly.
+  Future<List<PublicCatalogResult>> searchItunesSongs(
+    String query, {
+    int limit = 40,
+  }) async {
+    final rows = await _searchItunesRows(
+      query,
+      category: 'songs',
+      entity: 'song',
+      attribute: 'songTerm',
+      limit: limit,
+    );
+    return rows
+        .where((row) =>
+            _string(row['kind']).isEmpty || _string(row['kind']) == 'song')
+        .map((row) => PublicCatalogResult(
+              title: _string(row['trackName']),
+              artist: _string(row['artistName']),
+              album: _string(row['collectionName']),
+              artworkUrl: _string(row['artworkUrl100']),
+              id: _string(row['trackId']),
+              externalUrl: _string(row['trackViewUrl']),
+              durationSeconds:
+                  ((_int(row['trackTimeMillis']) ?? 0) / 1000).round(),
+            ))
+        .where((result) => result.title.isNotEmpty)
+        .toList();
+  }
+
+  /// Searches Apple's music-artist entity directly, not artists inferred
+  /// from matching song results.
+  Future<List<PublicCatalogResult>> searchItunesArtists(
+    String query, {
+    int limit = 25,
+  }) async {
+    final rows = await _searchItunesRows(
+      query,
+      category: 'artists',
+      entity: 'musicArtist',
+      attribute: 'artistTerm',
+      limit: limit,
+    );
+    return rows
+        .map((row) {
+          final name = _string(row['artistName']);
+          final id = _string(row['artistId']);
+          return PublicCatalogResult(
+            title: name,
+            artist: name,
+            id: id,
+            externalUrl: _string(row['artistLinkUrl']).isNotEmpty
+                ? _string(row['artistLinkUrl'])
+                : _string(row['artistViewUrl']),
+          );
+        })
+        .where((result) => result.title.isNotEmpty)
+        .toList();
+  }
+
+  /// Searches Apple's album entity directly, with album-specific matching.
+  Future<List<PublicCatalogResult>> searchItunesAlbums(
+    String query, {
+    int limit = 30,
+  }) async {
+    final rows = await _searchItunesRows(
+      query,
+      category: 'albums',
+      entity: 'album',
+      attribute: 'albumTerm',
+      limit: limit,
+    );
+    return rows
+        .map((row) => PublicCatalogResult(
+              title: _string(row['collectionName']),
+              artist: _string(row['artistName']),
+              artworkUrl: _string(row['artworkUrl100']),
+              id: _string(row['collectionId']),
+              externalUrl: _string(row['collectionViewUrl']),
+            ))
+        .where((result) => result.title.isNotEmpty)
+        .toList();
   }
 
   Future<List<PublicCatalogResult>> searchMusicBrainzRecordings(
@@ -227,6 +216,7 @@ class PublicMusicCatalogs {
   }) =>
       _searchMusicBrainz(
         query,
+        category: 'songs',
         entity: 'recording',
         field: 'recording',
         responseKey: 'recordings',
@@ -239,6 +229,7 @@ class PublicMusicCatalogs {
   }) =>
       _searchMusicBrainz(
         query,
+        category: 'artists',
         entity: 'artist',
         field: 'artist',
         responseKey: 'artists',
@@ -251,6 +242,7 @@ class PublicMusicCatalogs {
   }) =>
       _searchMusicBrainz(
         query,
+        category: 'albums',
         entity: 'release-group',
         field: 'releasegroup',
         responseKey: 'release-groups',
@@ -259,13 +251,14 @@ class PublicMusicCatalogs {
 
   Future<List<PublicCatalogResult>> _searchMusicBrainz(
     String query, {
+    required String category,
     required String entity,
     required String field,
     required String responseKey,
     required int limit,
   }) async {
     try {
-      return await _musicBrainzRateLimited(() async {
+      final results = await _musicBrainzRateLimited(() async {
         final escaped = query.replaceAll('"', ' ').trim();
         final uri = Uri.https(
           'musicbrainz.org',
@@ -324,9 +317,10 @@ class PublicMusicCatalogs {
           );
         }).where((entry) => entry.title.isNotEmpty).toList();
       });
-    } catch (_) {
-      // A 503 is commonly a rate-limit response. Keep the other providers'
-      // results available and let the query memo expire before retrying.
+      _logSuccess('MusicBrainz', category, results.length);
+      return results;
+    } catch (error) {
+      _logFailure('MusicBrainz', category, error);
       return const [];
     }
   }
@@ -364,5 +358,4 @@ class PublicMusicCatalogs {
       return '$artistName${_string(map['joinphrase'])}';
     }).join().trim();
   }
-
 }
