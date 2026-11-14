@@ -20,6 +20,7 @@ class SearchResultItem {
   final SearchTab tab;
   final int durationSeconds;
   final String externalUrl;
+  final String providerLabel;
 
   const SearchResultItem({
     required this.name,
@@ -31,7 +32,21 @@ class SearchResultItem {
     required this.tab,
     this.durationSeconds = 0,
     this.externalUrl = '',
+    this.providerLabel = '',
   });
+
+  SearchResultItem copyWithProviderLabel(String label) => SearchResultItem(
+        name: name,
+        artist: artist,
+        artworkUrl: artworkUrl,
+        subtitle: subtitle,
+        videoId: videoId,
+        entityId: entityId,
+        tab: tab,
+        durationSeconds: durationSeconds,
+        externalUrl: externalUrl,
+        providerLabel: label,
+      );
 }
 
 class SearchSuggestion {
@@ -240,12 +255,12 @@ class SearchRepository {
         if (_itunesEnabled()) {
           requests.add(_catalogs
               .searchItunesSongs(q)
-              .then((hits) => _catalogItems(hits, SearchTab.tracks)));
+              .then((hits) => _catalogItems(hits, SearchTab.tracks, 'iTunes')));
         }
         if (_musicBrainzEnabled()) {
           requests.add(_catalogs
               .searchMusicBrainzRecordings(q)
-              .then((hits) => _catalogItems(hits, SearchTab.tracks)));
+              .then((hits) => _catalogItems(hits, SearchTab.tracks, 'MusicBrainz')));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.tracks);
 
@@ -281,12 +296,12 @@ class SearchRepository {
         if (_itunesEnabled()) {
           requests.add(_catalogs
               .searchItunesArtists(q)
-              .then((hits) => _catalogItems(hits, SearchTab.artists)));
+              .then((hits) => _catalogItems(hits, SearchTab.artists, 'iTunes')));
         }
         if (_musicBrainzEnabled()) {
           requests.add(_catalogs
               .searchMusicBrainzArtists(q)
-              .then((hits) => _catalogItems(hits, SearchTab.artists)));
+              .then((hits) => _catalogItems(hits, SearchTab.artists, 'MusicBrainz')));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.artists);
 
@@ -308,12 +323,12 @@ class SearchRepository {
         if (_itunesEnabled()) {
           requests.add(_catalogs
               .searchItunesAlbums(q)
-              .then((hits) => _catalogItems(hits, SearchTab.albums)));
+              .then((hits) => _catalogItems(hits, SearchTab.albums, 'iTunes')));
         }
         if (_musicBrainzEnabled()) {
           requests.add(_catalogs
               .searchMusicBrainzAlbums(q)
-              .then((hits) => _catalogItems(hits, SearchTab.albums)));
+              .then((hits) => _catalogItems(hits, SearchTab.albums, 'MusicBrainz')));
         }
         return _mergeCatalogItems(await Future.wait(requests), SearchTab.albums);
 
@@ -341,6 +356,7 @@ class SearchRepository {
   List<SearchResultItem> _catalogItems(
     List<PublicCatalogResult> hits,
     SearchTab tab,
+    String providerLabel,
   ) =>
       hits
           .map((hit) => SearchResultItem(
@@ -350,6 +366,7 @@ class SearchRepository {
                 subtitle: hit.album,
                 entityId: hit.id,
                 externalUrl: hit.externalUrl,
+                providerLabel: providerLabel,
                 tab: tab,
                 durationSeconds: hit.durationSeconds,
               ))
@@ -360,7 +377,7 @@ class SearchRepository {
     SearchTab tab,
   ) {
     final out = <SearchResultItem>[];
-    final seen = <String>{};
+    final indexByKey = <String, int>{};
     String normalize(String value) =>
         value.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
     for (final batch in batches) {
@@ -369,7 +386,28 @@ class SearchRepository {
             ? ''
             : normalize(item.artist.isNotEmpty ? item.artist : item.subtitle);
         final key = '${tab.name}|${normalize(item.name)}|$artistKey';
-        if (!seen.add(key)) continue;
+        final existingIndex = indexByKey[key];
+        if (existingIndex != null) {
+          final existing = out[existingIndex];
+          final labels = <String>{
+            ...existing.providerLabel
+                .split(' · ')
+                .where((label) => label.isNotEmpty),
+            ...item.providerLabel
+                .split(' · ')
+                .where((label) => label.isNotEmpty),
+          };
+          final existingLabels = existing.providerLabel
+              .split(' · ')
+              .where((label) => label.isNotEmpty)
+              .toSet();
+          if (labels.length != existingLabels.length) {
+            out[existingIndex] =
+                existing.copyWithProviderLabel(labels.join(' · '));
+          }
+          continue;
+        }
+        indexByKey[key] = out.length;
         out.add(item);
         if (out.length >= 100) return out;
       }
