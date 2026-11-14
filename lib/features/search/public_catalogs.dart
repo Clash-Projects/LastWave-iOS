@@ -361,8 +361,11 @@ class PublicMusicCatalogs {
       final map = _asMap(part);
       if (map == null) return '';
       final credited = _string(map['name']);
-      if (credited.isNotEmpty) return credited;
-      return _string(_asMap(map['artist'])?['name']);
-    }).where((name) => name.isNotEmpty).join();
+      final artistName = credited.isNotEmpty
+          ? credited
+          : _string(_asMap(map['artist'])?['name']);
+      return '$artistName${_string(map['joinphrase'])}';
+    }).join().trim();
   }
+
 }
