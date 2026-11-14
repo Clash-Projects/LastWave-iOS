@@ -41,15 +41,6 @@ class WaveHomePage extends ConsumerStatefulWidget {
 }
 
 class _WaveHomePageState extends ConsumerState<WaveHomePage> {
-  YtHomeBrowseKey? _selectedBrowse;
-  String _selectedTitle = 'Home';
-
-  String _displayChipTitle(YtHomeChip chip) {
-    final id = HomeShelfCatalog.idForTitle(chip.title);
-    if (id == null || id == HomeShelfId.similar) return chip.title;
-    return HomeShelfCatalog.label(id);
-  }
-
   static void _refreshHome(WidgetRef ref) {
     feedRefreshSalt++;
     ref.invalidate(ytHomeFeedProvider);
@@ -60,37 +51,9 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
     ref.invalidate(friendsActivityProvider);
   }
 
-  void _selectHomeChip(YtHomeChip chip) {
-    final id = HomeShelfCatalog.idForTitle(chip.title);
-    if (id == HomeShelfId.home) {
-      setState(() {
-        _selectedBrowse = null;
-        _selectedTitle = 'Home';
-      });
-      return;
-    }
-    final browseId = chip.browseId.isNotEmpty
-        ? chip.browseId
-        : chip.params.isNotEmpty
-            ? InnerTubeMusicApi.homeBrowseId
-            : '';
-    if (browseId.isEmpty) return;
-    setState(() {
-      _selectedBrowse = (
-        browseId: browseId,
-        params: chip.params.isEmpty ? null : chip.params,
-      );
-      _selectedTitle = _displayChipTitle(chip);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final homeFeed = ref.watch(ytHomeFeedProvider);
-    final activeFeed = _selectedBrowse == null
-        ? homeFeed
-        : ref.watch(ytHomeBrowseProvider(_selectedBrowse!));
-    final baseChips = homeFeed.valueOrNull?.chips ?? const <YtHomeChip>[];
+    final activeFeed = ref.watch(ytHomeFeedProvider);
     final layout = ref.watch(homeShelfLayoutProvider);
     final legacyFeed = ref.watch(feedProvider);
     final viewport = MediaQuery.sizeOf(context).width;
@@ -112,7 +75,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
                   child: WaveEntrance(
                     local: true,
                     child: _Header(
-                      greeting: _selectedTitle,
+                      greeting: 'Home',
                       onRefresh: () => _refreshHome(ref),
                     ),
                   ),
@@ -135,7 +98,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
                   ),
                 ),
                 data: (feed) {
-                  if (feed.isEmpty && _selectedBrowse == null) {
+                  if (feed.isEmpty) {
                     final fallback = legacyFeed.valueOrNull;
                     if (fallback != null && !fallback.isEmpty) {
                       return _feedSlivers(context, ref, fallback, side);
@@ -145,7 +108,6 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
                     context,
                     ref,
                     feed,
-                    baseChips,
                     layout,
                     side,
                   );
@@ -182,132 +144,12 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
     BuildContext context,
     WidgetRef ref,
     YtHomeFeed feed,
-    List<YtHomeChip> sourceChips,
     HomeShelfLayout layout,
     double side,
   ) {
     final hidden = layout.hidden;
     final topIds = HomeShelfCatalog.topNavigationIds;
-    YtHomeChip? apiHomeChip;
-    for (final chip in sourceChips) {
-      if (HomeShelfCatalog.idForTitle(chip.title) == HomeShelfId.home) {
-        apiHomeChip = chip;
-        break;
-      }
-    }
-    final homeChip = apiHomeChip ??
-        const YtHomeChip(title: 'Home', browseId: InnerTubeMusicApi.homeBrowseId);
-    YtHomeChip fromApiOr(String title, YtHomeChip fallback) {
-      for (final chip in sourceChips) {
-        if (HomeShelfCatalog.idForTitle(chip.title) ==
-            HomeShelfCatalog.idForTitle(title)) {
-          return chip;
-        }
-      }
-      return fallback;
-    }
-
-    final tabs = <YtHomeChip>[
-      homeChip,
-      fromApiOr(
-        'Explore',
-        const YtHomeChip(title: 'Explore', browseId: 'FEmusic_explore'),
-      ),
-      fromApiOr(
-        'Library',
-        const YtHomeChip(
-          title: 'Library',
-          browseId: 'FEmusic_library_landing',
-        ),
-      ),
-    ].where((chip) {
-      final id = HomeShelfCatalog.idForTitle(chip.title);
-      return id == null || !hidden.contains(id);
-    }).toList();
-    tabs.sort((a, b) {
-      final aIndex = layout.order.indexOf(
-        HomeShelfCatalog.idForTitle(a.title) ?? HomeShelfId.home,
-      );
-      final bIndex = layout.order.indexOf(
-        HomeShelfCatalog.idForTitle(b.title) ?? HomeShelfId.home,
-      );
-      return aIndex.compareTo(bIndex);
-    });
-
-    final moodChips = <YtHomeChip>[];
-    final seenChipKeys = <String>{};
-    // Library's own filter row (Playlists, Songs, Albums, Artists, etc.) is
-    // a different navigation model from the Home mood row. Keep it inside the
-    // Library page implementation rather than mixing those filters into the
-    // Home-only Edit Home category list.
-    if (_selectedTitle != 'Library') {
-      for (final chip in [...sourceChips, ...feed.chips]) {
-        final id = HomeShelfCatalog.idForTitle(chip.title);
-        if (id == null || topIds.contains(id) || hidden.contains(id)) continue;
-        final key =
-            '${chip.browseId}|${chip.params}|${chip.title.toLowerCase()}';
-        if (seenChipKeys.add(key)) moodChips.add(chip);
-      }
-      moodChips.sort((a, b) {
-        final aIndex = layout.order.indexOf(
-          HomeShelfCatalog.idForTitle(a.title) ?? '',
-        );
-        final bIndex = layout.order.indexOf(
-          HomeShelfCatalog.idForTitle(b.title) ?? '',
-        );
-        return aIndex.compareTo(bIndex);
-      });
-    }
-
-    final slivers = <Widget>[
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(side, 6, side, 0),
-          child: SizedBox(
-            height: 42,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: tabs.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final chip = tabs[index];
-                return _YtmHomeChipPill(
-                  title: _displayChipTitle(chip),
-                  selected: _selectedTitle == _displayChipTitle(chip),
-                  enabled: chip.title == 'Home' ||
-                      chip.browseId.isNotEmpty || chip.params.isNotEmpty,
-                  onTap: () => _selectHomeChip(chip),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-      if (moodChips.isNotEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(side, 10, side, 2),
-            child: SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: moodChips.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final chip = moodChips[index];
-                  return _YtmHomeChipPill(
-                    title: _displayChipTitle(chip),
-                    selected: _selectedTitle == _displayChipTitle(chip),
-                    enabled: chip.browseId.isNotEmpty || chip.params.isNotEmpty,
-                    compact: true,
-                    onTap: () => _selectHomeChip(chip),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-    ];
+    final slivers = <Widget>[];
 
     final renderedShelfIndexes = <int>{};
     var entrance = 0;
@@ -338,12 +180,10 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
                 count: tracks.isNotEmpty
                     ? tracks.length
                     : shelf.entities.length,
-                actionLabel: _selectedBrowse == null ? 'See all' : null,
-                onAction: _selectedBrowse == null
-                    ? () => context.go(
-                          '/ytshelf/${Uri.encodeComponent(shelf.title)}',
-                        )
-                    : null,
+                actionLabel: 'See all',
+                onAction: () => context.go(
+                  '/ytshelf/${Uri.encodeComponent(shelf.title)}',
+                ),
               ),
             ),
           ),
@@ -433,7 +273,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
       slivers.addAll(renderShelf(shelf, i));
     }
 
-    if (feed.shelves.isEmpty && feed.chips.isEmpty) {
+    if (feed.shelves.isEmpty) {
       slivers.add(
         SliverPadding(
           padding: EdgeInsets.fromLTRB(side, 26, side, 32),
@@ -442,10 +282,8 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
               icon: FluentIcons.music_note,
               title: 'Nothing here yet',
               subtitle: 'YouTube Music did not return any shelves for this category.',
-              actionLabel: _selectedBrowse == null ? 'Refresh' : null,
-              onAction: _selectedBrowse == null
-                  ? () => _refreshHome(ref)
-                  : null,
+              actionLabel: 'Refresh',
+              onAction: () => _refreshHome(ref),
             ),
           ),
         ),
@@ -1086,68 +924,6 @@ class _NativeQuickPickRow extends ConsumerWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact filter pill used for YouTube Music's top tabs and moods.
-class _YtmHomeChipPill extends StatelessWidget {
-  final String title;
-  final bool selected;
-  final bool enabled;
-  final bool compact;
-  final VoidCallback onTap;
-
-  const _YtmHomeChipPill({
-    required this.title,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
-          duration: waveMotion(context, WaveMotion.fast),
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 14 : 16,
-            vertical: compact ? 7 : 9,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? waveAccent(context).withValues(alpha: 0.18)
-                : waveSurfaceRaised(context).withValues(alpha: enabled ? 0.78 : 0.42),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected
-                  ? waveAccent(context).withValues(alpha: 0.78)
-                  : waveDivider(context).withValues(alpha: enabled ? 0.3 : 0.14),
-            ),
-          ),
-          child: Center(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: WaveType.trackTitle.copyWith(
-                fontSize: compact ? 12 : 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                color: selected
-                    ? waveAccent(context)
-                    : enabled
-                        ? waveTextSecondary(context)
-                        : waveTextTertiary(context),
-              ),
-            ),
-          ),
         ),
       ),
     );
