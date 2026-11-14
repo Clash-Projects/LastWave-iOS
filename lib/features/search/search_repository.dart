@@ -417,7 +417,7 @@ class SearchRepository {
     if (title.isEmpty) return null;
 
     String normalize(String value) =>
-        value.toLowerCase().trim().replaceAll(RegExp(r'\\s+'), ' ');
+        value.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
     final wantedTitle = normalize(title);
     final wantedArtist = normalize(
       album.artist.isNotEmpty ? album.artist : album.subtitle,
@@ -433,13 +433,15 @@ class SearchRepository {
     var candidates = await search(
       [title, album.artist].where((part) => part.trim().isNotEmpty).join(' '),
     );
-    if (candidates.isEmpty && album.artist.isNotEmpty) {
-      candidates = await search(title);
-    }
-
-    final matches = candidates
+    var matches = candidates
         .where((candidate) => normalize(candidate.name) == wantedTitle)
         .toList();
+    if (matches.isEmpty && album.artist.isNotEmpty) {
+      candidates = await search(title);
+      matches = candidates
+          .where((candidate) => normalize(candidate.name) == wantedTitle)
+          .toList();
+    }
     if (matches.isEmpty) return null;
 
     YouTubeMusicEntity? match;
