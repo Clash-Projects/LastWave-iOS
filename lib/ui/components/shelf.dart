@@ -202,7 +202,7 @@ class WaveShelf extends StatelessWidget {
     this.count = 0,
     this.onPlayAll,
     this.cardWidth = 160,
-    this.height = 216,
+    this.height = 228,
     required this.children,
   });
 
@@ -430,7 +430,7 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
               SizedBox(height: Platform.isIOS ? 8 : 6),
               Text(
                 widget.title,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: WaveType.trackTitle.copyWith(
                   fontSize: Platform.isIOS ? 14.5 : null,
