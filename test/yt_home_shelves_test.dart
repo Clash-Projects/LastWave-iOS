@@ -99,6 +99,106 @@ void main() {
           (e) => e.kind == YouTubeEntityKind.mix), isTrue);
     });
 
+    test('library grid cards parse as browsable entities', () {
+      final root = {
+        'contents': {
+          'sectionListRenderer': {
+            'contents': [
+              {
+                'gridRenderer': {
+                  'title': {'text': 'From your library'},
+                  'items': [
+                    {
+                      'musicTwoRowItemRenderer': {
+                        'title': {
+                          'runs': [
+                            {'text': 'Saved playlist'},
+                          ],
+                        },
+                        'subtitle': {
+                          'runs': [
+                            {'text': 'Playlist • 18 songs'},
+                          ],
+                        },
+                        'navigationEndpoint': {
+                          'commandExecutorCommand': {
+                            'commands': [
+                              {
+                                'browseEndpoint': {
+                                  'browseId': 'VLPLsaved123',
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        'thumbnail': {
+                          'thumbnails': [
+                            {'url': 'https://art.example/library.jpg'},
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      'musicTwoRowItemRenderer': {
+                        'title': {
+                          'runs': [
+                            {'text': 'Saved album'},
+                          ],
+                        },
+                        'subtitle': {
+                          'runs': [
+                            {'text': 'Album • Artist'},
+                          ],
+                        },
+                        'navigationEndpoint': {
+                          'browseEndpoint': {
+                            'browseId': 'MPREsaved123',
+                          },
+                        },
+                        'thumbnail': {
+                          'thumbnails': [
+                            {'url': 'https://art.example/album.jpg'},
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      'musicTwoRowItemRenderer': {
+                        'title': {
+                          'runs': [
+                            {'text': 'Podcast show'},
+                          ],
+                        },
+                        'navigationEndpoint': {
+                          'browseEndpoint': {
+                            'browseId': 'MPSPPLpodcast123',
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      };
+
+      final shelves = tube.parseHomeShelves(root);
+      expect(shelves, hasLength(1));
+      expect(shelves.single.title, 'From your library');
+      expect(shelves.single.entities, hasLength(2));
+      expect(shelves.single.entities[0].kind, YouTubeEntityKind.playlist);
+      expect(shelves.single.entities[0].browseId, 'VLPLsaved123');
+      expect(shelves.single.entities[1].kind, YouTubeEntityKind.album);
+      expect(
+        shelves.single.entities.every(
+          (entity) => entity.name.startsWith('Saved'),
+        ),
+        isTrue,
+      );
+    });
+
     test('honours maxShelves', () {
       expect(
         tube.parseHomeShelves(_fixture(), maxShelves: 1).length, 1);
