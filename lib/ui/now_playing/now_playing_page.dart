@@ -339,22 +339,25 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                   final isWide = constraints.maxWidth >
                       (Platform.isIOS ? 1024 : 860);
 
-                  // The body spans the whole page and the top action bar floats
-                  // over it, so the lyrics toolbar can sit on the same row as the
-                  // top bar instead of costing the lyrics a row of their own.
+                  // Keep the content close to the floating action bar on
+                  // iPhone and iPad. The wider desktop layout retains its
+                  // more generous breathing room.
+                  final contentTopInset =
+                      _kTopBarHeight + (Platform.isIOS ? 12.0 : 48.0);
+
                   return Stack(
                     children: [
                       Positioned.fill(
                         child: isWide
                             ? _DesktopDualPane(
-                                topInset: _kTopBarHeight + 48,
+                                topInset: contentTopInset,
                                 track: current,
                                 lyricsVisible: _lyricsVisible,
                                 focusMode: _focusMode,
                               )
                             : Padding(
                                 padding: EdgeInsets.only(
-                                  top: _kTopBarHeight + 48,
+                                  top: contentTopInset,
                                 ),
                                 child: _NarrowCenteredPane(
                                   track: current,
