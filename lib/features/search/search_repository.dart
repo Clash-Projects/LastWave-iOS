@@ -36,17 +36,28 @@ class SearchResultItem {
     this.providerLabel = '',
   });
 
-  SearchResultItem copyWithProviderLabel(String label) => SearchResultItem(
+  SearchResultItem copyWithCatalogMetadata({
+    required String providerLabel,
+    String? artist,
+    String? artworkUrl,
+    String? subtitle,
+    int? durationSeconds,
+  }) =>
+      SearchResultItem(
         name: name,
-        artist: artist,
-        artworkUrl: artworkUrl,
-        subtitle: subtitle,
+        artist: artist?.isNotEmpty == true ? artist! : this.artist,
+        artworkUrl: artworkUrl?.isNotEmpty == true
+            ? artworkUrl!
+            : this.artworkUrl,
+        subtitle: subtitle?.isNotEmpty == true ? subtitle! : this.subtitle,
         videoId: videoId,
         entityId: entityId,
         tab: tab,
-        durationSeconds: durationSeconds,
+        durationSeconds: durationSeconds != null && durationSeconds > 0
+            ? durationSeconds
+            : this.durationSeconds,
         externalUrl: externalUrl,
-        providerLabel: label,
+        providerLabel: providerLabel,
       );
 }
 
@@ -275,6 +286,7 @@ class SearchRepository {
                       entityId: t.videoId,
                       tab: SearchTab.tracks,
                       durationSeconds: t.durationSeconds,
+                       providerLabel: 'YouTube Music',
                     ))
                 .toList(),
           ),
@@ -321,6 +333,7 @@ class SearchRepository {
                       artworkUrl: e.artworkUrl,
                       entityId: e.browseId,
                       tab: tab,
+                      providerLabel: 'YouTube Music',
                     ))
                 .toList(),
           ),
@@ -353,6 +366,7 @@ class SearchRepository {
                       artworkUrl: e.artworkUrl,
                       entityId: e.browseId,
                       tab: tab,
+                      providerLabel: 'YouTube Music',
                     ))
                 .toList(),
           ),
@@ -391,6 +405,70 @@ class SearchRepository {
       case SearchTab.users:
         return _searchUsers(q);
     }
+  }
+
+  /// Resolve a metadata-only Deezer album to its matching YouTube Music
+  /// browse entry. The Deezer ID is never passed to playback or routing.
+  Future<SearchResultItem?> resolveAlbumForOpening(
+    SearchResultItem album,
+  ) async {
+    if (album.entityId.isNotEmpty) return album;
+    final title = album.name.trim();
+    if (title.isEmpty) return null;
+
+    String normalize(String value) =>
+        value.toLowerCase().trim().replaceAll(RegExp(r'\\s+'), ' ');
+    final wantedTitle = normalize(title);
+    final wantedArtist = normalize(
+      album.artist.isNotEmpty ? album.artist : album.subtitle,
+    );
+
+    Future<List<YouTubeMusicEntity>> search(String query) =>
+        _searchSafely<YouTubeMusicEntity>(
+          'YouTube Music',
+          'album_open',
+          () => _tube.searchAlbums(query, limit: 30),
+        );
+
+    var candidates = await search(
+      [title, album.artist].where((part) => part.trim().isNotEmpty).join(' '),
+    );
+    if (candidates.isEmpty && album.artist.isNotEmpty) {
+      candidates = await search(title);
+    }
+
+    final matches = candidates
+        .where((candidate) => normalize(candidate.name) == wantedTitle)
+        .toList();
+    if (matches.isEmpty) return null;
+
+    YouTubeMusicEntity? match;
+    if (wantedArtist.isNotEmpty) {
+      for (final candidate in matches) {
+        final candidateArtist = normalize(candidate.artist);
+        final candidateSubtitle = normalize(candidate.subtitle);
+        if (candidateArtist == wantedArtist ||
+            candidateSubtitle.contains(wantedArtist)) {
+          match = candidate;
+          break;
+        }
+      }
+      if (match == null) return null;
+    } else {
+      match = matches.first;
+    }
+
+    if (match.browseId.isEmpty) return null;
+    return SearchResultItem(
+      name: match.name,
+      artist: match.artist.isNotEmpty ? match.artist : album.artist,
+      artworkUrl:
+          match.artworkUrl.isNotEmpty ? match.artworkUrl : album.artworkUrl,
+      subtitle: album.subtitle,
+      entityId: match.browseId,
+      tab: SearchTab.albums,
+      providerLabel: 'YouTube Music · Deezer',
+    );
   }
 
   List<SearchResultItem> _deezerItems(
@@ -442,9 +520,21 @@ class SearchRepository {
               .split(' · ')
               .where((label) => label.isNotEmpty)
               .toSet();
-          if (labels.length != existingLabels.length) {
-            out[existingIndex] =
-                existing.copyWithProviderLabel(labels.join(' · '));
+          if (labels.length != existingLabels.length ||
+              existing.artworkUrl.isEmpty ||
+              existing.subtitle.isEmpty ||
+              existing.durationSeconds <= 0 ||
+              existing.artist.isEmpty) {
+            out[existingIndex] = existing.copyWithCatalogMetadata(
+              providerLabel: labels.join(' · '),
+              artist: existing.artist.isEmpty ? item.artist : null,
+              artworkUrl:
+                  existing.artworkUrl.isEmpty ? item.artworkUrl : null,
+              subtitle: existing.subtitle.isEmpty ? item.subtitle : null,
+              durationSeconds: existing.durationSeconds <= 0
+                  ? item.durationSeconds
+                  : null,
+            );
           }
           continue;
         }
