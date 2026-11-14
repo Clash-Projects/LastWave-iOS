@@ -22,6 +22,7 @@ import 'playlist_dialogs.dart'
         showWaveImportPlaylist,
         showWaveRenamePlaylist;
 import '../navigation/wave_nav.dart';
+import 'library_tabs.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
@@ -99,6 +100,7 @@ class _WavePlaylistsPageState
         padding: EdgeInsets.fromLTRB(side, 20, side, 24),
         children: [
         const WaveChromeSpacer.top(),
+        const WaveLibraryTabs(activePath: '/playlists'),
         SizedBox(
           width: double.infinity,
           child: Column(
