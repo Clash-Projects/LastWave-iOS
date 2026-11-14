@@ -11,7 +11,7 @@ import '../theme/wave_icons.dart';
 ///
 /// [id] is the `id` of the `_Group` it scrolls to; [section] is the rail
 /// section that group lives in. [keywords] lists the individual settings
-/// inside the group, so a search for "crossfade" finds the Playback card.
+/// inside the group, so a search for an individual setting finds its Playback card.
 class SettingsSearchEntry {
   final String id;
   final String section;
@@ -62,8 +62,8 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     id: 'playback.main',
     section: 'playback',
     title: 'Playback',
-    subtitle: 'Gapless, crossfade and output behaviour',
-    keywords: 'autoplay similar crossfade gapless radio queue ends',
+    subtitle: 'Gapless and output behaviour',
+    keywords: 'autoplay similar gapless radio queue ends',
   ),
   SettingsSearchEntry(
     id: 'audio.output',
@@ -99,7 +99,7 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     section: 'audio',
     title: 'AutoMix',
     subtitle: 'Timed overlap between tracks',
-    keywords: 'automix crossfade mix transition overlap',
+    keywords: 'automix timed mix transition overlap',
   ),
   SettingsSearchEntry(
     id: 'audio.equalizer',
