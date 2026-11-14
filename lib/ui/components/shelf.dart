@@ -280,6 +280,15 @@ class WaveShelf extends StatelessWidget {
 }
 
 /// Artwork-led media card with centered hover play affordance.
+/// Width used by artwork shelves. Narrow iPhones use slightly smaller
+/// cards so more of each carousel is visible without clipping text.
+double waveMediaCardWidth(BuildContext context) =>
+    Platform.isIOS && MediaQuery.sizeOf(context).width < 430 ? 148.0 : 160.0;
+
+/// Height reserved for artwork cards with up to two title and subtitle lines.
+double waveMediaRailHeight(BuildContext context) =>
+    Platform.isIOS && MediaQuery.sizeOf(context).width < 430 ? 244.0 : 236.0;
+
 class WaveMediaCard extends ConsumerStatefulWidget {
   final String title;
   final String subtitle;
@@ -376,7 +385,7 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
                     children: [
                       WaveArtwork(
                         url: widget.artworkUrl,
-                        size: 160,
+                        size: waveMediaCardWidth(context),
                         radius: _rv,
                         title: widget.title,
                         artist: widget.artist,
@@ -441,7 +450,7 @@ class _WaveMediaCardState extends ConsumerState<WaveMediaCard> {
               ),
               Text(
                 widget.subtitle,
-                maxLines: 1,
+                maxLines: Platform.isIOS ? 2 : 1,
                 overflow: TextOverflow.ellipsis,
                 style: WaveType.meta.copyWith(
                   color: dark
