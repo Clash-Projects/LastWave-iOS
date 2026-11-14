@@ -173,7 +173,7 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
           child: _InfiniteRadioHero(tracks: tracks),
         ),
       SliverToBoxAdapter(
-        child: _NativeQuickAccess(hasHero: hasHero),
+        child: _NativeQuickAccess(),
       ),
     ];
   }
@@ -402,18 +402,8 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
       if (id == HomeShelfId.speedDial) {
         slivers.addAll([
           const SliverToBoxAdapter(child: SizedBox(height: 22)),
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: side),
-            sliver: SliverToBoxAdapter(
-              child: WaveEntrance(
-                index: entrance++,
-                rise: 8,
-                child: const LWSectionHeader(title: 'Speed dial'),
-              ),
-            ),
-          ),
           SliverToBoxAdapter(
-            child: _NativeQuickAccess(hasHero: false),
+            child: _NativeQuickAccess(),
           ),
         ]);
         continue;
@@ -1324,71 +1314,57 @@ class _InfiniteRadioHero extends ConsumerWidget {
 
 /// Native QuickTilesGrid translated to a horizontal, independently scrollable rail.
 class _NativeQuickAccess extends StatelessWidget {
-  final bool hasHero;
-
-  const _NativeQuickAccess({required this.hasHero});
+  const _NativeQuickAccess();
 
   @override
   Widget build(BuildContext context) {
-    final topRadius = hasHero ? 0.0 : 28.0;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 3),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: waveSurfaceRaised(context).withValues(alpha: 0.5),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(topRadius),
-          topRight: Radius.circular(topRadius),
-          bottomLeft: const Radius.circular(28),
-          bottomRight: const Radius.circular(28),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Quick access',
-              style: WaveType.sectionTitle.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.4,
-              ),
+          Text(
+            'Quick access',
+            style: WaveType.sectionTitle.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 194,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: const [
-                _NativeQuickAccessTile(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Expanded(
+                child: _NativeQuickAccessTile(
                   title: 'Liked Songs',
                   subtitle: 'Your favorites',
                   route: '/liked',
                   icon: WaveIcons.liked,
                   tint: WaveColors.danger,
                 ),
-                SizedBox(width: 10),
-                _NativeQuickAccessTile(
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _NativeQuickAccessTile(
                   title: 'Mix Lab',
                   subtitle: 'Made for you',
                   route: '/mixes',
                   icon: WaveIcons.mixes,
                   tint: WaveColors.defaultAccent,
                 ),
-                SizedBox(width: 10),
-                _NativeQuickAccessTile(
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _NativeQuickAccessTile(
                   title: 'New Releases',
                   subtitle: 'Fresh drops',
                   route: '/new-releases',
                   icon: WaveIcons.albums,
                   tint: WaveColors.success,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1413,67 +1389,61 @@ class _NativeQuickAccessTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.go(route),
-      child: Container(
-        width: 136,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: waveSurface(context),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: waveDivider(context).withValues(alpha: 0.18),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 116,
-              height: 116,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    tint.withValues(alpha: 0.22),
-                    tint.withValues(alpha: 0.52),
-                  ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final artworkHeight = constraints.maxWidth.clamp(88.0, 164.0);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => context.go(route),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                height: artworkHeight,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      tint.withValues(alpha: 0.22),
+                      tint.withValues(alpha: 0.52),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                borderRadius: BorderRadius.circular(14),
+                alignment: Alignment.center,
+                child: Icon(
+                  icon,
+                  size: 36,
+                  color: waveTextPrimary(context),
+                ),
               ),
-              alignment: Alignment.center,
-              child: Icon(
-                icon,
-                size: 36,
-                color: waveTextPrimary(context),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: WaveType.trackTitle.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: WaveType.trackTitle.copyWith(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                height: 1.2,
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: WaveType.meta.copyWith(
+                  fontSize: 11,
+                  color: waveTextSecondary(context).withValues(alpha: 0.8),
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: WaveType.meta.copyWith(
-                fontSize: 11,
-                color: waveTextSecondary(context).withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
