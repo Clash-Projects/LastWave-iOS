@@ -297,7 +297,8 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
           data: systemMedia.copyWith(
             textScaler: TextScaler.linear(systemTextScale * interfaceScale),
           ),
-          child: WaveHazeScope(
+          child: Builder(
+            builder: (mediaContext) => WaveHazeScope(
             material: material,
             intensity: intensity,
             child: Stack(
@@ -312,7 +313,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                       right: safe.right,
                     ).add(pagePadding),
                     child: MediaQuery.removePadding(
-                      context: context,
+                      context: mediaContext,
                       removeTop: true,
                       removeBottom: true,
                       child: WaveChromeInsets(
@@ -387,6 +388,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
