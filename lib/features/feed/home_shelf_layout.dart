@@ -14,66 +14,167 @@ const homeShelfLayoutKey = 'home_shelf_layout';
 /// people who already saved a layout: [resolveHomeShelfOrder] leaves any
 /// id the save never mentioned in its default slot.
 abstract final class HomeShelfId {
-  static const taste = 'taste';
-  static const mixes = 'mixes';
-  static const youtube = 'youtube';
-  static const youtubeMore = 'youtube_more';
-  static const quickPicks = 'quick_picks';
-  static const continueListening = 'continue';
-  static const because = 'because';
-  static const albums = 'albums';
-  static const artists = 'artists';
-  static const friends = 'friends';
-  static const charts = 'charts';
-  static const fresh = 'fresh';
-  static const releases = 'releases';
-  static const popular = 'popular';
+  static const home = 'home';
+  static const samples = 'samples';
+  static const explore = 'explore';
+  static const library = 'library';
+  static const energize = 'energize';
+  static const workout = 'workout';
+  static const relax = 'relax';
+  static const focus = 'focus';
+  static const commute = 'commute';
+  static const feelGood = 'feel_good';
+  static const party = 'party';
+  static const romance = 'romance';
+  static const sad = 'sad';
+  static const sleep = 'sleep';
   static const podcasts = 'podcasts';
+  static const speedDial = 'speed_dial';
+  static const quickPicks = 'quick_picks';
+  static const listenAgain = 'listen_again';
+  static const mixedForYou = 'mixed_for_you';
+  static const forgottenFavorites = 'forgotten_favorites';
+  static const trendingSongs = 'trending_songs';
+  static const newReleases = 'new_releases';
+  static const fromYourLibrary = 'from_your_library';
+  static const recommendedRadio = 'recommended_radio';
+  static const coversAndRemixes = 'covers_and_remixes';
+  static const heardInShorts = 'heard_in_shorts';
+  static const longListens = 'long_listens';
+  static const similar = 'similar';
+  static const livePerformances = 'live_performances';
+  static const charts = 'charts';
+
+  // Compatibility aliases for the older editorial Home renderer. They are
+  // intentionally not part of the new Edit Home catalog.
+  static const taste = energize;
+  static const mixes = mixedForYou;
+  static const youtube = home;
+  static const youtubeMore = explore;
+  static const continueListening = listenAgain;
+  static const because = forgottenFavorites;
+  static const albums = fromYourLibrary;
+  static const artists = similar;
+  static const friends = recommendedRadio;
+  static const fresh = trendingSongs;
+  static const releases = newReleases;
+  static const popular = trendingSongs;
 }
 
 abstract final class HomeShelfCatalog {
-  /// Visual order on a fresh Home, top to bottom.
+  /// The order shown in Edit Home and used for the YouTube Music Home feed.
   static const defaults = <String>[
-    HomeShelfId.taste,
-    HomeShelfId.quickPicks,
-    HomeShelfId.because,
-    HomeShelfId.fresh,
-    HomeShelfId.continueListening,
-    HomeShelfId.youtube,
-    HomeShelfId.artists,
-    HomeShelfId.albums,
-    HomeShelfId.charts,
-    HomeShelfId.releases,
-    HomeShelfId.friends,
+    HomeShelfId.home,
+    HomeShelfId.samples,
+    HomeShelfId.explore,
+    HomeShelfId.library,
+    HomeShelfId.energize,
+    HomeShelfId.workout,
+    HomeShelfId.relax,
+    HomeShelfId.focus,
+    HomeShelfId.commute,
+    HomeShelfId.feelGood,
+    HomeShelfId.party,
+    HomeShelfId.romance,
+    HomeShelfId.sad,
+    HomeShelfId.sleep,
     HomeShelfId.podcasts,
-    HomeShelfId.popular,
-    HomeShelfId.youtubeMore,
+    HomeShelfId.speedDial,
+    HomeShelfId.quickPicks,
+    HomeShelfId.listenAgain,
+    HomeShelfId.mixedForYou,
+    HomeShelfId.forgottenFavorites,
+    HomeShelfId.trendingSongs,
+    HomeShelfId.newReleases,
+    HomeShelfId.fromYourLibrary,
+    HomeShelfId.recommendedRadio,
+    HomeShelfId.coversAndRemixes,
+    HomeShelfId.heardInShorts,
+    HomeShelfId.longListens,
+    HomeShelfId.similar,
+    HomeShelfId.livePerformances,
+    HomeShelfId.charts,
   ];
 
-  /// Top to bottom when YouTube Music is connected and the layout was never
-  /// edited: what you play most first, broad browsing last. Podcasts and the
-  /// taste-only shelves are left out unless a saved layout asks for them.
-  static const connected = defaults;
-
   static const labels = <String, String>{
-    HomeShelfId.taste: 'My genres',
-    HomeShelfId.mixes: 'Mixes',
-    HomeShelfId.youtube: 'YouTube Music',
-    HomeShelfId.youtubeMore: 'More from YouTube Music',
-    HomeShelfId.quickPicks: 'Quick Picks',
-    HomeShelfId.continueListening: 'Continue Listening',
-    HomeShelfId.because: 'Because You Listened',
-    HomeShelfId.albums: 'Albums',
-    HomeShelfId.artists: 'Artists',
-    HomeShelfId.friends: 'Friends',
-    HomeShelfId.charts: 'Charts',
-    HomeShelfId.fresh: 'Fresh Finds',
-    HomeShelfId.releases: 'New Releases',
-    HomeShelfId.popular: 'Popular',
+    HomeShelfId.home: 'Home',
+    HomeShelfId.samples: 'Samples',
+    HomeShelfId.explore: 'Explore',
+    HomeShelfId.library: 'Library',
+    HomeShelfId.energize: 'Energize',
+    HomeShelfId.workout: 'Workout',
+    HomeShelfId.relax: 'Relax',
+    HomeShelfId.focus: 'Focus',
+    HomeShelfId.commute: 'Commute',
+    HomeShelfId.feelGood: 'Feel good',
+    HomeShelfId.party: 'Party',
+    HomeShelfId.romance: 'Romance',
+    HomeShelfId.sad: 'Sad',
+    HomeShelfId.sleep: 'Sleep',
     HomeShelfId.podcasts: 'Podcasts',
+    HomeShelfId.speedDial: 'Speed dial',
+    HomeShelfId.quickPicks: 'Quick picks',
+    HomeShelfId.listenAgain: 'Listen again',
+    HomeShelfId.mixedForYou: 'Mixed for you',
+    HomeShelfId.forgottenFavorites: 'Forgotten favorites',
+    HomeShelfId.trendingSongs: 'Trending songs',
+    HomeShelfId.newReleases: 'New releases',
+    HomeShelfId.fromYourLibrary: 'From your library',
+    HomeShelfId.recommendedRadio: 'Recommended radio',
+    HomeShelfId.coversAndRemixes: 'Covers and remixes',
+    HomeShelfId.heardInShorts: 'Heard in Shorts',
+    HomeShelfId.longListens: 'Long listens',
+    HomeShelfId.similar: 'Similar to [Artist Name]',
+    HomeShelfId.livePerformances: 'Live performances',
+    HomeShelfId.charts: 'Charts',
+  };
+
+  static const topNavigationIds = <String>{
+    HomeShelfId.home,
+    HomeShelfId.samples,
+    HomeShelfId.explore,
+    HomeShelfId.library,
   };
 
   static String label(String id) => labels[id] ?? id;
+
+  /// Maps API-provided localized labels to the user's configurable Home
+  /// slots. Unknown API shelves return null and are still rendered separately
+  /// in their original server order.
+  static String? idForTitle(String title) {
+    final value = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+    if (value == 'home') return HomeShelfId.home;
+    if (value == 'samples') return HomeShelfId.samples;
+    if (value == 'explore') return HomeShelfId.explore;
+    if (value == 'library') return HomeShelfId.library;
+    if (value.contains('energize')) return HomeShelfId.energize;
+    if (value.contains('workout')) return HomeShelfId.workout;
+    if (value.contains('relax')) return HomeShelfId.relax;
+    if (value.contains('focus')) return HomeShelfId.focus;
+    if (value.contains('commute')) return HomeShelfId.commute;
+    if (value.contains('feel good')) return HomeShelfId.feelGood;
+    if (value.contains('party')) return HomeShelfId.party;
+    if (value.contains('romance')) return HomeShelfId.romance;
+    if (value == 'sad' || value.startsWith('sad ')) return HomeShelfId.sad;
+    if (value.contains('sleep')) return HomeShelfId.sleep;
+    if (value.contains('podcast')) return HomeShelfId.podcasts;
+    if (value.contains('speed dial')) return HomeShelfId.speedDial;
+    if (value.contains('quick pick')) return HomeShelfId.quickPicks;
+    if (value.contains('listen again') || value.contains('keep listening')) return HomeShelfId.listenAgain;
+    if (value.contains('mixed for you') || value == 'mixes' || value.contains('your mix')) return HomeShelfId.mixedForYou;
+    if (value.contains('forgotten favorite')) return HomeShelfId.forgottenFavorites;
+    if (value.contains('trending song') || value == 'trending now') return HomeShelfId.trendingSongs;
+    if (value.contains('new release')) return HomeShelfId.newReleases;
+    if (value.contains('from your library') || value.contains('your library')) return HomeShelfId.fromYourLibrary;
+    if (value.contains('recommended radio')) return HomeShelfId.recommendedRadio;
+    if (value.contains('cover') || value.contains('remix')) return HomeShelfId.coversAndRemixes;
+    if (value.contains('heard in shorts')) return HomeShelfId.heardInShorts;
+    if (value.contains('long listen')) return HomeShelfId.longListens;
+    if (value.startsWith('similar to ')) return HomeShelfId.similar;
+    if (value.contains('live performance')) return HomeShelfId.livePerformances;
+    if (value.contains('chart')) return HomeShelfId.charts;
+    return null;
+  }
 }
 
 /// Saved order merged with [defaults].
