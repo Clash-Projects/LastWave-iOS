@@ -1327,18 +1327,48 @@ class _WaveMenuSheetState extends State<_WaveMenuSheet> {
               const SizedBox(width: WaveSpacing.x8),
             ],
             Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: WaveTouchType.rowTitle.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                ),
-              ),
+              child: Platform.isIOS
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          maxLines: 3,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
+                          style: WaveTouchType.rowTitle.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: color,
+                          ),
+                        ),
+                        if (hint != null && hint.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            hint,
+                            maxLines: 2,
+                            softWrap: true,
+                            overflow: TextOverflow.ellipsis,
+                            style: WaveTouchType.rowMeta.copyWith(
+                              color: waveTextTertiary(context),
+                            ),
+                          ),
+                        ],
+                      ],
+                    )
+                  : Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: WaveTouchType.rowTitle.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: color,
+                      ),
+                    ),
             ),
-            if (hint != null)
+            if (hint != null && !Platform.isIOS)
               Text(
                 hint,
                 style: WaveTouchType.rowMeta.copyWith(
