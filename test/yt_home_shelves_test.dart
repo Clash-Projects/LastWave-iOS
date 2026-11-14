@@ -348,6 +348,123 @@ void main() {
     });
   });
 
+  group('parseHomeChips', () {
+    test('reads Home chips, Explore categories and mood button endpoints', () {
+      final root = <String, dynamic>{
+        'header': {
+          'chipCloudRenderer': {
+            'chips': [
+              {
+                'chipCloudChipRenderer': {
+                  'text': {'runs': [{'text': 'Home'}]},
+                  'navigationEndpoint': {
+                    'browseEndpoint': {'browseId': 'FEmusic_home'},
+                  },
+                },
+              },
+              {
+                'chipCloudChipRenderer': {
+                  'text': {'text': 'Explore'},
+                  'navigationEndpoint': {
+                    'browseEndpoint': {'browseId': 'FEmusic_explore'},
+                  },
+                },
+              },
+            ],
+          },
+        },
+        'contents': {
+          'sectionListRenderer': {
+            'contents': [
+              {
+                'musicCategoryListRenderer': {
+                  'items': [
+                    {
+                      'musicCategoryListItemRenderer': {
+                        'title': {'runs': [{'text': 'New releases'}]},
+                        'navigationEndpoint': {
+                          'browseEndpoint': {
+                            'browseId': 'FEmusic_new_releases',
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+              {
+                'musicCarouselShelfRenderer': {
+                  'header': {
+                    'musicCarouselShelfBasicHeaderRenderer': {
+                      'title': {'runs': [{'text': 'Moods and genres'}]},
+                    },
+                  },
+                  'contents': [
+                    {
+                      'musicNavigationButtonRenderer': {
+                        'buttonText': {'runs': [{'text': 'Chill'}]},
+                        'clickCommand': {
+                          'browseEndpoint': {
+                            'browseId': 'FEmusic_moods_and_genres_category',
+                            'params': 'chill',
+                          },
+                        },
+                      },
+                    },
+                    {
+                      'musicNavigationButtonRenderer': {
+                        'buttonText': {'runs': [{'text': 'Energise'}]},
+                        'clickCommand': {
+                          'browseEndpoint': {
+                            'browseId': 'FEmusic_moods_and_genres_category',
+                            'params': 'energy',
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      };
+
+      final chips = tube.parseHomeChips(root);
+      expect(
+        chips.map((chip) => chip.title),
+        ['Home', 'Explore', 'New releases', 'Chill', 'Energise'],
+      );
+      expect(chips[0].browseId, 'FEmusic_home');
+      expect(chips[1].browseId, 'FEmusic_explore');
+      expect(chips[2].browseId, 'FEmusic_new_releases');
+      expect(chips[3].browseId, 'FEmusic_moods_and_genres_category');
+      expect(chips[3].params, 'chill');
+      expect(chips[4].params, 'energy');
+    });
+
+    test('deduplicates the same localized endpoint', () {
+      final root = <String, dynamic>{
+        'header': {
+          'chipCloudRenderer': {
+            'chips': [
+              for (var i = 0; i < 2; i++)
+                {
+                  'chipCloudChipRenderer': {
+                    'text': {'text': 'Home'},
+                    'navigationEndpoint': {
+                      'browseEndpoint': {'browseId': 'FEmusic_home'},
+                    },
+                  },
+                },
+            ],
+          },
+        },
+      };
+      expect(tube.parseHomeChips(root), hasLength(1));
+    });
+  });
+
   group('YtHomeShelf', () {
     test('renderability tracks populated lists', () {
       expect(const YtHomeShelf(title: 'x').isRenderable, isFalse);
