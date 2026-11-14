@@ -130,7 +130,7 @@ class DeezerCatalogApi {
       if (apiError is Map) {
         final code = apiError['code']?.toString() ?? 'unknown';
         final message = (apiError['message']?.toString() ?? 'unknown')
-            .replaceAll(RegExp(r'[\\r\\n]+'), ' ');
+            .replaceAll(RegExp(r'[\r\n]+'), ' ');
         DiagnosticsLog.info(
           '$tag kind=${kind.name} status=api_error code=$code message=$message',
         );
