@@ -72,9 +72,8 @@ class _LastWaveAppState extends ConsumerState<LastWaveApp> {
     // WEB_REMIX fallback never stalls transport on a cold window spawn.
     // Direct-only mode (lw_disable_potoken) skips it — zero WebViews.
     Future.microtask(() {
-      // Artist tiles whose Deezer lookup fails (rate limit, no press
-      // photo) fall back to the YouTube Music portrait, same as the
-      // artist detail page.
+      // Artist tiles use YouTube Music portraits, same as the artist
+      // detail page.
       OfficialArtworkService.instance.artistPhotoFallback = (name) async {
         final artists =
             await ref.read(innerTubeProvider).searchArtists(name, limit: 3);
