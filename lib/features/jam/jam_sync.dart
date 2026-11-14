@@ -9,7 +9,6 @@ import 'jam_client.dart';
 
 /// Bridges Jam playback events to the existing player.
 ///
-/// AutoMix is not part of the protocol and is never read or written here.
 /// If the socket is down, this does nothing and local playback continues.
 final jamSyncProvider = Provider<void>((ref) {
   final bridge = _JamBridge();
