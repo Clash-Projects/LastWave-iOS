@@ -88,6 +88,7 @@ class WaveYtShelfPage extends ConsumerWidget {
       if (tracks.isNotEmpty)
         for (var i = 0; i < tracks.length; i++)
           _card(
+            context: context,
             title: tracks[i].name,
             subtitle: tracks[i].artist,
             artworkUrl: tracks[i].artworkUrl,
@@ -105,6 +106,7 @@ class WaveYtShelfPage extends ConsumerWidget {
       else
         for (final e in shelf.entities)
           _card(
+            context: context,
             title: e.name,
             subtitle: e.subtitle,
             artworkUrl: e.artworkUrl,
@@ -199,6 +201,7 @@ class WaveYtShelfPage extends ConsumerWidget {
       );
 
   static Widget _card({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required String artworkUrl,
