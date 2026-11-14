@@ -107,6 +107,20 @@ void main() {
     expect(_upNextRowRect(tester).bottom, lessThanOrEqualTo(size.height));
   });
 
+  testWidgets('short phone-sized Now Playing content can scroll', (
+    tester,
+  ) async {
+    const size = Size(390, 568);
+    await _pumpNowPlaying(tester, size: size);
+
+    expect(
+      find.byKey(const ValueKey('now-playing-phone-auto-scroll')),
+      findsOneWidget,
+    );
+    expect(find.text('Do Numbari (From "Mirzapur The Movie")'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow metadata and UP NEXT fit without scrolling', (
     tester,
   ) async {
