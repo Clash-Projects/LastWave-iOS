@@ -1391,7 +1391,7 @@ class _NativeQuickAccessTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final artworkHeight = constraints.maxWidth.clamp(88.0, 164.0);
+        final artworkHeight = constraints.maxWidth.clamp(88.0, 164.0).toDouble();
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => context.go(route),
