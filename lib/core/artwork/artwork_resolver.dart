@@ -118,8 +118,8 @@ class ArtworkResolver {
       final host = Uri.parse(n).host;
       final isYoutube = ['ytimg.com', 'googleusercontent.com', 'ggpht.com']
           .any((domain) => host == domain || host.endsWith('.$domain'));
-      // High-authority official artwork CDNs (Qobuz, Spotify, Deezer)
-      // take primary priority; YouTube video stills and thumbnails are fallbacks.
+      // Lossless-provider artwork takes primary priority; YouTube thumbnails
+      // remain fallbacks.
       final target = isYoutube ? fallback : primary;
       target.add(sized(n, request.targetPx));
       target.add(n);
@@ -200,8 +200,6 @@ class ArtworkResolver {
     'ggpht.com',
     'last.fm',
     'lastfm',
-    'deezer.com',
-    'dzcdn.net',
     'spotifycdn.com',
     'scdn.co',
     'i.scdn.co',
