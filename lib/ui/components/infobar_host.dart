@@ -2,7 +2,6 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/network/network_monitor.dart';
 import '../../features/addons/addon_api.dart';
 import '../../features/downloads/download_manager.dart';
 import '../../features/innertube/innertube_api.dart';
@@ -14,7 +13,6 @@ import 'buttons.dart';
 /// Global Fluent InfoBar host — non-blocking feedback docked above content.
 ///
 /// Shows (highest priority first):
-/// - offline network
 /// - Last.fm session expired
 /// - addon daily quota spent (falls through to YouTube)
 /// - latest download done/error
@@ -32,7 +30,6 @@ class WaveInfoBarHost extends ConsumerStatefulWidget {
 }
 
 class _WaveInfoBarHostState extends ConsumerState<WaveInfoBarHost> {
-  bool _dismissedOffline = false;
   bool _dismissedAuth = false;
   bool _dismissedYt = false;
   String? _dismissedDownloadKey;
@@ -68,7 +65,6 @@ class _WaveInfoBarHostState extends ConsumerState<WaveInfoBarHost> {
     ref.listen<bool>(ytAuthStaleProvider, (prev, stale) {
       if (stale && prev != true) _recoverYt();
     });
-    final online = ref.watch(networkMonitorProvider);
     final auth = ref.watch(authRepositoryProvider);
     final downloads = ref.watch(downloadManagerProvider);
 
@@ -82,15 +78,6 @@ class _WaveInfoBarHostState extends ConsumerState<WaveInfoBarHost> {
         isLong: false,
         onClose: () =>
             ref.read(trayHintProvider.notifier).state = false,
-      ));
-    }
-    if (!online && !_dismissedOffline) {
-      bars.add(InfoBar(
-        title: const Text('You are offline'),
-        content: const Text('Charts and streaming may be unavailable.'),
-        severity: InfoBarSeverity.warning,
-        isLong: false,
-        onClose: () => setState(() => _dismissedOffline = true),
       ));
     }
     // Guests chose keyless entry — never nag them about Last.fm.
