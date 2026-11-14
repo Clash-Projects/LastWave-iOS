@@ -57,13 +57,13 @@ class PodcastHomeShelf extends ConsumerWidget {
         const SizedBox(height: 10),
         if (shows.isNotEmpty)
           WaveRail(
-            height: 228,
+            height: waveMediaRailHeight(context),
             itemCount: shows.length > 12 ? 12 : shows.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               final show = shows[i];
               return SizedBox(
-                width: 160,
+                width: waveMediaCardWidth(context),
                 child: WaveMediaCard(
                   title: show.title,
                   subtitle: show.publisher.isEmpty ? 'Podcast' : show.publisher,
