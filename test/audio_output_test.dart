@@ -140,7 +140,6 @@ void main() {
           dspActive: false,
           peqActive: false,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.bitPerfect,
@@ -157,7 +156,6 @@ void main() {
           dspActive: false,
           peqActive: true,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.peqActive,
@@ -174,7 +172,6 @@ void main() {
           dspActive: false,
           peqActive: false,
           softwareVolume: true,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.softwareVolume,
@@ -191,7 +188,6 @@ void main() {
           dspActive: false,
           peqActive: false,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.sharedMode,
@@ -274,7 +270,6 @@ void main() {
           dspActive: false,
           peqActive: false,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.exclusiveUnavailable,
@@ -291,27 +286,9 @@ void main() {
           dspActive: false,
           peqActive: false,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.deviceUnavailable,
-      );
-    });
-
-    test('crossfade blocks bit-perfect', () {
-      expect(
-        negotiator.evaluate(
-          decision: native(),
-          exclusiveRequested: true,
-          exclusiveActive: true,
-          deviceAvailable: true,
-          dspActive: false,
-          peqActive: false,
-          softwareVolume: false,
-          crossfade: true,
-          speed: 1.0,
-        ),
-        BitPerfectReason.crossfadeActive,
       );
     });
 
@@ -325,7 +302,6 @@ void main() {
           dspActive: true,
           peqActive: false,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.dspActive,
@@ -350,7 +326,6 @@ void main() {
           dspActive: false,
           peqActive: false,
           softwareVolume: false,
-          crossfade: false,
           speed: 1.0,
         ),
         BitPerfectReason.exclusiveUnavailable,
