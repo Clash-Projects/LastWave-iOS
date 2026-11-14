@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 
@@ -63,6 +64,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   DateTime? _sleepDeadline;
   Timer? _persistThrottle;
   DateTime _lastPersist = DateTime.fromMillisecondsSinceEpoch(0);
+  late final AppLifecycleListener _appLifecycleListener;
+  static const Duration _persistInterval = Duration(seconds: 2);
   // UI position emission gate: mpv fires time-pos per frame (60Hz+)
   // and every emission rebuilds all position watchers (dock bar,
   // karaoke, time labels, mini player). Karaoke interpolates
@@ -430,7 +433,26 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     OfficialArtworkService? artworkService,
     this._onAddonQuota,
   ])  : _artworkService = artworkService ?? OfficialArtworkService(),
-        super(const PlayerSnapshot());
+        super(const PlayerSnapshot()) {
+    // iOS can suspend or terminate the process without calling disposePlayer.
+    // Flush the last in-memory position as soon as Flutter backgrounds.
+    _appLifecycleListener = AppLifecycleListener(
+      onStateChange: (lifecycleState) {
+        switch (lifecycleState) {
+          case AppLifecycleState.inactive:
+          case AppLifecycleState.hidden:
+          case AppLifecycleState.paused:
+          case AppLifecycleState.detached:
+            _persistThrottle?.cancel();
+            _persistThrottle = null;
+            _lastPersist = DateTime.now();
+            _persistNow();
+          case AppLifecycleState.resumed:
+            break;
+        }
+      },
+    );
+  }
 
   /// Check the live add-on catalog for a Dolby Atmos version of this track.
   /// null means the catalog could not be reached; it is not treated as absent.
@@ -1813,6 +1835,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     _subs.clear();
     _sleepTimer?.cancel();
     _persistThrottle?.cancel();
+    _persistThrottle = null;
     final standby = _standbyPlayer;
     _standbyPlayer = null;
     if (standby != null) {
@@ -4004,16 +4027,34 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
   void _schedulePersist() {
     final now = DateTime.now();
-    if (now.difference(_lastPersist) < const Duration(seconds: 2)) {
+    final elapsed = now.difference(_lastPersist);
+    if (elapsed >= _persistInterval) {
       _persistThrottle?.cancel();
-      _persistThrottle = Timer(
-        const Duration(seconds: 2),
-        () => _schedulePersist(),
-      );
+      _persistThrottle = null;
+      _lastPersist = now;
+      _persistNow();
       return;
     }
-    _lastPersist = now;
-    _persistNow();
+
+    // Position ticks arrive more often than the persistence interval. Keep
+    // the first pending timer instead of restarting it on every tick; the old
+    // debounce implementation continually moved the deadline forward and
+    // only saved again after playback stopped.
+    if (_persistThrottle?.isActive ?? false) return;
+    final remaining = _persistInterval - elapsed;
+    _persistThrottle = Timer(remaining, () {
+      _persistThrottle = null;
+      _lastPersist = DateTime.now();
+      _persistNow();
+    });
+  }
+
+  @override
+  void dispose() {
+    _appLifecycleListener.dispose();
+    _persistThrottle?.cancel();
+    _persistThrottle = null;
+    super.dispose();
   }
 
   void _persistNow() {
