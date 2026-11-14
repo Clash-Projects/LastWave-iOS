@@ -134,7 +134,7 @@ class SearchRepository {
         '[Search] provider=$provider category=$category '
         'status=error errorType=${error.runtimeType}',
       );
-      return const <T>[];
+      return <T>[];
     }
   }
 
