@@ -97,11 +97,13 @@ class _WavePlaylistsPageState
     // below fills the viewport instead of bunching in a centered cap.
     return WaveEntranceGroup(
       child: ListView(
-        padding: EdgeInsets.fromLTRB(side, 20, side, 24),
+        padding: const EdgeInsets.only(bottom: 24),
         children: [
         const WaveChromeSpacer.top(),
         const WaveLibraryTabs(activePath: '/playlists'),
-        SizedBox(
+        Padding(
+          padding: EdgeInsets.fromLTRB(side, 20, side, 0),
+          child: SizedBox(
           width: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,6 +204,7 @@ class _WavePlaylistsPageState
                 ],
               ],
             ],
+          ),
           ),
         ),
         const WaveChromeSpacer.bottom(),
