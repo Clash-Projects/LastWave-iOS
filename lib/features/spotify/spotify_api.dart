@@ -546,6 +546,7 @@ class SpotifyApi {
   final Map<String,
           Future<Map<SpotifyCatalogKind, List<SpotifyCatalogHit>>>>
       _catalogRequests = {};
+  DateTime? _catalogRetryAt;
 
   /// Catalog search for the Search page. Parallel category providers for the
   /// same query share one HTTP request and then select their own result set.
@@ -584,6 +585,13 @@ class SpotifyApi {
   Future<Map<SpotifyCatalogKind, List<SpotifyCatalogHit>>>
       _fetchCatalogBatch(String query) async {
     const tag = 'spotify catalog batch';
+    final retryAt = _catalogRetryAt;
+    if (retryAt != null && DateTime.now().isBefore(retryAt)) {
+      final remaining = retryAt.difference(DateTime.now()).inSeconds + 1;
+      DiagnosticsLog.info('$tag skipped cooldownSeconds=$remaining');
+      return const {};
+    }
+
     final headers = await _authHeaders();
     if (headers == null) {
       DiagnosticsLog.info('$tag session=false');
@@ -619,15 +627,28 @@ class SpotifyApi {
           // Do not log an unparseable response body.
         }
         final retryAfter = res.headers.value('retry-after') ?? '';
+        // Spotify normally supplies Retry-After for rate limits. If it is
+        // absent, use one rolling-window pause rather than firing again on
+        // every keystroke. QUOTA_EXCEEDED is also surfaced distinctly so it
+        // can be diagnosed in the exported logs.
+        final retrySeconds = int.tryParse(retryAfter);
+        final cooldownSeconds = retrySeconds == null
+            ? 30
+            : retrySeconds.clamp(1, 3600);
+        _catalogRetryAt = DateTime.now().add(
+          Duration(seconds: cooldownSeconds),
+        );
         DiagnosticsLog.info(
           '$tag http=${res.statusCode} '
           'reason=${reason.isEmpty ? 'unspecified' : reason} '
           'retryAfter=${retryAfter.isEmpty ? 'missing' : retryAfter} '
+          'cooldownSeconds=$cooldownSeconds '
           'message=${message.isEmpty ? 'unspecified' : message}',
         );
         return const {};
       }
 
+      _catalogRetryAt = null;
       final body = jsonDecode(res.data ?? '{}');
       final results = <SpotifyCatalogKind, List<SpotifyCatalogHit>>{
         SpotifyCatalogKind.track:
