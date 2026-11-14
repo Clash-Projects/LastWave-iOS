@@ -1530,6 +1530,8 @@ class _SourceMenu extends ConsumerWidget {
     final currentId = lyricsSourceToProviderId(result.source);
     final selectedSource =
         LyricsProviderId.fromId(currentId ?? effective).title;
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
+    final buttonLabel = isPhone ? 'Lyrics' : selectedSource;
 
     void apply(String? pickedId) {
       if (pickedId == null) {
@@ -1597,7 +1599,7 @@ class _SourceMenu extends ConsumerWidget {
               const SizedBox(width: 5),
               Flexible(
                 child: Text(
-                  selectedSource,
+                  buttonLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: WaveType.meta.copyWith(
