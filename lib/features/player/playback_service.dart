@@ -1683,6 +1683,13 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       unawaited(_writeMixSweep(0));
     }
 
+    // Do not hand off to a standby deck whose playback clock never starts.
+    // The beat-aware path has this protection; the timed path needs the same
+    // guard so a failed incoming open cannot leave the player silent.
+    final incoming = _standbyPlayer!;
+    var lastIncomingPosition = _secs(incoming.state.position);
+    var incomingMovedAt = DateTime.now();
+
     _mixTimer?.cancel();
     _mixTimer = Timer.periodic(const Duration(milliseconds: 25),
         (timer) => _guardedTick(timer, 'mix transition', () {
@@ -1690,7 +1697,30 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
         timer.cancel();
         return;
       }
-      final elapsed = DateTime.now().difference(_mixStartTime!);
+      if (!identical(_standbyPlayer, incoming)) {
+        timer.cancel();
+        _mixFault('incoming deck changed during timed mix');
+        _abortMixSafely();
+        return;
+      }
+
+      final now = DateTime.now();
+      final incomingPosition = _secs(incoming.state.position);
+      if (incomingPosition > lastIncomingPosition + 0.02) {
+        lastIncomingPosition = incomingPosition;
+        incomingMovedAt = now;
+      } else if (now.difference(incomingMovedAt) >
+          const Duration(seconds: 5)) {
+        // Keep the outgoing deck alive; never promote a silent/paused deck.
+        timer.cancel();
+        _mixFault('incoming deck stalled at '
+            '${incomingPosition.toStringAsFixed(1)}s');
+        _mixGaveUpFor = _standbyTrack?.queueKey ?? '';
+        cancelMixTransition();
+        return;
+      }
+
+      final elapsed = now.difference(_mixStartTime!);
       final progress = (elapsed.inMilliseconds /
               _mixDuration!.inMilliseconds)
           .clamp(0.0, 1.0);
@@ -1703,15 +1733,15 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
 
       try {
         _player?.setVolume(outVol.clamp(0.0, 100.0));
-        _standbyPlayer?.setVolume(inVol.clamp(0.0, 100.0));
+        incoming.setVolume(inVol.clamp(0.0, 100.0));
       } catch (_) {}
 
       if (spectral &&
           _sweepSupported != false &&
           !_mixSweepFailed &&
           !_mixSweepBusy &&
-          DateTime.now().difference(_lastMixSweep).inMilliseconds >= 200) {
-        _lastMixSweep = DateTime.now();
+          now.difference(_lastMixSweep).inMilliseconds >= 200) {
+        _lastMixSweep = now;
         unawaited(_writeMixSweep(progress));
       }
 
