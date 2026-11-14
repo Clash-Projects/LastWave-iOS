@@ -2895,31 +2895,22 @@ class _General extends ConsumerWidget {
   }
 }
 
-class _Playback extends ConsumerStatefulWidget {
+class _Playback extends ConsumerWidget {
   final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
   const _Playback({required this.onUpdate});
 
   @override
-  ConsumerState<_Playback> createState() => _PlaybackState();
-}
-
-class _PlaybackState extends ConsumerState<_Playback> {
-  double? _dragSeconds;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(prefsProvider);
-    final currentSeconds = _dragSeconds ?? prefs.crossfadeSeconds.toDouble();
-
     return _Group(
       id: 'playback.main',
       title: 'Playback',
-      subtitle: 'Gapless, crossfade and output behaviour',
+      subtitle: 'Gapless and playback behaviour',
       child: Column(
         children: [
           _SwitchRow(
             value: prefs.autoplaySimilar,
-            onChanged: (v) => widget.onUpdate((p) => p.setAutoplaySimilar(v)),
+            onChanged: (v) => onUpdate((p) => p.setAutoplaySimilar(v)),
             title: 'Autoplay similar',
             subtitle: 'Keep playing related tracks after a queue ends',
           ),
@@ -2927,344 +2918,10 @@ class _PlaybackState extends ConsumerState<_Playback> {
           _SwitchRow(
             value: prefs.strictTrackMatching,
             onChanged: (v) =>
-                widget.onUpdate((p) => p.setStrictTrackMatching(v)),
+                onUpdate((p) => p.setStrictTrackMatching(v)),
             title: 'Strict Track Matching',
             subtitle: 'Require a reliable title, artist and duration match. '
                 'Never silently substitute another recording.',
-          ),
-          const SizedBox(height: 8),
-          _SwitchRow(
-            value: prefs.crossfadeEnabled,
-            onChanged: (v) async {
-              await widget.onUpdate((p) => p.setCrossfade(v));
-              await ref
-                  .read(playbackServiceProvider.notifier)
-                  .applyAudioPrefs();
-              ref.read(audioOutputProvider.notifier).refreshPath();
-            },
-            title: 'Crossfade',
-            subtitle: prefs.autoMixEnabled
-                ? 'Off while timed AutoMix is on'
-                : prefs.crossfadeEnabled
-                    ? '${prefs.crossfadeSeconds}s crossfade duration'
-                    : 'Gapless direct transition (crossfade disabled)',
-          ),
-          if (prefs.crossfadeEnabled) ...[
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Crossfade duration',
-                        style: WaveType.trackTitle,
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${currentSeconds.round()}s',
-                        style: WaveType.meta.copyWith(
-                          color: waveAccent(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Slider(
-                    value: currentSeconds.clamp(3.0, 12.0),
-                    min: 3.0,
-                    max: 12.0,
-                    onChanged: (v) =>
-                        setState(() => _dragSeconds = v.roundToDouble()),
-                    onChangeEnd: (v) async {
-                      setState(() => _dragSeconds = null);
-                      final secs = v.round().clamp(3, 12);
-                      await widget.onUpdate((p) => p.setCrossfadeSeconds(secs));
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '3s (Short)',
-                        style: WaveType.meta.copyWith(
-                          color: waveTextSecondary(context),
-                        ),
-                      ),
-                      Text(
-                        '7s (Standard)',
-                        style: WaveType.meta.copyWith(
-                          color: waveTextSecondary(context),
-                        ),
-                      ),
-                      Text(
-                        '12s (Long)',
-                        style: WaveType.meta.copyWith(
-                          color: waveTextSecondary(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Downloads extends ConsumerWidget {
-  final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
-  const _Downloads({required this.onUpdate});
-
-  Future<void> _pickDir(WidgetRef ref) async {
-    try {
-      final path = await FilePicker.getDirectoryPath(
-        dialogTitle: 'Choose download folder',
-      );
-      if (path == null || path.trim().isEmpty) return;
-      await onUpdate((p) => p.setDownloadDir(path));
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(prefsProvider);
-    final custom = prefs.downloadDir;
-    return _Group(
-      id: 'downloads.offline',
-      title: 'Offline',
-      subtitle: 'Download behaviour and lyrics sidecars',
-      child: Column(
-        children: [
-          _SwitchRow(
-            value: prefs.downloadLyrics,
-            onChanged: (v) => onUpdate((p) => p.setDownloadLyrics(v)),
-            title: 'Download lyrics',
-            subtitle: 'Save synced .lrc sidecars with downloads',
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(FluentIcons.open_folder_horizontal, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Save location', style: WaveType.trackTitle),
-                    Text(
-                      Platform.isIOS
-                          ? 'LastWave app storage'
-                          : custom.isEmpty
-                              ? 'Default location'
-                              : custom,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: WaveType.meta,
-                    ),
-                  ],
-                ),
-              ),
-              if (!Platform.isIOS) ...[
-                WaveButton(
-                  onPressed: () => _pickDir(ref),
-                  child: const Text('Change'),
-                ),
-                if (custom.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  WaveButton(
-                    onPressed: () => onUpdate((p) => p.resetDownloadDir()),
-                    child: const Text('Reset'),
-                  ),
-                ],
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          DownloadLayoutSettings(onUpdate: onUpdate),
-        ],
-      ),
-    );
-  }
-}
-
-class _LastFm extends ConsumerWidget {
-  final Future<void> Function(Future<void> Function(Prefs)) onUpdate;
-  const _LastFm({required this.onUpdate});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        _Account(onUpdate: onUpdate),
-        const SizedBox(height: 8),
-        const _ApiKeys(),
-        const SizedBox(height: 8),
-        _Scrobbler(onUpdate: onUpdate),
-      ],
-    );
-  }
-}
-
-/// Last.fm BYOK editor: the user's own API key + shared secret.
-///
-/// Validated with a signed `auth.getToken` call before persisting;
-/// saving *different* keys signs the session out (sessions belong to
-/// their API key). Key values are never logged — only presence.
-class _ApiKeys extends ConsumerStatefulWidget {
-  const _ApiKeys();
-  @override
-  ConsumerState<_ApiKeys> createState() => _ApiKeysState();
-}
-
-class _ApiKeysState extends ConsumerState<_ApiKeys> {
-  TextEditingController? _key;
-  TextEditingController? _secret;
-  bool _busy = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _key?.dispose();
-    _secret?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await ref
-          .read(authRepositoryProvider.notifier)
-          .saveCustomKeys(_key?.text ?? '', _secret?.text ?? '');
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = _shortError(e));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _clear() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await ref.read(authRepositoryProvider.notifier).clearCustomKeys();
-      _key?.clear();
-      _secret?.clear();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = _shortError(e));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  static String _shortError(Object e) =>
-      e.toString().replaceFirst('LastFmException(null): ', '');
-
-  @override
-  Widget build(BuildContext context) {
-    // Subscribe to auth transitions so the status line below flips
-    // right after save/clear: Prefs itself never notifies (see
-    // welcome _AuthPanel — same pattern).
-    ref.watch(authRepositoryProvider.select((s) => s.status));
-    final prefs = ref.watch(prefsProvider);
-    _key ??= TextEditingController(text: prefs.lastFmApiKey);
-    _secret ??= TextEditingController(text: prefs.lastFmApiSecret);
-    final configured = prefs.isLastFmConfigured;
-    return _Group(
-      id: 'lastfm.keys',
-      title: 'API keys',
-      subtitle: 'Your own keys from last.fm/api/account/create',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const LastFmKeyGuide(),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(
-                configured ? FluentIcons.check_mark : FluentIcons.warning,
-                size: 14,
-                color: configured ? Colors.green : Colors.orange,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  configured
-                      ? 'Keys saved — values never shown here'
-                      : 'Not configured — Last.fm is disabled',
-                  style: WaveType.meta,
-                ),
-              ),
-              if (configured)
-                WaveButton(
-                  onPressed: _busy ? null : _clear,
-                  child: const Text('Clear'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text('API key', style: WaveType.label),
-          const SizedBox(height: 4),
-          TextBox(padding: waveFieldPadding, 
-        selectionControls: waveTextSelectionControls,
-        contextMenuBuilder: waveTextContextMenuBuilder,
-decoration: waveInputDecoration(),
-            controller: _key,
-            placeholder: '32-character hex key',
-          ),
-          const SizedBox(height: 8),
-          const Text('Shared secret', style: WaveType.label),
-          const SizedBox(height: 4),
-          TextBox(padding: waveFieldPadding, 
-        selectionControls: waveTextSelectionControls,
-        contextMenuBuilder: waveTextContextMenuBuilder,
-decoration: waveInputDecoration(),
-            controller: _secret,
-            placeholder: 'Shared secret',
-            obscureText: true,
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: WaveType.meta.copyWith(color: Colors.red)),
-          ],
-          const SizedBox(height: 10),
-          WaveFilledButton(
-            onPressed: _busy ? null : _save,
-            child: _busy
-                ? const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: ProgressRing(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 8),
-                      Text('Validating…'),
-                    ],
-                  )
-                : const Text('Save & validate'),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Saving different keys signs you out — sessions belong '
-            'to their API key. Reconnect afterwards.',
-            style: WaveType.meta.copyWith(color: waveTextTertiary(context)),
           ),
         ],
       ),
@@ -3291,7 +2948,7 @@ class _TimedMixSettingsState extends ConsumerState<_TimedMixSettings> {
       id: 'audio.automix',
       title: 'AutoMix',
       subtitle: prefs.autoMixEnabled
-          ? 'Timed dual-deck overlap, not beat-matched. Turns crossfade off.'
+          ? 'Timed dual-deck overlap, with beat matching when possible.'
           : 'Off. A timed mix between tracks, not a beat or key match.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
