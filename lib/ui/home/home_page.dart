@@ -121,11 +121,11 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
               activeFeed.when(
                 skipLoadingOnRefresh: false,
                 loading: () => SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(side, 18, side, 32),
+                  padding: EdgeInsets.fromLTRB(side, 18, side, 32),
                   sliver: const SliverToBoxAdapter(child: _HomeSkeleton()),
                 ),
                 error: (error, _) => SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(side, 18, side, 32),
+                  padding: EdgeInsets.fromLTRB(side, 18, side, 32),
                   sliver: SliverToBoxAdapter(
                     child: WaveError(
                       title: 'Could not load YouTube Music Home',
