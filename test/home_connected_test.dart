@@ -77,6 +77,11 @@ Future<void> _pump(
         ytConnectionProvider.overrideWith(
           (ref) => YtConnection(connected: connected),
         ),
+        ytHomeFeedProvider.overrideWith(
+          (ref) async => connected
+              ? YtHomeFeed(shelves: _shelves)
+              : const YtHomeFeed(),
+        ),
         ytHomeShelvesProvider.overrideWith(
           (ref) async => connected ? _shelves : const [],
         ),
@@ -116,7 +121,7 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('connected Home leads with YouTube shelves in priority order', (
+  testWidgets('connected Home renders YouTube shelves in Edit Home order', (
     tester,
   ) async {
     await _pump(tester, size: const Size(1400, 4000), connected: true);
@@ -124,17 +129,13 @@ void main() {
     final quick = tester.getTopLeft(find.text('Quick picks')).dy;
     final again = tester.getTopLeft(find.text('Listen again')).dy;
     final mix = tester.getTopLeft(find.text('Mixed for you')).dy;
-    final because =
-        tester.getTopLeft(find.text('Because you listened to Fav')).dy;
     final releases = tester.getTopLeft(find.text('New releases')).dy;
     final videos = tester.getTopLeft(find.text('Music videos for you')).dy;
     expect(quick, lessThan(again));
-    // YouTube's own shelves keep YouTube's order...
-    expect(again, lessThan(videos));
-    expect(videos, lessThan(mix));
+    expect(again, lessThan(mix));
     expect(mix, lessThan(releases));
-    // ...and the small Last.fm rows follow the feed.
-    expect(releases, lessThan(because));
+    // API shelves without an Edit Home category keep their server order last.
+    expect(releases, lessThan(videos));
 
     expect(find.text('CHART SPOTLIGHT'), findsNothing);
     expect(find.text('Trending Now'), findsNothing);
