@@ -900,13 +900,13 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   }
 
   Future<void> setVolume(double volume, {bool software = true}) async {
-    final v = volume.clamp(0.0, 1.0);
+    final v = volume.clamp(0.0, 1.0).toDouble();
     state = state.copyWith(volume: v);
     if (!software || _lockSoftwareVolume) {
       await _player?.setVolume(100);
       return;
     }
-    await _player?.setVolume(((_lockSoftwareVolume ? 1.0 : v) * 100).clamp(0.0, 100.0));
+    await _player?.setVolume(v * 100);
   }
 
   /// Apply WASAPI exclusive / device to the existing libmpv player.
