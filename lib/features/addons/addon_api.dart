@@ -1204,22 +1204,30 @@ class AddonApi implements LosslessSource {
     }
   }
 
-  static String _streamFormatForPayload({
+  @visibleForTesting
+  static String streamFormatForPayload({
     required String codec,
     required String manifestXml,
     required List<String> urls,
     required bool isAtmos,
     required bool mp3,
   }) {
-    final metadata = '${codec.toLowerCase()} ${manifestXml.toLowerCase()} '
-        '${urls.join(' ').toLowerCase()}';
+    // MPD codec information lives in codec-related attributes. Do not scan
+    // BaseURL/SegmentTemplate values or signed URLs: an arbitrary "ac3"
+    // substring there must never override a declared AAC codec.
+    final manifestCodecs = RegExp(
+      r'\\b(?:codecs?|mimeType|contentType)\\s*=\\s*["\\']([^"\\']+)["\\']',
+      caseSensitive: false,
+    ).allMatches(manifestXml).map((m) => m.group(1)!).join(' ');
+    final metadata = '${codec.toLowerCase()} ${manifestCodecs.toLowerCase()}';
+    final eac3Token =
+        RegExp(r'(^|[^a-z0-9])(?:eac3|e-ac3|ec-3|ec3)(?=$|[^a-z0-9])');
+    final ac3Token = RegExp(r'(^|[^a-z0-9])(?:ac-3|ac3)(?=$|[^a-z0-9])');
+
     if (metadata.contains('flac')) return 'FLAC';
-    if (metadata.contains('eac3') ||
-        metadata.contains('ec-3') ||
-        metadata.contains('ec3')) {
-      return 'E-AC3';
-    }
-    if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
+    if (eac3Token.hasMatch(metadata)) return 'E-AC3';
+    if (ac3Token.hasMatch(metadata)) return 'AC-3';
+
     final opusAt = metadata.indexOf('opus');
     final aacCandidates = [
       metadata.indexOf('mp4a'),
@@ -1233,16 +1241,21 @@ class AddonApi implements LosslessSource {
           ? 'OPUS'
           : 'AAC';
     }
-    if (mp3 || metadata.contains('.mp3') || metadata.contains('mpeg')) {
+    bool hasPathExtension(String extension) => urls.any((url) {
+          final path = Uri.tryParse(url)?.path.toLowerCase() ??
+              url.split('?').first.toLowerCase();
+          return path.endsWith(extension);
+        });
+    if (mp3 || metadata.contains('mpeg') || hasPathExtension('.mp3')) {
       return 'MP3';
     }
     if (isAtmos) return 'DOLBY ATMOS';
-    if (urls.any((url) {
-      final path = url.split('?').first.toLowerCase();
-      return path.endsWith('.m4a') || path.endsWith('.mp4');
-    })) {
-      return 'AAC';
+    // Recognize AC-3 only by an explicit codec declaration or exact suffix.
+    if (hasPathExtension('.eac3') || hasPathExtension('.ec3')) {
+      return 'E-AC3';
     }
+    if (hasPathExtension('.ac3')) return 'AC-3';
+    if (hasPathExtension('.m4a') || hasPathExtension('.mp4')) return 'AAC';
     return 'FLAC';
   }
 
@@ -1352,7 +1365,7 @@ class AddonApi implements LosslessSource {
             : hiRes
                 ? 'HI-RES FLAC'
                 : 'LOSSLESS';
-    final streamFormat = _streamFormatForPayload(
+    final streamFormat = streamFormatForPayload(
       codec: data['codec']?.toString() ?? '',
       manifestXml: manifestXml,
       urls: urls,
