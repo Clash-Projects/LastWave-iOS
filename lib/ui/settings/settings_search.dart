@@ -128,10 +128,9 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     id: 'appearance.theme',
     section: 'appearance',
     title: 'Theme',
-    subtitle: 'Midnight, White, or your own colours',
+    subtitle: 'Choose Dark or Light mode; the accent adjusts automatically',
     keywords:
-        'dark light midnight white custom theme background base tint '
-        'accent colour color picker palette mode personalize',
+        'dark light theme mode appearance automatic accent black white',
   ),
   SettingsSearchEntry(
     id: 'lastfm.connection',
