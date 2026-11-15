@@ -188,7 +188,7 @@ const settingsSearchEntries = <SettingsSearchEntry>[
     section: 'more',
     title: 'More',
     subtitle: 'Additional pages and tools',
-    keywords: 'edit home artist browse listening history friends mixes podcasts speed dial quick access',
+    keywords: 'artist browse listening history friends mixes podcasts speed dial quick access',
   ),
   SettingsSearchEntry(
     id: 'about.main',
