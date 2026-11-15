@@ -20,7 +20,7 @@
 
 ## Overview
 
-LastWave for iOS is the iPhone and iPad port of [LastWave Desktop](https://github.com/Clash-Projects/LastWave-Desktop). It shares the Flutter codebase with the desktop app, and its mobile interface follows the design of the Android app, [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native). See [UPSTREAM_NOTICES.md](UPSTREAM_NOTICES.md) for what was adapted from where.
+LastWave for iOS is the iPhone and iPad port of [original LastWave codebase](https://github.com/Clash-Projects/LastWave-Desktop). It shares the Flutter codebase with the desktop app, and its mobile interface follows the design of the Android app, [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native). See [UPSTREAM_NOTICES.md](UPSTREAM_NOTICES.md) for what was adapted from where.
 
 The port is a work in progress. The feature list below comes from the shared codebase, and not everything on it has been verified on iOS yet. In particular, background playback is declared but still needs on-device testing, and desktop-only items (Bit-Perfect output, system tray, global hotkeys, Discord Rich Presence, mini-player window) do not apply on iPhone or iPad.
 
@@ -180,7 +180,7 @@ If LastWave has been useful to you, consider supporting its development.
 
 ## Acknowledgements
 
-LastWave for iOS builds on [LastWave-Desktop](https://github.com/Clash-Projects/LastWave-Desktop) and adapts UI from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native), both by Clash-Projects. It is made possible thanks to these open-source projects:
+LastWave for iOS builds on [the original LastWave codebase](https://github.com/Clash-Projects/LastWave-Desktop) and adapts UI from [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native), both by Clash-Projects. It is made possible thanks to these open-source projects:
 
 - **[media_kit](https://github.com/media-kit/media-kit)** — Audio playback engine powered by libmpv
 - **[Limusic](https://github.com/chenyandian/Limusic)** — InnerTube client registry & stream resolution fast path
