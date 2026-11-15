@@ -25,16 +25,17 @@ class WaveLibraryTabs extends StatelessWidget {
         child: Row(
           children: [
             for (final destination in _destinations)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ToggleButton(
-                  checked: activePath == destination.$1,
-                  onChanged: (selected) {
-                    if (selected) context.go(destination.$1);
-                  },
-                  child: Text(destination.$2),
+              if (activePath != '/playlists' || destination.$1 != '/albums')
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ToggleButton(
+                    checked: activePath == destination.$1,
+                    onChanged: (selected) {
+                      if (selected) context.go(destination.$1);
+                    },
+                    child: Text(destination.$2),
+                  ),
                 ),
-              ),
           ],
         ),
       ),
