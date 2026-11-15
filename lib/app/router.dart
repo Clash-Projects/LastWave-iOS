@@ -18,7 +18,6 @@ import '../ui/collections/yt_playlist_detail_page.dart';
 import '../ui/collections/yt_shelf_page.dart';
 import '../ui/podcasts/podcasts_page.dart';
 import '../ui/stats/stats_page.dart';
-import '../ui/home/home_layout_page.dart';
 import '../ui/home/home_page.dart';
 import '../ui/home/discovery_sections.dart' show WaveNewReleasesPage;
 import '../ui/jam/jam_page.dart';
@@ -184,11 +183,6 @@ GoRouter buildRouter() {
                 path: '/home',
                 pageBuilder: (c, s) =>
                     _page(const WaveHomePage()),
-              ),
-              GoRoute(
-                path: '/home-layout',
-                pageBuilder: (c, s) =>
-                    _page(const WaveHomeLayoutPage()),
               ),
               GoRoute(
                 path: '/new-releases',
