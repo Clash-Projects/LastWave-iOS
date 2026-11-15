@@ -2,7 +2,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:go_router/go_router.dart';
 
 /// Compact collection switcher shared by the Playlists, Liked Songs,
-/// Albums and Downloads pages on iPhone and iPad.
+/// and Downloads pages on iPhone and iPad.
 class WaveLibraryTabs extends StatelessWidget {
   final String activePath;
 
@@ -11,7 +11,6 @@ class WaveLibraryTabs extends StatelessWidget {
   static const _destinations = <(String, String)>[
     ('/playlists', 'Playlists'),
     ('/liked', 'Liked Songs'),
-    ('/albums', 'Albums'),
     ('/downloads', 'Downloads'),
   ];
 
@@ -25,7 +24,6 @@ class WaveLibraryTabs extends StatelessWidget {
         child: Row(
           children: [
             for (final destination in _destinations)
-              if (activePath != '/playlists' || destination.$1 != '/albums')
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ToggleButton(
