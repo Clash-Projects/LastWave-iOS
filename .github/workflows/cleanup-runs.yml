@@ -1,0 +1,58 @@
+name: Clean up old workflow runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_cleanup:
+        description: Delete older completed iOS workflow runs (preserves the two protected runs)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete older completed runs
+    if: ${{ inputs.confirm_cleanup }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete older completed iOS workflow runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const protectedRunIds = new Set([
+              43718135728, // Successful 8204e87 baseline (run #343)
+              43719215185, // 24-hour retention change (run #344)
+              context.runId, // Never delete this cleanup run
+            ]);
+
+            const workflowId = 414153378; // .github/workflows/iOS.yml
+            const { owner, repo } = context.repo;
+            const runs = await github.paginate(
+              github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: workflowId, per_page: 100 }
+            );
+
+            const targets = runs.filter(run =>
+              run.status === 'completed' && !protectedRunIds.has(run.id)
+            );
+
+            core.info(`Found ${runs.length} iOS workflow runs; ${targets.length} older completed runs will be deleted.`);
+
+            let deleted = 0;
+            for (const run of targets) {
+              await github.rest.actions.deleteWorkflowRun({
+                owner,
+                repo,
+                run_id: run.id,
+              });
+              deleted++;
+              core.info(`Deleted run #${run.run_number} (${run.id})`);
+              // Avoid issuing a large burst of delete requests.
+              await new Promise(resolve => setTimeout(resolve, 250));
+            }
+
+            core.info(`Cleanup complete. Deleted ${deleted} runs. Preserved #343, #344, and this cleanup run.`);
