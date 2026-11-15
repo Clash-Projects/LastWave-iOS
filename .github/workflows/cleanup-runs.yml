@@ -43,13 +43,21 @@ jobs:
 
             let deleted = 0;
             for (const run of targets) {
-              await github.rest.actions.deleteWorkflowRun({
-                owner,
-                repo,
-                run_id: run.id,
-              });
-              deleted++;
-              core.info(`Deleted workflow "${run.name}" run #${run.run_number} (${run.id}, branch: ${run.head_branch}).`);
+              try {
+                await github.rest.actions.deleteWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: run.id,
+                });
+                deleted++;
+                core.info(`Deleted workflow "${run.name}" run #${run.run_number} (${run.id}, branch: ${run.head_branch}).`);
+              } catch (error) {
+                if (error.status === 404) {
+                  core.warning(`Skipped workflow "${run.name}" run #${run.run_number} (${run.id}): GitHub returned 404 Not Found.`);
+                  continue;
+                }
+                throw error;
+              }
               // Avoid issuing a large burst of delete requests.
               await new Promise(resolve => setTimeout(resolve, 250));
             }
