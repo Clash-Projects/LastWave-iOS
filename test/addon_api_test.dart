@@ -164,6 +164,45 @@ void main() {
     });
   });
 
+  group('stream format inference', () {
+    test('AAC codec declaration wins over ac3 text in URLs', () {
+      const manifest = '''
+<MPD>
+  <Period>
+    <AdaptationSet contentType="audio" mimeType="audio/mp4">
+      <Representation codecs="mp4a.40.2">
+        <BaseURL>https://cdn.test/ac3-token/song.m4a?sig=123</BaseURL>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>
+''';
+      expect(
+        AddonApi.streamFormatForPayload(
+          codec: '',
+          manifestXml: manifest,
+          urls: const ['https://cdn.test/ac3-token/song.m4a?sig=123'],
+          isAtmos: false,
+          mp3: false,
+        ),
+        'AAC',
+      );
+    });
+
+    test('explicit AC-3 codec declaration is retained', () {
+      expect(
+        AddonApi.streamFormatForPayload(
+          codec: 'ac-3',
+          manifestXml: '<MPD />',
+          urls: const ['https://cdn.test/audio.bin'],
+          isAtmos: false,
+          mp3: false,
+        ),
+        'AC-3',
+      );
+    });
+  });
+
   group('Atmos helpers', () {
     test('isAtmosCodec recognizes spatial codecs', () {
       expect(AddonApi.isAtmosCodec('ec-3'), isTrue);
