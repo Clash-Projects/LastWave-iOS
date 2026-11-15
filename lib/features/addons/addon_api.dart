@@ -1204,23 +1204,6 @@ class AddonApi implements LosslessSource {
     }
   }
 
-  static bool _payloadIsDecoy(Map<String, dynamic> data) {
-    for (final k in const [
-      'url',
-      'dataUrl',
-      'directUrl',
-      'streamUrl',
-      'downloadUrl',
-      'mediaUrl',
-    ]) {
-      final v = data[k]?.toString() ?? '';
-      if (v.isNotEmpty && isDecoyUrl(v)) return true;
-    }
-    final manifest = data['manifestXml']?.toString() ?? '';
-    return manifest.contains('pranks-cdn') ||
-        manifest.contains('definatelynagato');
-  }
-
   static String _streamFormatForPayload({
     required String codec,
     required String manifestXml,
