@@ -121,7 +121,7 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('connected Home renders YouTube shelves in Edit Home order', (
+  testWidgets('connected Home renders YouTube shelves in saved Home order', (
     tester,
   ) async {
     await _pump(tester, size: const Size(1400, 4000), connected: true);
@@ -134,7 +134,7 @@ void main() {
     expect(quick, lessThan(again));
     expect(again, lessThan(mix));
     expect(mix, lessThan(releases));
-    // API shelves without an Edit Home category keep their server order last.
+    // API shelves without a matching Home category keep their server order last.
     expect(releases, lessThan(videos));
 
     expect(find.text('CHART SPOTLIGHT'), findsNothing);
