@@ -63,9 +63,6 @@ String waveActivePath(String location) {
   if (path.startsWith('/now')) return '/home';
   if (path.startsWith('/history')) return '/stats';
   if (path.startsWith('/stats')) return '/stats';
-  if (path == '/home-layout' || path.startsWith('/home-layout/')) {
-    return '/home';
-  }
   if (path.startsWith('/mixes')) return '/home';
   if (path.startsWith('/profile')) return '/friends';
   return '/home';
