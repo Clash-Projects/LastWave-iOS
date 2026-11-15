@@ -2718,9 +2718,7 @@ class _AboutState extends ConsumerState<_About> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                Platform.isIOS
-                    ? 'LastWave for iOS - sundaywired'
-                    : 'LastWave Desktop · v$appVersion',
+                'LastWave iOS · v$appVersion',
                 style: WaveType.trackTitle,
               ),
               if (!Platform.isIOS) _buildUpdateButton(),
