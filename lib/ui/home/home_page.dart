@@ -263,8 +263,8 @@ class _WaveHomePageState extends ConsumerState<WaveHomePage> {
       }
     }
 
-    // Keep new or localized shelves that do not yet have a matching Edit
-    // Home slot. YouTube's own ordering is preserved for this remainder.
+    // Keep new or localized shelves that do not yet have a matching Home
+    // slot. YouTube's own ordering is preserved for this remainder.
     for (var i = 0; i < feed.shelves.length; i++) {
       final shelf = feed.shelves[i];
       if (renderedShelfIndexes.contains(i) || !shelf.isRenderable) continue;
