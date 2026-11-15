@@ -215,29 +215,27 @@ class ResolvedStream {
       return 'AAC';
     }
 
+    // Codec labels are matched as complete tokens. In particular, never
+    // search a signed media URL for "ac3": opaque path/query text can contain
+    // those characters even when the actual stream is AAC.
+    final eac3Token =
+        RegExp(r'(^|[^a-z0-9])(?:eac3|e-ac3|ec-3|ec3)(?=$|[^a-z0-9])');
+    final ac3Token = RegExp(r'(^|[^a-z0-9])(?:ac-3|ac3)(?=$|[^a-z0-9])');
+
     final declared = format.trim().toLowerCase();
     if (declared.contains('flac')) return 'FLAC';
-    if (declared.contains('eac3') ||
-        declared.contains('ec-3') ||
-        declared.contains('ec3')) {
-      return 'E-AC3';
-    }
-    if (declared.contains('ac-3') || declared.contains('ac3')) return 'AC-3';
+    if (eac3Token.hasMatch(declared)) return 'E-AC3';
+    if (ac3Token.hasMatch(declared)) return 'AC-3';
     final declaredAacOrOpus = orderedAacOrOpus(declared);
     if (declaredAacOrOpus != null) return declaredAacOrOpus;
     if (declared.contains('mp3')) return 'MP3';
     if (declared.contains('wav')) return 'WAV';
     if (declared.contains('atmos')) return 'DOLBY ATMOS';
 
-    final metadata =
-        '${audioCodec.toLowerCase()} ${mimeType.toLowerCase()} ${url.toLowerCase()}';
+    final metadata = '${audioCodec.toLowerCase()} ${mimeType.toLowerCase()}';
     if (metadata.contains('flac')) return 'FLAC';
-    if (metadata.contains('eac3') ||
-        metadata.contains('ec-3') ||
-        metadata.contains('ec3')) {
-      return 'E-AC3';
-    }
-    if (metadata.contains('ac-3') || metadata.contains('ac3')) return 'AC-3';
+    if (eac3Token.hasMatch(metadata)) return 'E-AC3';
+    if (ac3Token.hasMatch(metadata)) return 'AC-3';
     if (metadata.contains('atmos')) return 'DOLBY ATMOS';
     final metadataAacOrOpus = orderedAacOrOpus(metadata);
     if (metadataAacOrOpus != null) return metadataAacOrOpus;
@@ -247,6 +245,12 @@ class ResolvedStream {
       return 'MP3';
     }
     if (metadata.contains('wav')) return 'WAV';
+
+    // A file extension is useful evidence; arbitrary URL text is not.
+    final urlPath = Uri.tryParse(url)?.path.toLowerCase() ??
+        url.split('?').first.toLowerCase();
+    if (urlPath.endsWith('.eac3') || urlPath.endsWith('.ec3')) return 'E-AC3';
+    if (urlPath.endsWith('.ac3')) return 'AC-3';
     if (isLossless) return 'FLAC';
 
     final subtype = mimeType.split('/').last.split(';').first.trim();
