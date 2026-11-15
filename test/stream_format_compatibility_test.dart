@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lastwave_desktop/core/audio/stream_models.dart';
 import 'package:lastwave_desktop/core/network/dio_factory.dart';
 import 'package:lastwave_desktop/core/storage/secure_store.dart';
 import 'package:lastwave_desktop/features/innertube/innertube_api.dart';
@@ -62,6 +63,26 @@ void main() {
     expect(stream!.url, contains('itag=251'));
     expect(stream.mimeType, 'audio/webm');
     expect(stream.audioCodec, 'OPUS');
+  });
+
+  test('AAC stays AAC when an opaque signed URL contains ac3 text', () {
+    final stream = ResolvedStream(
+      url: 'https://cdn.example.test/media/ac3-token/song.m4a?sig=abc',
+      mimeType: 'audio/mp4',
+      audioCodec: 'AAC',
+    );
+
+    expect(stream.formatLabel, 'AAC');
+  });
+
+  test('explicit AC-3 MIME codec remains identifiable', () {
+    final stream = ResolvedStream(
+      url: 'https://cdn.example.test/media/song.bin?sig=abc',
+      mimeType: 'audio/ac3; codecs="ac-3"',
+      audioCodec: 'AC-3',
+    );
+
+    expect(stream.formatLabel, 'AC-3');
   });
 
   test('never selects a sabr: URL', () async {
