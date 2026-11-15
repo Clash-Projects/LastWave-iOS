@@ -145,7 +145,7 @@ class LogBundle {
   }
 
   static const String _readme = '''
-LastWave Desktop diagnostics bundle
+LastWave iOS diagnostics bundle
 ===================================
 
 diagnostics.txt            App/build/platform summary, audio output path,
