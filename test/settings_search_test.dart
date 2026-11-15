@@ -35,8 +35,8 @@ void main() {
     expect(titles('wavy timeline'), isEmpty);
   });
 
-  test('new destinations are searchable', () {
-    expect(titles('edit home'), contains('More'));
+  test('Edit Home is no longer searchable', () {
+    expect(titles('edit home'), isEmpty);
   });
 
   test('the removed Experimental section is not searchable', () {
