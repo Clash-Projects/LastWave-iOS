@@ -1,4 +1,4 @@
-# Performance & bug-fix report — LastWave Desktop
+# Performance & bug-fix report — LastWave iOS
 
 **Branch:** `claude/cool-wozniak-i1f3h0`. This is the branch the session was
 allowed to push to; the brief asked for `perf-and-fixes`. The branch has 12
