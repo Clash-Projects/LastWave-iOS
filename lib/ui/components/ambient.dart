@@ -1492,9 +1492,37 @@ class AmbientWash extends StatelessWidget {
             opacity: palette == null ? 0 : 1,
             duration: waveMotion(context, WaveMotion.slow),
             curve: WaveMotion.standard,
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: hue.withValues(alpha: alpha)),
-              child: const SizedBox.expand(),
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (bounds) => const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.white,
+                  Colors.white,
+                  Colors.transparent,
+                ],
+                stops: [0.0, 0.18, 0.82, 1.0],
+              ).createShader(bounds),
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (bounds) => const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.transparent,
+                    Colors.white,
+                    Colors.white,
+                    Colors.transparent,
+                  ],
+                  stops: [0.0, 0.06, 0.78, 1.0],
+                ).createShader(bounds),
+                child: ColoredBox(
+                  color: hue.withValues(alpha: alpha),
+                  child: const SizedBox.expand(),
+                ),
+              ),
             ),
           ),
         );
