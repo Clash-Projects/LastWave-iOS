@@ -1277,7 +1277,7 @@ Future<LyricsResult?> fetchBiniLyrics(
         options: Options(
           headers: {
             'User-Agent':
-                'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+                'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
             'Accept': 'application/json',
           },
         ),
@@ -1363,7 +1363,7 @@ Future<LyricsResult?> fetchBiniLyrics(
         responseType: ResponseType.plain,
         headers: {
           'User-Agent':
-              'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+              'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
           'Accept': 'application/xml, text/xml, */*',
         },
       ),
@@ -1466,7 +1466,7 @@ Future<LyricsResult?> fetchLyricsPlus(
           responseType: ResponseType.json,
           headers: {
             'User-Agent':
-                'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+                'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
             'Accept': 'application/json',
           },
         ),
@@ -1566,7 +1566,7 @@ Future<LyricsResult?> fetchUnisonLyrics(
         responseType: ResponseType.json,
         headers: {
           'User-Agent':
-              'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+              'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
           'Accept': 'application/json',
         },
       ),
@@ -1639,7 +1639,7 @@ Future<LyricsResult?> fetchMegalobizLyrics(
         responseType: ResponseType.plain,
         headers: {
           'User-Agent':
-              'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+              'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
           'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
         },
       ),
@@ -1657,7 +1657,7 @@ Future<LyricsResult?> fetchMegalobizLyrics(
         responseType: ResponseType.plain,
         headers: {
           'User-Agent':
-              'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+              'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
         },
       ),
     );
@@ -1819,7 +1819,7 @@ Future<LyricsResult?> fetchLastWaveLyrics(
         responseType: ResponseType.plain,
         headers: {
           'User-Agent':
-              'LastWave-Desktop/1.0 (https://github.com/clash-projects/lastwave-desktop)',
+              'LastWave-iOS/1.0 (https://github.com/Clash-Projects/LastWave-iOS)',
           'Accept': 'application/json, text/plain',
         },
       ),
