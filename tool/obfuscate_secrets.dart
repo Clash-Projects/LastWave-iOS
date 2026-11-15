@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// Build-time secret obfuscation for LastWave Desktop.
+/// Build-time secret obfuscation for LastWave iOS.
 ///
 /// Mirrors LastWave-native's `obfuscateSecret()` (XOR each byte with a
 /// repeating mask, stored as byte arrays in BuildConfig, decoded at
