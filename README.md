@@ -109,7 +109,7 @@ There is no App Store release. The GitHub Actions workflow **LastWave iOS** buil
 | Platform | Source |
 |:---|:---|
 | **iPhone / iPad** | This repository (unsigned `.ipa` from CI, or build from source below) |
-| **Windows, Linux, macOS** | [LastWave-Desktop](https://github.com/Clash-Projects/LastWave-Desktop/releases) |
+| **Windows, Linux, macOS** | [Original desktop releases](https://github.com/Clash-Projects/LastWave-Desktop/releases) |
 | **Android** | [LastWave-Native](https://github.com/Clash-Projects/LastWave-Native) |
 
 ### Quick Setup
