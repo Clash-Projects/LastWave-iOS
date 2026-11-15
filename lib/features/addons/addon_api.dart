@@ -69,11 +69,7 @@ class AddonApi implements LosslessSource {
               ..options.connectTimeout =
                   const Duration(seconds: 10));
 
-  /// Set when the server refused the build secret but accepted the
-  /// published default; every later request signs with it.
-  String? _secretOverride;
-  bool _fallbackSecretTried = false;
-  String get _secret => _secretOverride ?? AppEnv.addonClientSecret;
+  String get _secret => AppEnv.addonClientSecret;
 
   @override
   bool get isConfigured => bases.isNotEmpty;
@@ -1160,46 +1156,6 @@ class AddonApi implements LosslessSource {
           continue;
         }
         return null;
-      }
-    }
-    // The server answers a refused proof with a decoy payload. If the build
-    // secret was refused, try the published default once; when it is
-    // accepted, keep using it for the rest of the session.
-    if (data != null &&
-        !_fallbackSecretTried &&
-        _secretOverride == null &&
-        AppEnv.addonSecretSource == 'build' &&
-        _payloadIsDecoy(data)) {
-      _fallbackSecretTried = true;
-      try {
-        final fallback = AppEnv.addonFallbackSecret;
-        final token = tokenOfRoot(root);
-        final res = await _dio.get<Map<String, dynamic>>(
-          '${root}stream/$trackId',
-          queryParameters: {
-            'quality': serverQuality,
-            'atmos': wantAtmos ? 'auto' : 'none',
-          },
-          options: Options(
-            headers: signFor(
-              secret: fallback,
-              method: 'GET',
-              path: path,
-              token: token,
-              ts: (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString(),
-            ),
-          ),
-        ).timeout(timeout);
-        final alt = unwrapStreamPayload(res.data ?? const {});
-        final accepted = !_payloadIsDecoy(alt);
-        TraceCrumb.write('resolve stage=stream-fallback-secret '
-            'result=${accepted ? 'accepted' : 'rejected'}');
-        if (accepted) {
-          _secretOverride = fallback;
-          data = alt;
-        }
-      } catch (_) {
-        TraceCrumb.write('resolve stage=stream-fallback-secret result=error');
       }
     }
     final resolved = data;
