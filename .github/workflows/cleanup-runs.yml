@@ -1,4 +1,5 @@
 name: Clean up old workflow runs
+run-name: Repository-wide workflow cleanup
 
 on:
   workflow_dispatch:
