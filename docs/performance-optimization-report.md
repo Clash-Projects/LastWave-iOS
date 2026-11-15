@@ -1,6 +1,6 @@
 # 144Hz Bare-Metal Performance, Smooth Scroll & Zero-Jank Architecture Report
 
-**LastWave Desktop — High-Refresh Performance Overhaul**  
+**LastWave iOS — High-Refresh Performance Overhaul**  
 **Date:** October 17, 2026  
 **Status:** Completed & Verified (12/12 Unit Tests Passing, Clean Static Analysis)
 
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary & Impact
 
-Prior to this optimization, LastWave Desktop exhibited noticeable frame drops, stutter during window scrolling, up to 15% CPU load in synced lyrics, and visible lag when switching tabs. 
+Prior to this optimization, LastWave iOS exhibited noticeable frame drops, stutter during window scrolling, up to 15% CPU load in synced lyrics, and visible lag when switching tabs. 
 
 Our architectural audit identified 5 root bottlenecks in the graphics and execution pipeline:
 1. **Artificial 30Hz Frame Throttling & Gaussian Blur Passes in Lyrics:** The karaoke ticker had a 33,000µs clamp; every inactive line executed `ImageFiltered(ImageFilter.blur)` (28 blur passes per frame); and active line ticks destroyed and recreated list view widgets at 1,440 shader allocations/sec.
@@ -80,8 +80,8 @@ All bottlenecks have been resolved. The application now runs locked to native di
 ### 3.1 Unit Test Suite
 Ran `flutter test`:
 ```
-00:00 +0: loading C:/Users/Ajisth/Documents/LastWave Desktop/test/lyrics_match_parse_test.dart
-00:01 +0: loading C:/Users/Ajisth/Documents/LastWave Desktop/test/scroll_physics_test.dart
+00:00 +0: loading C:/Users/Ajisth/Documents/LastWave iOS/test/lyrics_match_parse_test.dart
+00:01 +0: loading C:/Users/Ajisth/Documents/LastWave iOS/test/scroll_physics_test.dart
 00:01 +0: test/lyrics_match_parse_test.dart: sameVersion rejects live/remix, accepts remaster
 00:01 +1: test/lyrics_match_parse_test.dart: strict title match rejects substring theft
 00:01 +2: test/lyrics_match_parse_test.dart: strict artist match rejects short-name theft
