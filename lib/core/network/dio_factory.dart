@@ -6,15 +6,15 @@ import 'rate_guard.dart';
 
 /// Shared Dio factory with LastWave networking behaviour ported from
 /// Android `di/NetworkModule.kt`:
-/// - desktop User-Agent + JSON accept headers
+/// - app User-Agent + JSON accept headers
 /// - generous pool/timeouts, retry-on-connection-failure
 /// - Last.fm 429/503 backoff via [LastFmRateGuard]
 class DioFactory {
   DioFactory._();
 
-  static const String desktopUserAgent =
+  static const String appUserAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) '
-      'Gecko/20100101 Firefox/140.0 LastWave-Desktop/1.0';
+      'Gecko/20100101 Firefox/140.0 LastWave-iOS/1.0';
 
   static Dio create({LastFmRateGuard? rateGuard}) {
     final dio = Dio(
@@ -23,7 +23,7 @@ class DioFactory {
         receiveTimeout: const Duration(seconds: 15),
         sendTimeout: const Duration(seconds: 15),
         headers: {
-          'User-Agent': desktopUserAgent,
+          'User-Agent': appUserAgent,
           'Accept': 'application/json, text/plain, */*',
           'Accept-Language': 'en-US,en;q=0.9',
         },
