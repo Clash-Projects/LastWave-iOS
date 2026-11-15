@@ -751,8 +751,10 @@ class _WaveArtistPageState extends ConsumerState<WaveArtistPage> {
                         Text(d.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: WaveType.pageTitle
-                                .copyWith(fontSize: 30)),
+                            style: WaveType.pageTitle.copyWith(
+                              fontSize: 30,
+                              color: waveTextPrimary(context),
+                            )),
                         if (bioLoading) ...[
                           const SizedBox(height: 8),
                           const SkeletonBox(width: 240, height: 10),
