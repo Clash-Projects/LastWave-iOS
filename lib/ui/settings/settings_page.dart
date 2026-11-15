@@ -764,8 +764,6 @@ class _Audio extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _TimedMixSettings(onUpdate: onUpdate),
-        const SizedBox(height: 8),
         _Group(
           id: 'audio.equalizer',
           title: 'Equalizer & Sound FX',
