@@ -1216,7 +1216,7 @@ class AddonApi implements LosslessSource {
     // BaseURL/SegmentTemplate values or signed URLs: an arbitrary "ac3"
     // substring there must never override a declared AAC codec.
     final manifestCodecs = RegExp(
-      r'\b(?:codecs?|mimeType|contentType)\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]',
+      r"""\b(?:codecs?|mimeType|contentType)\s*=\s*["']([^"']+)["']""",
       caseSensitive: false,
     ).allMatches(manifestXml).map((m) => m.group(1)!).join(' ');
     final metadata = '${codec.toLowerCase()} ${manifestCodecs.toLowerCase()}';
