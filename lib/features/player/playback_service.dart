@@ -169,9 +169,9 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   // Set when mpv rejected the EQ / headphone graph (missing FFmpeg filter):
   // processing stays off for the rest of the session.
   bool _processingDisabled = false;
+  bool _filterErrorLogged = false;
   String _hpFilter = '';
   String _currentAudioFilter = '';
-  String _currentAudioDevice = 'auto';
   /// Album ReplayGain (dB, before the -14 LUFS preamp) shared by the
   /// current album when libmpv reports the same tag twice. NaN means
   /// the tags disagreed, so untagged siblings use the fixed fallback.
@@ -587,7 +587,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
           // A rejected audio filter is not a broken stream: the audio
           // keeps playing. Treating it as one restarted the song, then
           // fell back to YouTube, then marked it unavailable and skipped.
-          if (isFilterGraphError(e)) {
+          if (_isFilterGraphError(e)) {
             _onFilterGraphError(e);
             return;
           }
@@ -616,6 +616,27 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       await _applyRateAndPitch();
     }
     _notifyProcessing();
+  }
+
+  static bool _isFilterGraphError(String message) {
+    final lower = message.toLowerCase();
+    // Only classify explicit filter-graph setup failures. Ordinary stream,
+    // network, and decoder errors must continue through the playback retry
+    // path rather than disabling the user's EQ or headphone correction.
+    return lower.contains('filter graph') ||
+        lower.contains('failed to configure filter') ||
+        lower.contains('failed to initialize filter') ||
+        lower.contains('error opening filter') ||
+        lower.contains('error applying option') ||
+        lower.contains('invalid filter') ||
+        lower.contains('filter not found') ||
+        lower.contains('no such filter') ||
+        lower.contains('could not configure filter') ||
+        lower.contains('failed to create filter') ||
+        (lower.contains('lavfi') &&
+            (lower.contains('failed') ||
+                lower.contains('error') ||
+                lower.contains('invalid')));
   }
 
   void _onFilterGraphError(String text) {
@@ -926,7 +947,6 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       return;
     }
     _lockSoftwareVolume = lockSoftwareVolume;
-    _currentAudioDevice = mpvDevice;
     final player = _player;
     if (player == null) {
       exclusiveApplied = false;
