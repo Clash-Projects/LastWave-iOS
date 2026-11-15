@@ -1,5 +1,5 @@
 # Flutter Engine & GPU Rasterization Diagnostic Audit
-**Target System:** LastWave Desktop (Windows / Linux / macOS)  
+**Target System:** LastWave iOS (Windows / Linux / macOS)  
 **Profile Target:** 120Hz / 144Hz+ Display Pacing, Sub-2% Idle/Karaoke CPU, 0-Stutter Native Desktop Scrolling  
 **Audit Mode:** Read-Only Bare-Metal Engine Mechanics & Frame Timing Analysis  
 
@@ -7,7 +7,7 @@
 
 ## Executive Summary & System-Level Diagnosis
 
-LastWave Desktop suffers from five compounding architectural bottlenecks that explain the **30fps feel**, the **15% CPU lyrics burn**, and the **jittery scroll/navigation experience**:
+LastWave iOS suffers from five compounding architectural bottlenecks that explain the **30fps feel**, the **15% CPU lyrics burn**, and the **jittery scroll/navigation experience**:
 
 1. **Explicit 30Hz Frame-Throttling in Karaoke Ticker:** A hardcoded `33,000µs` wall-clock guard in the lyric engine clamps animation updates to ~30.3 FPS, dragging perceived UI fluidity down to 30Hz.
 2. **GPU Raster Starvation via Multi-Pass Gaussian Blurs:** Every inactive lyric line (12–25 on screen) runs an active `ImageFiltered(ImageFilter.blur)`. Simultaneously, persistent window chrome (Title Bar, Side Rail, Player Dock) mounts live `BackdropFilter` widgets directly above scrolling surfaces, forcing dozens of redundant `saveLayer()` allocations per frame.
