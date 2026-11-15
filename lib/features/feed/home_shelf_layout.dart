@@ -16,7 +16,7 @@ const homeShelfLayoutKey = 'home_shelf_layout';
 abstract final class HomeShelfId {
   static const home = 'home';
   // Kept only to recognize and suppress the unsupported API chip.
-  // It is intentionally absent from Edit Home defaults.
+  // It is intentionally absent from the supported Home shelf defaults.
   static const samples = 'samples';
   static const explore = 'explore';
   static const library = 'library';
@@ -48,7 +48,7 @@ abstract final class HomeShelfId {
   static const charts = 'charts';
 
   // Compatibility aliases for the older editorial Home renderer. They are
-  // intentionally not part of the new Edit Home catalog.
+  // intentionally not part of the current Home shelf catalog.
   static const taste = energize;
   static const mixes = mixedForYou;
   static const youtube = home;
@@ -64,7 +64,7 @@ abstract final class HomeShelfId {
 }
 
 abstract final class HomeShelfCatalog {
-  /// The order shown in Edit Home and used for the YouTube Music Home feed.
+  /// The default order used for the YouTube Music Home feed.
   static const defaults = <String>[
     HomeShelfId.home,
     HomeShelfId.explore,
