@@ -21,12 +21,7 @@ class AppEnv {
   /// Same mask as LastWave-native `SECRET_MASK`.
   static const _mask = [0x5A, 0x3F, 0x7E, 0x1B, 0x92, 0x4C, 0xA1, 0x6D];
 
-  /// Public LastWave addon protocol fallback. This matches the default
-  /// LASTWAVE_SECRET used by the published LastWave addon worker. A
-  /// build-provided ADDON_CLIENT_SECRET always takes precedence.
-  static const _fallbackAddonClientSecret =
-      '36d96a751b12ee481c281a8a8e64c482d0c1634a22061ab72f40175017818b85';
-
+  /// Add-on authentication is supplied only at build time.
   static String _decode(List<int> data) {
     if (data.isEmpty) return '';
     final bytes = List<int>.generate(
@@ -40,21 +35,14 @@ class AppEnv {
     }
   }
 
-  /// Addon one-way-lock secret (HMAC-SHA256 request proofs). Use the
-  /// generated build-specific secret when present; otherwise use the
-  /// published protocol fallback. The value is never logged.
-  /// 'build' when a CI/.env secret was baked in, 'fallback' otherwise.
-  /// Diagnostics only; never the value.
+  /// Add-on HMAC secret supplied by CI or a local .env file.
+  /// Empty when no build-time secret is configured.
+  static String get addonClientSecret =>
+      _decode(secrets.kAddonClientSecret);
+
+  /// Diagnostics only; never exposes the secret value.
   static String get addonSecretSource =>
-      _decode(secrets.kAddonClientSecret).isNotEmpty ? 'build' : 'fallback';
-
-  /// The published protocol default, used when the build secret is refused.
-  static String get addonFallbackSecret => _fallbackAddonClientSecret;
-
-  static String get addonClientSecret {
-    final configured = _decode(secrets.kAddonClientSecret);
-    return configured.isNotEmpty ? configured : _fallbackAddonClientSecret;
-  }
+      addonClientSecret.isNotEmpty ? 'build' : 'missing';
 
   /// About-screen catalog list. Never includes URLs or keys.
   /// (Settings → Sources) are the only lossless catalog now.
