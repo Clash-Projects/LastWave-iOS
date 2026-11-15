@@ -563,9 +563,8 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       p.stream.completed.listen((done) {
         runGuarded('player.completed', () {
           if (!identical(_player, p)) return;
-          // A deck can emit its final completion event while it is being
-          // retired after a mix transition. Only the currently active deck may
-          // complete the queue's current track.
+          // Ignore completion notifications from a player that has since
+          // been replaced. Only the active player may complete the current track.
           if (done) _onTrackCompleted();
         });
       }),
