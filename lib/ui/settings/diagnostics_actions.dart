@@ -31,7 +31,7 @@ Future<String> buildDiagnosticsReport(WidgetRef ref) async {
   final yt = ref.read(ytConnectionProvider);
   final b = StringBuffer();
 
-  b.writeln('LastWave Desktop diagnostics');
+  b.writeln('LastWave iOS diagnostics');
   b.writeln('generated: ${DateTime.now().toIso8601String()}');
   b.writeln('version: $appVersion');
   b.writeln('mode: ${kReleaseMode ? 'release' : 'debug'}');
