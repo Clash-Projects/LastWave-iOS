@@ -1,4 +1,4 @@
-// On-device performance benchmark for LastWave Desktop.
+// On-device performance benchmark for LastWave iOS.
 //
 // Run in PROFILE mode (debug numbers are meaningless):
 //
