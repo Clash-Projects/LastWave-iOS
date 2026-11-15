@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - .github/workflows/cleanup-runs.yml
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - .github/workflows/cleanup-runs.yml
   workflow_dispatch:
 
 permissions:
