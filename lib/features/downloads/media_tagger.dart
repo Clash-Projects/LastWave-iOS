@@ -875,7 +875,7 @@ class MediaTagger {
           type: 3));
       comments.add('METADATA_BLOCK_PICTURE=$pic');
     }
-    final vendor = utf8.encode('LastWave Desktop');
+    final vendor = utf8.encode('LastWave iOS');
     final parts = <Uint8List>[];
     parts.add(utf8.encode('OpusTags'));
     parts.add(_u32le(vendor.length));
@@ -972,8 +972,8 @@ class MediaTagger {
     }
     final lyrics = tags.lyrics.replaceAll('\r\n', '\n').trim();
     if (lyrics.isNotEmpty) comments.add('LYRICS=$lyrics');
-    comments.add('ENCODER=LastWave Desktop');
-    final vendor = utf8.encode('LastWave Desktop');
+    comments.add('ENCODER=LastWave iOS');
+    final vendor = utf8.encode('LastWave iOS');
     final parts = <Uint8List>[
       _u32le(vendor.length),
       Uint8List.fromList(vendor),
