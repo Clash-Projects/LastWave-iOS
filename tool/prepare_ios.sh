@@ -74,8 +74,8 @@ pbx_path.write_text(pbx, encoding="utf-8")
 with plist_path.open("rb") as handle:
     info = plistlib.load(handle)
 
-info["CFBundleDisplayName"] = "LastWave"
-info["CFBundleName"] = "LastWave"
+info["CFBundleDisplayName"] = "LastWave iOS"
+info["CFBundleName"] = "LastWave iOS"
 
 # Register LastWave's custom URL scheme. The app_links plugin owns incoming
 # URL delivery, so disable Flutter's competing default deep-link handler.
