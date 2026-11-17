@@ -349,6 +349,17 @@ class _DownloadRowState extends ConsumerState<_DownloadRow> {
             label: 'Play offline file',
             onPressed: _play,
           ),
+        if (e.status == DownloadStatus.error)
+          WaveMenuAction(
+            leading: const Icon(FluentIcons.refresh, size: 13),
+            label: 'Retry download',
+            onPressed: () => manager.downloadTrack(
+              title: e.title,
+              artist: e.artist,
+              album: e.album,
+              artworkUrl: e.artworkUrl,
+            ),
+          ),
         WaveMenuAction(
           leading: const Icon(FluentIcons.contact, size: 13),
           label: 'Go to artist',
