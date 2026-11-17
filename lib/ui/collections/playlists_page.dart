@@ -608,11 +608,10 @@ class _PlaylistCardState extends ConsumerState<_PlaylistCard> {
         type: FileType.image,
       );
       final path = file?.path;
-      if (path != null && path.isNotEmpty) {
-        await ref
-            .read(playlistRepositoryProvider.notifier)
-            .setCustomCover(playlist.id, path);
-      }
+      if (!mounted || path == null || path.isEmpty) return;
+      await ref
+          .read(playlistRepositoryProvider.notifier)
+          .setCustomCover(playlist.id, path);
     } else if (action == 'rename') {
       await showWaveRenamePlaylist(context, ref, playlist);
     } else if (action == 'delete') {
