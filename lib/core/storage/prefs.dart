@@ -112,6 +112,19 @@ class Prefs {
       _sp.getBool('lw_show_quality_selector') ?? true;
   Future<void> setShowQualitySelector(bool value) =>
       _sp.setBool('lw_show_quality_selector', value);
+
+  bool get automaticQualityByNetwork =>
+      _sp.getBool('lw_auto_quality_by_network') ?? false;
+  Future<void> setAutomaticQualityByNetwork(bool value) =>
+      _sp.setBool('lw_auto_quality_by_network', value);
+  int get wifiStreamingQuality =>
+      _clampQuality(_sp.getInt('lw_wifi_streaming_quality') ?? 27);
+  Future<void> setWifiStreamingQuality(int value) =>
+      _sp.setInt('lw_wifi_streaming_quality', _clampQuality(value));
+  int get mobileStreamingQuality =>
+      _clampQuality(_sp.getInt('lw_mobile_streaming_quality') ?? 6);
+  Future<void> setMobileStreamingQuality(int value) =>
+      _sp.setInt('lw_mobile_streaming_quality', _clampQuality(value));
   // -- Window behaviour ---------------------------------------------------
   /// Close button / Alt+F4 hides to the tray instead of quitting.
   /// Real quit stays in tray → Quit (ordered player teardown first).
