@@ -34,6 +34,7 @@ class _WaveInfoBarHostState extends ConsumerState<WaveInfoBarHost> {
   bool _dismissedYt = false;
   String? _dismissedDownloadKey;
   String? _dismissedQuotaNotice;
+  String? _dismissedLosslessFallback;
   bool _ytRecovering = false;
 
   @override
@@ -133,6 +134,21 @@ class _WaveInfoBarHostState extends ConsumerState<WaveInfoBarHost> {
         onClose: () {
           setState(() => _dismissedQuotaNotice = quotaNotice);
           ref.read(addonNoticeProvider.notifier).state = null;
+        },
+      ));
+    }
+
+    final losslessFallback = ref.watch(addonFallbackNoticeProvider);
+    if (losslessFallback != null &&
+        _dismissedLosslessFallback != losslessFallback) {
+      bars.add(InfoBar(
+        title: const Text('Lossless unavailable'),
+        content: Text(losslessFallback),
+        severity: InfoBarSeverity.warning,
+        isLong: false,
+        onClose: () {
+          setState(() => _dismissedLosslessFallback = losslessFallback);
+          ref.read(addonFallbackNoticeProvider.notifier).state = null;
         },
       ));
     }
