@@ -243,8 +243,10 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final showMiniPlayer = ref.watch(
           prefsProvider.select((prefs) => prefs.showMiniPlayer),
         ) && !_miniPlayerDismissed;
-        void dismissMiniPlayer() =>
-            setState(() => _miniPlayerDismissed = true);
+        void dismissMiniPlayer() {
+          ref.read(prefsProvider).setShowMiniPlayer(false);
+          setState(() => _miniPlayerDismissed = true);
+        }
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
         final interfaceScale = tablet
             ? 1.0
