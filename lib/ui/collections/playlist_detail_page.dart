@@ -452,14 +452,17 @@ class _WavePlaylistDetailPageState
                   .read(playlistRepositoryProvider.notifier)
                   .removeTrack(
                       playlist.id, asGenerated()[i].key),
-              onPlay: (i) => playGenerated(
-                ref,
-                context,
-                asGenerated()[i],
-                sourceLabel: playlist.title,
-                queueAll: asGenerated(),
-                startIndex: i,
-              ),
+              onPlay: (i) {
+                _markPlayed();
+                playGenerated(
+                  ref,
+                  context,
+                  asGenerated()[i],
+                  sourceLabel: playlist.title,
+                  queueAll: asGenerated(),
+                  startIndex: i,
+                );
+              },
             ),
           ),
         const SliverToBoxAdapter(
