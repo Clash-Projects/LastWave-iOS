@@ -11,14 +11,11 @@ TextSelectionControls? get waveTextSelectionControls =>
         ? cupertinoTextSelectionHandleControls
         : null;
 
-/// TextBox's default builder is the Fluent/Windows toolbar. Hide that
-/// toolbar on iOS while leaving the selection itself intact.
+/// Keep the platform selection toolbar available on iOS. Hiding this
+/// builder removes Paste and Copy from TextBox fields, including secure
+/// credential fields such as the Last.fm shared secret.
 Widget waveTextContextMenuBuilder(
   BuildContext context,
   EditableTextState state,
-) {
-  if (defaultTargetPlatform == TargetPlatform.iOS) {
-    return const SizedBox.shrink();
-  }
-  return TextBox.defaultContextMenuBuilder(context, state);
-}
+) =>
+    TextBox.defaultContextMenuBuilder(context, state);
