@@ -1215,7 +1215,11 @@ class AddonApi implements LosslessSource {
     required bool isAtmos,
   }) {
     final normalized = format.trim().toUpperCase();
-    if (isAtmos) return true;
+    if (isAtmos) {
+      return normalized == 'E-AC3' ||
+          normalized == 'AC-3' ||
+          normalized == 'DOLBY ATMOS';
+    }
     if (mp3) return normalized == 'MP3';
     return isLosslessPayloadFormat(normalized);
   }
