@@ -113,6 +113,10 @@ class _WavePlaylistDetailPageState
         .setCustomCover(playlist.id, path);
   }
 
+  void _markPlayed() {
+    ref.read(playlistRepositoryProvider.notifier).markPlayed(widget.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final playlists = ref.watch(playlistRepositoryProvider);
@@ -238,19 +242,24 @@ class _WavePlaylistDetailPageState
                         WavePrimaryButton(
                           label: 'Play all',
                           icon: FluentIcons.play,
-                          onPressed: () => playGenerated(
-                            ref,
-                            context,
-                            asGenerated().first,
-                            sourceLabel: playlist.title,
-                            queueAll: asGenerated(),
-                          ),
+                          onPressed: () {
+                            _markPlayed();
+                            final queue = asGenerated();
+                            playGenerated(
+                              ref,
+                              context,
+                              queue.first,
+                              sourceLabel: playlist.title,
+                              queueAll: queue,
+                            );
+                          },
                         ),
                         WaveGhostButton(
                           label: 'Shuffle',
                           icon: WaveIcons.shuffle,
                           onPressed: () {
                             // Shuffle BEFORE picking first.
+                            _markPlayed();
                             final shuffled =
                                 asGenerated()..shuffle();
                             playGenerated(
