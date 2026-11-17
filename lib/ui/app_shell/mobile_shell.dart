@@ -476,20 +476,16 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
 class _DockFrame extends StatelessWidget {
   final Widget child;
 
-  /// Top-anchored chrome (the iPhone mini-player) gets its gap above instead
-  /// of below.
-  final bool atTop;
-
-  const _DockFrame({required this.child, this.atTop = false});
+  const _DockFrame({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         WaveTouch.floatInset,
-        atTop ? WaveTouch.floatGap : 0,
+        0,
         WaveTouch.floatInset,
-        atTop ? 0 : WaveTouch.floatGap,
+        WaveTouch.floatGap,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -1252,7 +1248,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                                 radius: WaveRadius.artwork,
                                 label: track.title,
                               ),
-                              const SizedBox(width: WaveSpacing.x3),
+                              const SizedBox(width: WaveSpacing.x4),
                               Expanded(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
