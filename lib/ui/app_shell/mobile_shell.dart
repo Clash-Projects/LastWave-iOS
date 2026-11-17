@@ -10,6 +10,7 @@ import '../../features/settings/theme_controller.dart';
 import '../../features/player/playback_service.dart';
 import '../../features/equalizer/equalizer_panel.dart';
 import '../../features/audio_output/output_controller.dart';
+import '../components/artwork.dart';
 import '../components/ambient.dart'
     show AmbientStyle, ambientStyleProvider, artworkSeedProvider;
 import '../components/chrome_insets.dart';
@@ -72,6 +73,7 @@ class WaveMobileShell extends ConsumerStatefulWidget {
 class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   bool _showEqualizer = false;
   bool _showQueue = false;
+  bool _miniPlayerDismissed = false;
   FluentThemeData? _artworkPlayerTheme;
   String get _route => waveRoutePath(widget.location);
 
@@ -112,6 +114,9 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
       // destination page.
       _showEqualizer = false;
       _showQueue = false;
+    }
+    if (oldWidget.location != widget.location) {
+      _miniPlayerDismissed = false;
     }
   }
 
@@ -201,6 +206,11 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             ? '/playlists'
             : routeActivePath;
         final theme = ref.watch(themeControllerProvider);
+        final showMiniPlayer = ref.watch(
+          prefsProvider.select((prefs) => prefs.showMiniPlayer),
+        ) && !_miniPlayerDismissed;
+        void dismissMiniPlayer() =>
+            setState(() => _miniPlayerDismissed = true);
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
         final interfaceScale = tablet
             ? 1.0
@@ -241,11 +251,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
               onGo: _go,
               onBack: _back,
             ),
-          if (!tablet && !nowPlaying)
-            _DockFrame(
-              atTop: true,
-              child: _MobileMiniPlayer(onOpen: _openNowPlaying),
-            ),
           if (!tablet && !nowPlaying && showBack)
             _BackHeader(onBack: _back),
         ];
@@ -268,12 +273,29 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                 ),
               )
             : tablet
-                ? _DockFrame(child: _MobileMiniPlayer(onOpen: _openNowPlaying))
+                ? _DockFrame(
+                    child: showMiniPlayer
+                        ? _MobileMiniPlayer(
+                            onOpen: _openNowPlaying,
+                            onDismiss: dismissMiniPlayer,
+                          )
+                        : const SizedBox.shrink(),
+                  )
                 : _DockFrame(
-                    child: _PhoneTabBar(
-                      destinations: tabs,
-                      activePath: activePath,
-                      onGo: _go,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showMiniPlayer)
+                          _MobileMiniPlayer(
+                            onOpen: _openNowPlaying,
+                            onDismiss: dismissMiniPlayer,
+                          ),
+                        _PhoneTabBar(
+                          destinations: tabs,
+                          activePath: activePath,
+                          onGo: _go,
+                        ),
+                      ],
                     ),
                   );
 
@@ -868,6 +890,9 @@ class _MobileTransportDock extends ConsumerWidget {
     final duration = snapshot.duration;
     final hasDuration = duration > Duration.zero;
     final volume = snapshot.volume.clamp(0.0, 1.0).toDouble();
+    final showQualitySelector = ref.watch(
+      prefsProvider.select((prefs) => prefs.showQualitySelector),
+    );
     final captionStyle = WaveTouchType.caption.copyWith(
       color: waveTextSecondary(context),
     );
@@ -979,8 +1004,10 @@ class _MobileTransportDock extends ConsumerWidget {
                   _MobileDownloadButton(track: snapshot.current),
                   const SizedBox(width: WaveSpacing.x4),
                 ],
-                const _MobileAudioQualityButton(),
-                const SizedBox(width: WaveSpacing.x2),
+                if (showQualitySelector) ...[
+                  const _MobileAudioQualityButton(),
+                  const SizedBox(width: WaveSpacing.x2),
+                ],
                 WaveTouchIconButton(
                   icon: volume <= 0
                       ? WaveIcons.volumeMute
@@ -1017,7 +1044,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
       playbackServiceProvider.select((state) => state.stream),
     );
     final detail = stream == null
-        ? 'Choose the audio stream quality'
+        ? 'Select Streaming Quality'
         : 'Streaming format · ${stream.formatLabel}';
     return LWTooltip(
       message: detail,
@@ -1038,7 +1065,7 @@ class _MobileAudioQualityButton extends ConsumerWidget {
             WaveMenuAction(
               leading: const Icon(WaveIcons.gauge, size: 15),
               label: stream == null
-                  ? 'Audio quality'
+                  ? 'Select Streaming Quality'
                   : 'Current format · ${stream.formatLabel}',
               onPressed: () {},
             ),
@@ -1126,8 +1153,12 @@ String _mobileAudioStreamLabel(ResolvedStream? stream) =>
 /// Hidden entirely while nothing is loaded.
 class _MobileMiniPlayer extends ConsumerWidget {
   final VoidCallback onOpen;
+  final VoidCallback onDismiss;
 
-  const _MobileMiniPlayer({required this.onOpen});
+  const _MobileMiniPlayer({
+    required this.onOpen,
+    required this.onDismiss,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1176,6 +1207,14 @@ class _MobileMiniPlayer extends ConsumerWidget {
                           ),
                           child: Row(
                             children: [
+                              WaveArtwork(
+                                url: track.artworkUrl,
+                                videoId: track.videoId,
+                                size: 42,
+                                radius: WaveRadius.artwork,
+                                label: track.title,
+                              ),
+                              const SizedBox(width: WaveSpacing.x3),
                               Expanded(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1227,6 +1266,13 @@ class _MobileMiniPlayer extends ConsumerWidget {
                       iconSize: WaveTouch.iconPrimary,
                       color: waveTextPrimary(context),
                       onPressed: playback.next,
+                    ),
+                    WaveTouchIconButton(
+                      icon: FluentIcons.chrome_close,
+                      label: 'Dismiss mini-player',
+                      iconSize: 15,
+                      color: waveTextSecondary(context),
+                      onPressed: onDismiss,
                     ),
                     const SizedBox(width: WaveSpacing.x2),
                   ],
