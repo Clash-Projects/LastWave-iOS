@@ -135,6 +135,12 @@ class Prefs {
   Future<void> setAudioDeviceId(String v) =>
       _sp.setString('lw_audio_device_id', v);
 
+  /// Playlist browser sort order, independent of per-playlist track sorting.
+  String get playlistBrowserSort =>
+      _sp.getString('lw_playlist_browser_sort') ?? 'recent';
+  Future<void> setPlaylistBrowserSort(String value) =>
+      _sp.setString('lw_playlist_browser_sort', value);
+
   /// Each playlist's last track sort, as `<sort>:<asc|desc>` (like the
   /// phone app), kept until the user picks another one.
   String playlistSort(int id) =>
