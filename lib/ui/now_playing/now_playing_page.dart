@@ -868,6 +868,20 @@ class _DesktopDualPane extends StatelessWidget {
                                           child: _HeroArtworkCard(
                                             track: track,
                                             size: artSize,
+                                            onSwipeDown: () {
+                                              if (context.canPop()) {
+                                                context.pop();
+                                              } else {
+                                                context.go('/home');
+                                              }
+                                            },
+                                            onSwipeUp: () {
+                                              _resetIdleTimer();
+                                              setState(() {
+                                                _lyricsVisible = true;
+                                                _focusMode = false;
+                                              });
+                                            },
                                           ),
                                         );
                                       },
@@ -1115,8 +1129,15 @@ class _NarrowCenteredPane extends StatelessWidget {
 class _HeroArtworkCard extends ConsumerStatefulWidget {
   final PlayableTrack track;
   final double size;
+  final VoidCallback onSwipeDown;
+  final VoidCallback onSwipeUp;
 
-  const _HeroArtworkCard({required this.track, required this.size});
+  const _HeroArtworkCard({
+    required this.track,
+    required this.size,
+    required this.onSwipeDown,
+    required this.onSwipeUp,
+  });
 
   @override
   ConsumerState<_HeroArtworkCard> createState() => _HeroArtworkCardState();
@@ -1182,7 +1203,13 @@ class _HeroArtworkCardState extends ConsumerState<_HeroArtworkCard> {
       final w = size;
       final h = size * 9 / 16;
       return Center(
-        child: Container(
+        child: GestureDetector(
+          onVerticalDragEnd: (details) {
+            final velocity = details.primaryVelocity ?? 0;
+            if (velocity > 300) widget.onSwipeDown();
+            if (velocity < -300) widget.onSwipeUp();
+          },
+          child: Container(
           width: w,
           height: h,
           decoration: BoxDecoration(
@@ -1209,6 +1236,7 @@ class _HeroArtworkCardState extends ConsumerState<_HeroArtworkCard> {
               height: h,
               errorWidget: (_, _, _) => const SizedBox.shrink(),
             ),
+          ),
           ),
         ),
       );
@@ -1262,7 +1290,13 @@ class _HeroArtworkCardState extends ConsumerState<_HeroArtworkCard> {
       artist: track.artist,
     );
 
-    return Container(
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity > 300) widget.onSwipeDown();
+        if (velocity < -300) widget.onSwipeUp();
+      },
+      child: Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -1334,6 +1368,7 @@ class _HeroArtworkCardState extends ConsumerState<_HeroArtworkCard> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
