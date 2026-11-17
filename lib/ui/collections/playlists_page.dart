@@ -4,6 +4,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/storage/prefs.dart';
 import '../../features/search/shared_providers.dart';
 import '../../features/innertube/innertube_api.dart';
 import '../../features/innertube/yt_library_providers.dart';
