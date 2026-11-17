@@ -39,7 +39,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   LosslessSource _lossless;
   int _losslessSourceGeneration = 0;
   final void Function(String notice)? _onAddonQuota;
-  final void Function(String notice)? _onLosslessFallback;
+  final void Function(String? notice)? _onLosslessFallback;
   final ScrobbleRepository _scrobbler;
   final DownloadManager _downloads;
   final PrefsHandle _prefs;
@@ -1750,6 +1750,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       losslessSw.stop();
       losslessMs = losslessSw.elapsedMilliseconds;
       if (stream != null) {
+        _onLosslessFallback?.call(null);
         _logTiming('resolve key=$key path=lossless-hit '
             'lossless_ms=$losslessMs');
         return stream;
