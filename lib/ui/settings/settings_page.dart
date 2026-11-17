@@ -2993,6 +2993,7 @@ class _Playback extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(prefsProvider);
     return _Group(
       id: 'playback.main',
       title: 'Playback',
