@@ -270,8 +270,19 @@ class HomeShelfLayout {
           ? {for (final id in hiddenRaw) id.toString()}
           : <String>{};
       final known = HomeShelfCatalog.defaults.toSet();
+      final resolvedOrder =
+          resolveHomeShelfOrder(saved, HomeShelfCatalog.defaults);
+      // Migrate the old default placement where Podcasts appeared before
+      // the music recommendation shelves. Keep it below the music feed.
+      final oldPodcastIndex = saved.indexOf(HomeShelfId.podcasts);
+      final oldQuickAccessIndex = saved.indexOf(HomeShelfId.speedDial);
+      if (oldPodcastIndex >= 0 &&
+          oldQuickAccessIndex > oldPodcastIndex) {
+        resolvedOrder.remove(HomeShelfId.podcasts);
+        resolvedOrder.add(HomeShelfId.podcasts);
+      }
       return HomeShelfLayout(
-        order: resolveHomeShelfOrder(saved, HomeShelfCatalog.defaults),
+        order: resolvedOrder,
         hidden: hidden.where(known.contains).toSet(),
       );
     } catch (_) {
