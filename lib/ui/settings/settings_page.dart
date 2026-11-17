@@ -724,6 +724,13 @@ class _Audio extends ConsumerWidget {
                 title: 'Prefer lossless',
                 subtitle: 'Try lossless first, fall back to Opus',
               ),
+              const SizedBox(height: 8),
+              _SwitchRow(
+                value: prefs.showQualitySelector,
+                onChanged: (v) => onUpdate((p) => p.setShowQualitySelector(v)),
+                title: 'Show quality selector in player',
+                subtitle: 'Display streaming quality controls in the Now Playing tray',
+              ),
             ],
           ),
         ),
@@ -2908,6 +2915,13 @@ class _Playback extends ConsumerWidget {
       subtitle: 'Gapless and playback behaviour',
       child: Column(
         children: [
+          _SwitchRow(
+            value: prefs.showMiniPlayer,
+            onChanged: (v) => onUpdate((p) => p.setShowMiniPlayer(v)),
+            title: 'Show mini-player',
+            subtitle: 'Display the compact player above the bottom navigation',
+          ),
+          const SizedBox(height: 8),
           _SwitchRow(
             value: prefs.autoplaySimilar,
             onChanged: (v) => onUpdate((p) => p.setAutoplaySimilar(v)),
