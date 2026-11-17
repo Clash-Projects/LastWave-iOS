@@ -214,7 +214,10 @@ final _artistDetailProvider = StreamProvider.autoDispose
   Future<_ArtistDetail> load(void Function(_ArtistDetail d)? onUpdate) async {
     Future<T> guarded<T>(Future<T> Function() run, T fallback) async {
       try {
-        return await run();
+        // A stalled metadata endpoint must not leave the artist route in
+        // its loading state indefinitely. Each source has an independent
+        // deadline, so one slow provider cannot hold the whole page open.
+        return await run().timeout(const Duration(seconds: 15));
       } catch (_) {
         return fallback;
       }
@@ -348,7 +351,9 @@ final _artistDetailProvider = StreamProvider.autoDispose
               durationSeconds: t.durationSeconds,
             );
         try {
-          final resolved = (await repo.resolveVideos(bare, limit: 20))
+          final resolved = (await repo
+                  .resolveVideos(bare, limit: 20)
+                  .timeout(const Duration(seconds: 12)))
               .map(plain)
               .toList();
           // The full YouTube Music list may have landed while this resolved.
@@ -362,8 +367,15 @@ final _artistDetailProvider = StreamProvider.autoDispose
           const batch = 5;
           for (var i = 0; i < popular.length && !fullSongs; i += batch) {
             final end = i + batch < popular.length ? i + batch : popular.length;
+            final batchTracks = popular.sublist(i, end);
             final filled = await Future.wait(
-                popular.sublist(i, end).map(repo.fillMissingMetadata));
+              batchTracks.map(
+                (track) => repo.fillMissingMetadata(track).timeout(
+                  const Duration(seconds: 6),
+                  onTimeout: () => track,
+                ),
+              ),
+            );
             if (fullSongs) break;
             popular = [
               ...popular.sublist(0, i),
