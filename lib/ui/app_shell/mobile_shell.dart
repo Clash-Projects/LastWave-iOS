@@ -313,7 +313,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                         if (showMiniPlayer) ...[
                           _MobileMiniPlayer(
                             onOpen: _openNowPlaying,
-                            onDismiss: dismissMiniPlayer,
                           ),
                           const SizedBox(height: WaveSpacing.x2),
                         ],
