@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
@@ -2544,6 +2545,30 @@ class _Sources extends ConsumerWidget {
               keyboardType: TextInputType.url,
               minLines: 1,
               maxLines: 2,
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: WaveButton(
+                onPressed: () async {
+                  final data = await Clipboard.getData(Clipboard.kTextPlain);
+                  final text = data?.text;
+                  if (text != null && text.trim().isNotEmpty) {
+                    controller.text = text.trim();
+                    controller.selection = TextSelection.collapsed(
+                      offset: controller.text.length,
+                    );
+                  }
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(FluentIcons.paste, size: 14),
+                    SizedBox(width: 6),
+                    Text('Paste from clipboard'),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
