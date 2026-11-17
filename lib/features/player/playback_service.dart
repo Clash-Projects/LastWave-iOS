@@ -39,6 +39,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
   LosslessSource _lossless;
   int _losslessSourceGeneration = 0;
   final void Function(String notice)? _onAddonQuota;
+  final void Function(String notice)? _onLosslessFallback;
   final ScrobbleRepository _scrobbler;
   final DownloadManager _downloads;
   final PrefsHandle _prefs;
@@ -267,6 +268,7 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     this._sessions, [
     OfficialArtworkService? artworkService,
     this._onAddonQuota,
+    this._onLosslessFallback,
   ])  : _artworkService = artworkService ?? OfficialArtworkService(),
         super(const PlayerSnapshot()) {
     // iOS can suspend or terminate the process without calling disposePlayer.
@@ -1328,7 +1330,14 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       await _prefs.setStreamingQuality(quality);
       return;
     }
-    if (_prefs.losslessQuality == quality) return;
+    final isLosslessTier = quality == AudioQualityTiers.cdLossless ||
+        quality == AudioQualityTiers.hiRes96 ||
+        quality == AudioQualityTiers.maxHiRes ||
+        quality == AudioQualityTiers.dolbyAtmos;
+    if (_prefs.losslessQuality == quality &&
+        (!isLosslessTier || state.stream?.isLossless == true)) {
+      return;
+    }
 
     final resumeAt = state.position;
     final shouldPlay = state.isPlaying;
@@ -1714,6 +1723,11 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
       final ytOnlySw = Stopwatch()..start();
       final ytOnly = await _resolveYoutube(track, const {},
           forceRefresh: forceRefresh);
+      if (_prefs.preferLossless && !_lossless.isConfigured && ytOnly != null) {
+        _onLosslessFallback?.call(
+          'No usable lossless addon is configured. Playing ${ytOnly.formatLabel} instead.',
+        );
+      }
       ytOnlySw.stop();
       _logTiming('resolve key=$key path=youtube-only '
           'youtube_ms=${ytOnlySw.elapsedMilliseconds} hit=${ytOnly != null}');
@@ -1761,6 +1775,11 @@ class PlaybackService extends StateNotifier<PlayerSnapshot> {
     final ytSw = Stopwatch()..start();
     final yt = await _resolveYoutube(track, const {},
         forceRefresh: forceRefresh);
+    if (yt != null) {
+      _onLosslessFallback?.call(
+        'The addon did not provide a usable lossless stream for this track. Playing ${yt.formatLabel} instead.',
+      );
+    }
     ytSw.stop();
     _logTiming('resolve key=$key path=lossless-miss+youtube '
         'lossless_ms=$losslessMs youtube_ms=${ytSw.elapsedMilliseconds} '
@@ -2966,6 +2985,11 @@ final playbackServiceProvider =
     (notice) {
       try {
         ref.read(addonNoticeProvider.notifier).state = notice;
+      } catch (_) {}
+    },
+    (notice) {
+      try {
+        ref.read(addonFallbackNoticeProvider.notifier).state = notice;
       } catch (_) {}
     },
   );
