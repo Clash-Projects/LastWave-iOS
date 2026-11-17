@@ -274,9 +274,9 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
         final safe = systemMedia.padding;
         _syncChromeHeights();
 
-        // Top chrome: iPad = navigation capsule; iPhone = mini-player (+ back
-        // chip). Bottom chrome: iPad = mini-player; iPhone = tab bar.
-        // Now Playing has its own top bar and a control tray at the bottom.
+        // Top chrome: iPad navigation and an optional back chip.
+        // Bottom chrome: mini-player above navigation on iPhone, mini-player
+        // alone on iPad. Now Playing has its own top bar and control tray.
         final topChrome = <Widget>[
           if (tablet && !nowPlaying)
             _TabletTopBar(
@@ -321,11 +321,13 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (showMiniPlayer)
+                        if (showMiniPlayer) ...[
                           _MobileMiniPlayer(
                             onOpen: _openNowPlaying,
                             onDismiss: dismissMiniPlayer,
                           ),
+                          const SizedBox(height: WaveSpacing.x2),
+                        ],
                         _PhoneTabBar(
                           destinations: tabs,
                           activePath: activePath,
@@ -1246,7 +1248,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                               WaveArtwork(
                                 url: track.artworkUrl,
                                 videoId: track.videoId,
-                                size: 42,
+                                size: 40,
                                 radius: WaveRadius.artwork,
                                 label: track.title,
                               ),
@@ -1279,6 +1281,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                       ),
                     ),
                     WaveTouchIconButton(
+                      size: 44,
                       icon: WaveIcons.previous,
                       label: 'Previous track',
                       iconSize: WaveTouch.iconPrimary,
@@ -1286,6 +1289,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                       onPressed: playback.previous,
                     ),
                     WaveTouchIconButton(
+                      size: 44,
                       icon: player.isBuffering
                           ? WaveIcons.music
                           : player.isPlaying
@@ -1297,6 +1301,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                       onPressed: playback.toggle,
                     ),
                     WaveTouchIconButton(
+                      size: 44,
                       icon: WaveIcons.next,
                       label: 'Next track',
                       iconSize: WaveTouch.iconPrimary,
@@ -1304,6 +1309,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                       onPressed: playback.next,
                     ),
                     WaveTouchIconButton(
+                      size: 44,
                       icon: FluentIcons.chrome_close,
                       label: 'Dismiss mini-player',
                       iconSize: 15,
