@@ -401,7 +401,6 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                                   });
                                 },
                                 onQueue: () => ref.read(nowPlayingOverlayRequestProvider.notifier).state = 'queue',
-                                onEqualizer: () => ref.read(nowPlayingOverlayRequestProvider.notifier).state = 'equalizer',
                                 onDownload: () {
                                   final manager = ref.read(
                                     downloadManagerProvider.notifier,
@@ -479,7 +478,6 @@ class _TopActionsBar extends StatelessWidget {
   final VoidCallback onToggleFocus;
   final VoidCallback onToggleVisualizer;
   final VoidCallback onQueue;
-  final VoidCallback onEqualizer;
   final VoidCallback onDownload;
   final VoidCallback onClose;
 
@@ -495,7 +493,6 @@ class _TopActionsBar extends StatelessWidget {
     required this.onToggleFocus,
     required this.onToggleVisualizer,
     required this.onQueue,
-    required this.onEqualizer,
     required this.onDownload,
     required this.onClose,
   });
@@ -555,10 +552,6 @@ class _TopActionsBar extends StatelessWidget {
                         progress: downloadProgress,
                         onTap: onDownload,
                       ),
-                    ),
-                    LWTooltip(
-                      message: 'Equalizer',
-                      child: _FsIconButton(icon: WaveIcons.equalizer, onTap: onEqualizer),
                     ),
                     LWTooltip(
                       message: 'Queue',
