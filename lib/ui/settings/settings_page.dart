@@ -2568,8 +2568,6 @@ class _Sources extends ConsumerWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(FluentIcons.paste, size: 14),
-                    SizedBox(width: 6),
                     Text('Paste from clipboard'),
                   ],
                 ),
