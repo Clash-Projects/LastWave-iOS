@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -734,7 +735,22 @@ class _Audio extends ConsumerWidget {
               const SizedBox(height: 8),
               _SwitchRow(
                 value: prefs.automaticQualityByNetwork,
-                onChanged: (v) => onUpdate((p) => p.setAutomaticQualityByNetwork(v)),
+                onChanged: (v) async {
+                  await onUpdate((p) => p.setAutomaticQualityByNetwork(v));
+                  if (!v) return;
+                  try {
+                    final networks = await Connectivity().checkConnectivity();
+                    final quality = networks.contains(ConnectivityResult.wifi)
+                        ? prefs.wifiStreamingQuality
+                        : networks.contains(ConnectivityResult.mobile)
+                            ? prefs.mobileStreamingQuality
+                            : null;
+                    if (quality != null) {
+                      await ref.read(playbackServiceProvider.notifier)
+                          .changeAudioQuality(quality);
+                    }
+                  } catch (_) {}
+                },
                 title: 'Automatic quality by network',
                 subtitle: 'Switch between your Wi-Fi and mobile-data quality preferences',
               ),
