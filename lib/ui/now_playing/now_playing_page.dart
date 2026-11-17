@@ -358,6 +358,20 @@ class _WaveNowPlayingPageState extends ConsumerState<WaveNowPlayingPage> {
                                 child: _NarrowCenteredPane(
                                   track: current,
                                   lyricsVisible: _lyricsVisible,
+                                  onSwipeDown: () {
+                                    if (context.canPop()) {
+                                      context.pop();
+                                    } else {
+                                      context.go('/home');
+                                    }
+                                  },
+                                  onSwipeUp: () {
+                                    _resetIdleTimer();
+                                    setState(() {
+                                      _lyricsVisible = true;
+                                      _focusMode = false;
+                                    });
+                                  },
                                 ),
                               ),
                       ),
@@ -868,20 +882,6 @@ class _DesktopDualPane extends StatelessWidget {
                                           child: _HeroArtworkCard(
                                             track: track,
                                             size: artSize,
-                                            onSwipeDown: () {
-                                              if (context.canPop()) {
-                                                context.pop();
-                                              } else {
-                                                context.go('/home');
-                                              }
-                                            },
-                                            onSwipeUp: () {
-                                              _resetIdleTimer();
-                                              setState(() {
-                                                _lyricsVisible = true;
-                                                _focusMode = false;
-                                              });
-                                            },
                                           ),
                                         );
                                       },
@@ -976,10 +976,14 @@ class _DesktopDualPane extends StatelessWidget {
 class _NarrowCenteredPane extends StatelessWidget {
   final PlayableTrack track;
   final bool lyricsVisible;
+  final VoidCallback onSwipeDown;
+  final VoidCallback onSwipeUp;
 
   const _NarrowCenteredPane({
     required this.track,
     required this.lyricsVisible,
+    required this.onSwipeDown,
+    required this.onSwipeUp,
   });
 
   @override
@@ -1007,7 +1011,12 @@ class _NarrowCenteredPane extends StatelessWidget {
                       return const SizedBox.shrink();
                     }
                     return Center(
-                      child: _HeroArtworkCard(track: track, size: artSize),
+                      child: _HeroArtworkCard(
+                        track: track,
+                        size: artSize,
+                        onSwipeDown: onSwipeDown,
+                        onSwipeUp: onSwipeUp,
+                      ),
                     );
                   },
                 ),
@@ -1080,7 +1089,12 @@ class _NarrowCenteredPane extends StatelessWidget {
                       SizedBox(
                         width: artSize,
                         height: artSize,
-                        child: _HeroArtworkCard(track: track, size: artSize),
+                        child: _HeroArtworkCard(
+                          track: track,
+                          size: artSize,
+                          onSwipeDown: onSwipeDown,
+                          onSwipeUp: onSwipeUp,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       _TrackSwap(
@@ -1129,14 +1143,14 @@ class _NarrowCenteredPane extends StatelessWidget {
 class _HeroArtworkCard extends ConsumerStatefulWidget {
   final PlayableTrack track;
   final double size;
-  final VoidCallback onSwipeDown;
-  final VoidCallback onSwipeUp;
+  final VoidCallback? onSwipeDown;
+  final VoidCallback? onSwipeUp;
 
   const _HeroArtworkCard({
     required this.track,
     required this.size,
-    required this.onSwipeDown,
-    required this.onSwipeUp,
+    this.onSwipeDown,
+    this.onSwipeUp,
   });
 
   @override
@@ -1204,11 +1218,13 @@ class _HeroArtworkCardState extends ConsumerState<_HeroArtworkCard> {
       final h = size * 9 / 16;
       return Center(
         child: GestureDetector(
-          onVerticalDragEnd: (details) {
-            final velocity = details.primaryVelocity ?? 0;
-            if (velocity > 300) widget.onSwipeDown();
-            if (velocity < -300) widget.onSwipeUp();
-          },
+          onVerticalDragEnd: widget.onSwipeDown == null && widget.onSwipeUp == null
+              ? null
+              : (details) {
+                  final velocity = details.primaryVelocity ?? 0;
+                  if (velocity > 300) widget.onSwipeDown?.call();
+                  if (velocity < -300) widget.onSwipeUp?.call();
+                },
           child: Container(
           width: w,
           height: h,
@@ -1291,11 +1307,13 @@ class _HeroArtworkCardState extends ConsumerState<_HeroArtworkCard> {
     );
 
     return GestureDetector(
-      onVerticalDragEnd: (details) {
-        final velocity = details.primaryVelocity ?? 0;
-        if (velocity > 300) widget.onSwipeDown();
-        if (velocity < -300) widget.onSwipeUp();
-      },
+      onVerticalDragEnd: widget.onSwipeDown == null && widget.onSwipeUp == null
+          ? null
+          : (details) {
+              final velocity = details.primaryVelocity ?? 0;
+              if (velocity > 300) widget.onSwipeDown?.call();
+              if (velocity < -300) widget.onSwipeUp?.call();
+            },
       child: Container(
       width: size,
       height: size,
