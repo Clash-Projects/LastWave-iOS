@@ -731,6 +731,27 @@ class _Audio extends ConsumerWidget {
                 title: 'Show quality selector in player',
                 subtitle: 'Display streaming quality controls in the Now Playing tray',
               ),
+              const SizedBox(height: 8),
+              _SwitchRow(
+                value: prefs.automaticQualityByNetwork,
+                onChanged: (v) => onUpdate((p) => p.setAutomaticQualityByNetwork(v)),
+                title: 'Automatic quality by network',
+                subtitle: 'Switch between your Wi-Fi and mobile-data quality preferences',
+              ),
+              if (prefs.automaticQualityByNetwork) ...[
+                const SizedBox(height: 8),
+                _QualityRow(
+                  title: 'Wi-Fi streaming quality',
+                  value: prefs.wifiStreamingQuality,
+                  onChanged: (q) => onUpdate((p) => p.setWifiStreamingQuality(q)),
+                ),
+                const SizedBox(height: 8),
+                _QualityRow(
+                  title: 'Mobile-data streaming quality',
+                  value: prefs.mobileStreamingQuality,
+                  onChanged: (q) => onUpdate((p) => p.setMobileStreamingQuality(q)),
+                ),
+              ],
             ],
           ),
         ),
