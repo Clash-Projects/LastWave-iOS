@@ -590,9 +590,13 @@ class _InShellConnectState extends ConsumerState<_InShellConnect> {
       ref.invalidate(feedProvider);
     } catch (e) {
       if (!mounted) return;
+      // Preserve Last.fm's actual API error code/message. The old
+      // generic text labelled every failure "not approved yet", hiding
+      // invalid signatures, expired tokens, and network failures.
       setState(
-        () => _error =
-            'Not approved yet — approve LastWave in the browser, then retry.',
+        () => _error = e
+            .toString()
+            .replaceFirst('LastFmException(null): ', ''),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
