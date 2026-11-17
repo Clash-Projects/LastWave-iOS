@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart' show cupertinoTextSelectionHandleControls;
+import 'package:flutter/cupertino.dart'
+    show CupertinoAdaptiveTextSelectionToolbar, cupertinoTextSelectionHandleControls;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart'
     show BuildContext, EditableTextState, TextSelectionControls, Widget;
@@ -11,11 +12,18 @@ TextSelectionControls? get waveTextSelectionControls =>
         ? cupertinoTextSelectionHandleControls
         : null;
 
-/// Keep the platform selection toolbar available on iOS. Hiding this
-/// builder removes Paste and Copy from TextBox fields, including secure
-/// credential fields such as the Last.fm shared secret.
+/// Use the iOS-native selection toolbar on iPhone and iPad. The Fluent
+/// desktop toolbar includes keyboard-shortcut hints (Ctrl+C, Ctrl+V, etc.)
+/// that are irrelevant on touch devices. Keep Fluent's menu on desktop.
 Widget waveTextContextMenuBuilder(
   BuildContext context,
   EditableTextState state,
-) =>
-    TextBox.defaultContextMenuBuilder(context, state);
+) {
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    return CupertinoAdaptiveTextSelectionToolbar.buttonItems(
+      anchors: state.contextMenuAnchors,
+      buttonItems: state.contextMenuButtonItems,
+    );
+  }
+  return TextBox.defaultContextMenuBuilder(context, state);
+}
