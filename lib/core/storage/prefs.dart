@@ -15,6 +15,9 @@ class Prefs {
     final preferences = await SharedPreferences.getInstance();
     // Remove keys for settings that are no longer part of the app.
     await preferences.remove('lw_wavy_seekbar');
+    // The mobile mini-player is now permanent shell chrome; clear the
+    // obsolete visibility preference left by older builds.
+    await preferences.remove('lw_show_mini_player');
     // Remove retired crossfade and AutoMix settings from older installs.
     await preferences.remove('lw_crossfade_enabled');
     await preferences.remove('lw_crossfade_seconds');
