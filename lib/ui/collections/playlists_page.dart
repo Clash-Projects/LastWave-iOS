@@ -16,6 +16,7 @@ import '../components/artwork.dart';
 import '../components/buttons.dart';
 import '../components/hero.dart';
 import '../components/states.dart';
+import '../components/select.dart';
 import 'playlist_dialogs.dart'
     show
         showWaveCreatePlaylist,
