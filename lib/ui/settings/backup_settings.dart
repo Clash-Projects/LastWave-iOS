@@ -134,8 +134,6 @@ class _BackupSettingsState extends ConsumerState<BackupSettings> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Backup', style: WaveType.trackTitle),
-        const SizedBox(height: 4),
         Text(
           'Playlists, hidden recommendations, home layout and settings. '
           'Accounts, cookies and keys are never included.',
