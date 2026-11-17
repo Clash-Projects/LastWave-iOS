@@ -236,7 +236,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             ? '/playlists'
             : routeActivePath;
         final theme = ref.watch(themeControllerProvider);
-        const showMiniPlayer = true;
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
         final interfaceScale = tablet
             ? 1.0
@@ -300,22 +299,18 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
               )
             : tablet
                 ? _DockFrame(
-                    child: showMiniPlayer
-                        ? _MobileMiniPlayer(
-                            onOpen: _openNowPlaying,
-                          )
-                        : const SizedBox.shrink(),
+                    child: _MobileMiniPlayer(
+                      onOpen: _openNowPlaying,
+                    ),
                   )
                 : _DockFrame(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (showMiniPlayer) ...[
-                          _MobileMiniPlayer(
-                            onOpen: _openNowPlaying,
-                          ),
-                          const SizedBox(height: WaveSpacing.x2),
-                        ],
+                        _MobileMiniPlayer(
+                          onOpen: _openNowPlaying,
+                        ),
+                        const SizedBox(height: WaveSpacing.x2),
                         _PhoneTabBar(
                           destinations: tabs,
                           activePath: activePath,
