@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart' as avp;
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../core/audio/stream_models.dart';
 import '../../core/storage/prefs.dart' show prefsProvider;
@@ -83,6 +86,37 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   final GlobalKey _bottomChromeKey = GlobalKey();
   double _topChromeHeight = 0;
   double _bottomChromeHeight = 0;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final connectivity = Connectivity();
+    _connectivitySubscription =
+        connectivity.onConnectivityChanged.listen(_applyNetworkQuality);
+    connectivity.checkConnectivity().then(_applyNetworkQuality).catchError((_) {});
+  }
+
+  Future<void> _applyNetworkQuality(List<ConnectivityResult> results) async {
+    if (!mounted) return;
+    final prefs = ref.read(prefsProvider);
+    if (!prefs.automaticQualityByNetwork) return;
+    final quality = results.contains(ConnectivityResult.wifi)
+        ? prefs.wifiStreamingQuality
+        : results.contains(ConnectivityResult.mobile)
+            ? prefs.mobileStreamingQuality
+            : null;
+    if (quality == null) return;
+    try {
+      await ref.read(playbackServiceProvider.notifier).changeAudioQuality(quality);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
 
   void _syncChromeHeights() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
