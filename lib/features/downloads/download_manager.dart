@@ -206,6 +206,13 @@ class DownloadManager extends StateNotifier<List<DownloadEntry>> {
   /// and unavailable-media responses are deliberately not retried.
   bool _isRetryableDownloadError(Object error) {
     if (error is! DioException) return false;
+    // Dio wraps a prematurely closed googlevideo response as
+    // DioExceptionType.unknown with an HttpException cause. Treat that as
+    // a transient transfer failure so the caller can refresh the signed
+    // stream URL and retry instead of immediately failing the download.
+    if (error.error is HttpException || error.error is SocketException) {
+      return true;
+    }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
@@ -214,6 +221,24 @@ class DownloadManager extends StateNotifier<List<DownloadEntry>> {
     }
     final code = error.response?.statusCode;
     return code == 408 || code == 429 || (code != null && code >= 500);
+  }
+
+  /// Keep temporary signed media URLs and request details out of the UI.
+  String _friendlyDownloadError(Object error) {
+    if (error is DioException) {
+      final cause = error.error;
+      if (cause is HttpException || cause is SocketException ||
+          error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout) {
+        return 'The network connection was interrupted. Please retry the download.';
+      }
+      final code = error.response?.statusCode;
+      if (code != null) return 'The download server returned HTTP $code.';
+      return 'The download failed due to a network error. Please retry.';
+    }
+    return 'The download failed. Please try again.';
   }
 
   /// Stops [key] if it is downloading. A finished file is left alone.
@@ -899,7 +924,7 @@ class DownloadManager extends StateNotifier<List<DownloadEntry>> {
           artist: artist,
           album: album,
           status: DownloadStatus.error,
-          error: e.toString(),
+          error: _friendlyDownloadError(e),
         ));
       }
     } finally {
