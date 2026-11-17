@@ -925,6 +925,7 @@ class DownloadManager extends StateNotifier<List<DownloadEntry>> {
           album: album,
           status: DownloadStatus.error,
           error: _friendlyDownloadError(e),
+          artworkUrl: artworkUrl,
         ));
       }
     } finally {
