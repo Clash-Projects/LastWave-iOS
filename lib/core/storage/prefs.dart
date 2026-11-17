@@ -103,6 +103,15 @@ class Prefs {
       _sp.setInt('lw_lossless_quality', _clampQuality(q));
   Future<void> setDownloadQuality(int q) =>
       _sp.setInt('lw_download_quality', _clampQuality(q));
+
+  bool get showMiniPlayer => _sp.getBool('lw_show_mini_player') ?? true;
+  Future<void> setShowMiniPlayer(bool value) =>
+      _sp.setBool('lw_show_mini_player', value);
+
+  bool get showQualitySelector =>
+      _sp.getBool('lw_show_quality_selector') ?? true;
+  Future<void> setShowQualitySelector(bool value) =>
+      _sp.setBool('lw_show_quality_selector', value);
   // -- Window behaviour ---------------------------------------------------
   /// Close button / Alt+F4 hides to the tray instead of quitting.
   /// Real quit stays in tray → Quit (ordered player teardown first).
