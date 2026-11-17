@@ -2103,6 +2103,9 @@ class AddonQuotaException implements Exception {
 /// [AddonQuotaException], cleared on dismiss.
 final addonNoticeProvider = StateProvider<String?>((_) => null);
 
+/// One-shot notice when the requested lossless stream is unavailable.
+final addonFallbackNoticeProvider = StateProvider<String?>((_) => null);
+
 /// The lossless tier. Addon URLs (Settings → Sources) are the only
 /// lossless catalog — the baked-in Qobuz/Tidal backend was removed.
 /// With no URLs configured this still constructs (unconfigured), so
