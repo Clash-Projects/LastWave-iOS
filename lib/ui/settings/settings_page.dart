@@ -709,6 +709,7 @@ class _Audio extends ConsumerWidget {
             children: [
               _QualityRow(
                 title: 'Streaming quality',
+                placeholder: 'Select Streaming Quality',
                 value: prefs.losslessQuality,
                 onChanged: (q) => onUpdate((p) => p.setLosslessQuality(q)),
               ),
@@ -758,12 +759,14 @@ class _Audio extends ConsumerWidget {
                 const SizedBox(height: 8),
                 _QualityRow(
                   title: 'Wi-Fi streaming quality',
+                  placeholder: 'Select Wi-Fi Streaming Quality',
                   value: prefs.wifiStreamingQuality,
                   onChanged: (q) => onUpdate((p) => p.setWifiStreamingQuality(q)),
                 ),
                 const SizedBox(height: 8),
                 _QualityRow(
                   title: 'Mobile-data streaming quality',
+                  placeholder: 'Select Mobile Streaming Quality',
                   value: prefs.mobileStreamingQuality,
                   onChanged: (q) => onUpdate((p) => p.setMobileStreamingQuality(q)),
                 ),
@@ -3299,10 +3302,12 @@ class _WasapiOutputSettings extends ConsumerWidget {
 
 class _QualityRow extends StatelessWidget {
   final String title;
+  final String? placeholder;
   final int value;
   final ValueChanged<int> onChanged;
   const _QualityRow({
     required this.title,
+    this.placeholder,
     required this.value,
     required this.onChanged,
   });
@@ -3322,6 +3327,7 @@ class _QualityRow extends StatelessWidget {
         ),
         WaveSelect<int>(
           value: value,
+          placeholder: placeholder,
           options: const [
             WaveSelectOption(value: 28, label: 'Dolby Atmos'),
             WaveSelectOption(value: 27, label: 'Hi-Res · 24/192'),
