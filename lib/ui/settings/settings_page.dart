@@ -712,7 +712,12 @@ class _Audio extends ConsumerWidget {
                 title: 'Streaming quality',
                 placeholder: 'Select Streaming Quality',
                 value: prefs.losslessQuality,
-                onChanged: (q) => onUpdate((p) => p.setLosslessQuality(q)),
+                onChanged: (q) async {
+                  await ref
+                      .read(playbackServiceProvider.notifier)
+                      .changeAudioQuality(q);
+                  await onUpdate((p) => p.setLosslessQuality(q));
+                },
               ),
               const SizedBox(height: 8),
               _QualityRow(
