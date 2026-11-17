@@ -76,7 +76,6 @@ class WaveMobileShell extends ConsumerStatefulWidget {
 class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
   bool _showEqualizer = false;
   bool _showQueue = false;
-  bool _miniPlayerDismissed = false;
   FluentThemeData? _artworkPlayerTheme;
   String get _route => waveRoutePath(widget.location);
 
@@ -148,9 +147,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
       // destination page.
       _showEqualizer = false;
       _showQueue = false;
-    }
-    if (oldWidget.location != widget.location) {
-      _miniPlayerDismissed = false;
     }
   }
 
@@ -240,13 +236,7 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
             ? '/playlists'
             : routeActivePath;
         final theme = ref.watch(themeControllerProvider);
-        final showMiniPlayer = ref.watch(
-          prefsProvider.select((prefs) => prefs.showMiniPlayer),
-        ) && !_miniPlayerDismissed;
-        void dismissMiniPlayer() {
-          ref.read(prefsProvider).setShowMiniPlayer(false);
-          setState(() => _miniPlayerDismissed = true);
-        }
+        const showMiniPlayer = true;
         final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
         final interfaceScale = tablet
             ? 1.0
@@ -313,7 +303,6 @@ class _WaveMobileShellState extends ConsumerState<WaveMobileShell> {
                     child: showMiniPlayer
                         ? _MobileMiniPlayer(
                             onOpen: _openNowPlaying,
-                            onDismiss: dismissMiniPlayer,
                           )
                         : const SizedBox.shrink(),
                   )
@@ -1184,14 +1173,12 @@ String _mobileAudioStreamLabel(ResolvedStream? stream) =>
 /// hairline progress along the bottom edge. Tap opens Now Playing; swiping
 /// left or right skips to the next or previous track. Everything else (like,
 /// add to playlist, download, quality) lives on Now Playing, where it has room.
-/// Hidden entirely while nothing is loaded.
+/// Shown whenever a track is loaded; only the Now Playing screen replaces it.
 class _MobileMiniPlayer extends ConsumerWidget {
   final VoidCallback onOpen;
-  final VoidCallback onDismiss;
 
   const _MobileMiniPlayer({
     required this.onOpen,
-    required this.onDismiss,
   });
 
   @override
@@ -1303,14 +1290,6 @@ class _MobileMiniPlayer extends ConsumerWidget {
                       iconSize: WaveTouch.iconPrimary,
                       color: waveTextPrimary(context),
                       onPressed: playback.next,
-                    ),
-                    WaveTouchIconButton(
-                      size: 44,
-                      icon: FluentIcons.chrome_close,
-                      label: 'Dismiss mini-player',
-                      iconSize: 15,
-                      color: waveTextSecondary(context),
-                      onPressed: onDismiss,
                     ),
                     const SizedBox(width: WaveSpacing.x2),
                   ],
