@@ -165,6 +165,27 @@ void main() {
   });
 
   group('stream format inference', () {
+    test('lossless tiers reject explicitly lossy formats', () {
+      expect(AddonApi.isLosslessPayloadFormat('FLAC'), isTrue);
+      expect(AddonApi.isLosslessPayloadFormat('ALAC'), isTrue);
+      expect(AddonApi.isLosslessPayloadFormat('AAC'), isFalse);
+      expect(AddonApi.isLosslessPayloadFormat('OPUS'), isFalse);
+      expect(AddonApi.isLosslessPayloadFormat('MP3'), isFalse);
+    });
+
+    test('ALAC codec declaration is recognized as lossless', () {
+      expect(
+        AddonApi.streamFormatForPayload(
+          codec: 'alac',
+          manifestXml: '<MPD />',
+          urls: const ['https://cdn.test/audio.m4a'],
+          isAtmos: false,
+          mp3: false,
+        ),
+        'ALAC',
+      );
+    });
+
     test('AAC codec declaration wins over ac3 text in URLs', () {
       const manifest = '''
 <MPD>
