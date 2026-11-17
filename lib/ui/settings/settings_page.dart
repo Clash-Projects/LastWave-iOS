@@ -2993,20 +2993,12 @@ class _Playback extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(prefsProvider);
     return _Group(
       id: 'playback.main',
       title: 'Playback',
       subtitle: 'Gapless and playback behaviour',
       child: Column(
         children: [
-          _SwitchRow(
-            value: prefs.showMiniPlayer,
-            onChanged: (v) => onUpdate((p) => p.setShowMiniPlayer(v)),
-            title: 'Show mini-player',
-            subtitle: 'Display the compact player above the bottom navigation',
-          ),
-          const SizedBox(height: 8),
           _SwitchRow(
             value: prefs.autoplaySimilar,
             onChanged: (v) => onUpdate((p) => p.setAutoplaySimilar(v)),
