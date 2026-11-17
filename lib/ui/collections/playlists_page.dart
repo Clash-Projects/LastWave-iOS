@@ -40,6 +40,13 @@ class _WavePlaylistsPageState
     extends ConsumerState<WavePlaylistsPage> {
   final _filter = TextEditingController();
   String _q = '';
+  String _sort = 'recent';
+
+  @override
+  void initState() {
+    super.initState();
+    _sort = ref.read(prefsProvider).playlistBrowserSort;
+  }
 
   @override
   void dispose() {
@@ -60,6 +67,24 @@ class _WavePlaylistsPageState
               p.title.toLowerCase().contains(_q.toLowerCase()),
         )
         .toList();
+    final playlistRepo = ref.read(playlistRepositoryProvider.notifier);
+    shown.sort((a, b) {
+      // Pinned playlists stay at the top in every sort mode.
+      if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+      switch (_sort) {
+        case 'title':
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        case 'lastPlayed':
+          final aPlayed = playlistRepo.lastPlayedAtMillis(a.id);
+          final bPlayed = playlistRepo.lastPlayedAtMillis(b.id);
+          if (aPlayed == bPlayed) return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+          if (aPlayed == 0) return 1;
+          if (bPlayed == 0) return -1;
+          return bPlayed.compareTo(aPlayed);
+        default:
+          return b.createdAtMillis.compareTo(a.createdAtMillis);
+      }
+    });
     // YouTube Music playlists not linked to a row above: the ones saved from
     // other people, which YouTube won't let this account edit. Read-only.
     final linked = ref.watch(ytSyncStatusProvider).linkedRemoteIds;
@@ -146,6 +171,18 @@ class _WavePlaylistsPageState
                     setState(() => _q = v),
                 hint: 'Filter playlists…',
                 countLabel: '${shown.length} shown',
+                sortSlot: WaveSelect<String>(
+                  value: _sort,
+                  options: const [
+                    WaveSelectOption(value: 'recent', label: 'Recently created'),
+                    WaveSelectOption(value: 'lastPlayed', label: 'Last played'),
+                    WaveSelectOption(value: 'title', label: 'Title A–Z'),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _sort = value);
+                    ref.read(prefsProvider).setPlaylistBrowserSort(value);
+                  },
+                ),
               ),
               const SizedBox(height: 12),
               const _LocalFolders(),
@@ -548,6 +585,10 @@ class _PlaylistCardState extends ConsumerState<_PlaylistCard> {
             child: const Text('Cancel'),
           ),
           WaveButton(
+            onPressed: () => Navigator.of(dialogContext).pop('cover'),
+            child: const Text('Change cover'),
+          ),
+          WaveButton(
             onPressed: () => Navigator.of(dialogContext).pop('rename'),
             child: const Text('Rename'),
           ),
@@ -560,7 +601,18 @@ class _PlaylistCardState extends ConsumerState<_PlaylistCard> {
       ),
     );
     if (!mounted || action == null) return;
-    if (action == 'rename') {
+    if (action == 'cover') {
+      final file = await FilePicker.pickFile(
+        dialogTitle: 'Playlist cover',
+        type: FileType.image,
+      );
+      final path = file?.path;
+      if (path != null && path.isNotEmpty) {
+        await ref
+            .read(playlistRepositoryProvider.notifier)
+            .setCustomCover(playlist.id, path);
+      }
+    } else if (action == 'rename') {
       await showWaveRenamePlaylist(context, ref, playlist);
     } else if (action == 'delete') {
       await showWaveDeletePlaylist(context, ref, playlist);
