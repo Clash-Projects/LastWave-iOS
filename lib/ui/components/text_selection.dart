@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart' show cupertinoTextSelectionHandleControls;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart'
-    show BuildContext, EditableTextState, SizedBox, TextSelectionControls, Widget;
+    show BuildContext, EditableTextState, TextSelectionControls, Widget;
 import 'package:fluent_ui/fluent_ui.dart' show TextBox;
 
 /// Keep iOS-native selection handles and text highlighting, but hide the
