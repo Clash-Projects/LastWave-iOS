@@ -594,9 +594,10 @@ class _InShellConnectState extends ConsumerState<_InShellConnect> {
       // generic text labelled every failure "not approved yet", hiding
       // invalid signatures, expired tokens, and network failures.
       setState(
-        () => _error = e
-            .toString()
-            .replaceFirst('LastFmException(null): ', ''),
+        () => _error = e.toString().replaceFirst(
+          RegExp(r'^LastFmException\\([^)]*\\):\\s*'),
+          '',
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -3081,8 +3082,10 @@ class _ApiKeysState extends ConsumerState<_ApiKeys> {
     }
   }
 
-  static String _shortError(Object e) =>
-      e.toString().replaceFirst('LastFmException(null): ', '');
+  static String _shortError(Object e) => e.toString().replaceFirst(
+        RegExp(r'^LastFmException\\([^)]*\\):\\s*'),
+        '',
+      );
 
   @override
   Widget build(BuildContext context) {
