@@ -2560,9 +2560,6 @@ class _Sources extends ConsumerWidget {
                   final text = data?.text;
                   if (text != null && text.trim().isNotEmpty) {
                     controller.text = text.trim();
-                    controller.selection = TextSelection.collapsed(
-                      offset: controller.text.length,
-                    );
                   }
                 },
                 child: const Row(
