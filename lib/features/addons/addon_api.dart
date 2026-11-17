@@ -1209,6 +1209,18 @@ class AddonApi implements LosslessSource {
       !const {'AAC', 'OPUS', 'MP3'}.contains(format.trim().toUpperCase());
 
   @visibleForTesting
+  static bool payloadMatchesServerTier(
+    String format, {
+    required bool mp3,
+    required bool isAtmos,
+  }) {
+    final normalized = format.trim().toUpperCase();
+    if (isAtmos) return true;
+    if (mp3) return normalized == 'MP3';
+    return isLosslessPayloadFormat(normalized);
+  }
+
+  @visibleForTesting
   static String streamFormatForPayload({
     required String codec,
     required String manifestXml,
@@ -1380,9 +1392,11 @@ class AddonApi implements LosslessSource {
     // A lossless/hi-res request must never be represented by a lossy
     // AAC/Opus/MP3 payload just because the server returned HTTP 200.
     // Reject it and let the resolver try the next tier or YouTube.
-    if (!mp3 &&
-        !isStreamAtmos &&
-        !isLosslessPayloadFormat(streamFormat)) {
+    if (!payloadMatchesServerTier(
+      streamFormat,
+      mp3: mp3,
+      isAtmos: isStreamAtmos,
+    )) {
       TraceCrumb.write('resolve stage=reject-lossy $mlabel '
           'tier=$serverQuality format=$streamFormat');
       return null;
