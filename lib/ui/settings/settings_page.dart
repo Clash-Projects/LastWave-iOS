@@ -761,14 +761,34 @@ class _Audio extends ConsumerWidget {
                   title: 'Wi-Fi streaming quality',
                   placeholder: 'Select Wi-Fi Streaming Quality',
                   value: prefs.wifiStreamingQuality,
-                  onChanged: (q) => onUpdate((p) => p.setWifiStreamingQuality(q)),
+                  onChanged: (q) async {
+                    await onUpdate((p) => p.setWifiStreamingQuality(q));
+                    if (!prefs.automaticQualityByNetwork) return;
+                    try {
+                      final networks = await Connectivity().checkConnectivity();
+                      if (networks.contains(ConnectivityResult.wifi)) {
+                        await ref.read(playbackServiceProvider.notifier)
+                            .changeAudioQuality(q);
+                      }
+                    } catch (_) {}
+                  },
                 ),
                 const SizedBox(height: 8),
                 _QualityRow(
                   title: 'Mobile-data streaming quality',
                   placeholder: 'Select Mobile Streaming Quality',
                   value: prefs.mobileStreamingQuality,
-                  onChanged: (q) => onUpdate((p) => p.setMobileStreamingQuality(q)),
+                  onChanged: (q) async {
+                    await onUpdate((p) => p.setMobileStreamingQuality(q));
+                    if (!prefs.automaticQualityByNetwork) return;
+                    try {
+                      final networks = await Connectivity().checkConnectivity();
+                      if (networks.contains(ConnectivityResult.mobile)) {
+                        await ref.read(playbackServiceProvider.notifier)
+                            .changeAudioQuality(q);
+                      }
+                    } catch (_) {}
+                  },
                 ),
               ],
             ],
