@@ -79,7 +79,6 @@ abstract final class HomeShelfCatalog {
     HomeShelfId.romance,
     HomeShelfId.sad,
     HomeShelfId.sleep,
-    HomeShelfId.podcasts,
     HomeShelfId.speedDial,
     HomeShelfId.quickPicks,
     HomeShelfId.listenAgain,
@@ -95,6 +94,8 @@ abstract final class HomeShelfCatalog {
     HomeShelfId.similar,
     HomeShelfId.livePerformances,
     HomeShelfId.charts,
+    // Podcasts are intentionally secondary to the music shelves.
+    HomeShelfId.podcasts,
   ];
 
   /// Compatibility order for the legacy Last.fm fallback renderer.
