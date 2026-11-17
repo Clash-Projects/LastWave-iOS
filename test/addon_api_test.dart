@@ -171,6 +171,22 @@ void main() {
       expect(AddonApi.isLosslessPayloadFormat('AAC'), isFalse);
       expect(AddonApi.isLosslessPayloadFormat('OPUS'), isFalse);
       expect(AddonApi.isLosslessPayloadFormat('MP3'), isFalse);
+      expect(
+        AddonApi.payloadMatchesServerTier('FLAC', mp3: false, isAtmos: false),
+        isTrue,
+      );
+      expect(
+        AddonApi.payloadMatchesServerTier('AAC', mp3: false, isAtmos: false),
+        isFalse,
+      );
+      expect(
+        AddonApi.payloadMatchesServerTier('MP3', mp3: true, isAtmos: false),
+        isTrue,
+      );
+      expect(
+        AddonApi.payloadMatchesServerTier('AAC', mp3: true, isAtmos: false),
+        isFalse,
+      );
     });
 
     test('ALAC codec declaration is recognized as lossless', () {
