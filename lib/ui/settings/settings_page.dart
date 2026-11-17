@@ -595,7 +595,7 @@ class _InShellConnectState extends ConsumerState<_InShellConnect> {
       // invalid signatures, expired tokens, and network failures.
       setState(
         () => _error = e.toString().replaceFirst(
-          RegExp(r'^LastFmException\\([^)]*\\):\\s*'),
+          RegExp(r'^LastFmException\([^)]*\):\s*'),
           '',
         ),
       );
@@ -3083,7 +3083,7 @@ class _ApiKeysState extends ConsumerState<_ApiKeys> {
   }
 
   static String _shortError(Object e) => e.toString().replaceFirst(
-        RegExp(r'^LastFmException\\([^)]*\\):\\s*'),
+        RegExp(r'^LastFmException\([^)]*\):\s*'),
         '',
       );
 
