@@ -185,6 +185,8 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
                               m.downloadTrack(
                                 title: f.title,
                                 artist: f.artist,
+                                album: f.album,
+                                artworkUrl: f.artworkUrl,
                               );
                             }
                           },
