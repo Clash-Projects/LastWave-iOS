@@ -140,6 +140,18 @@ class PlaylistRepository extends StateNotifier<List<SavedPlaylist>> {
   /// Current rows for callers that are not the notifier itself.
   List<SavedPlaylist> get all => state;
 
+  /// Timestamp of the most recent explicit play action for this playlist.
+  /// Stored in the existing key-value table; no schema migration required.
+  int lastPlayedAtMillis(int id) =>
+      int.tryParse(_db.kvGet('playlist_last_played_$id') ?? '') ?? 0;
+
+  void markPlayed(int id) {
+    _db.kvSet(
+      'playlist_last_played_$id',
+      DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+  }
+
   void refresh() {
     final rows = _db.raw.select(
       'SELECT * FROM saved_playlists ORDER BY is_pinned DESC, created_at_millis DESC;',
