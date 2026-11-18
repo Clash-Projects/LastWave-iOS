@@ -474,7 +474,8 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
                 ),
                 child: SelectableText(
                   jam.roomName.isEmpty ? jam.roomCode : jam.roomName,
-                  contextMenuBuilder: TextBox.defaultContextMenuBuilder,
+                  selectionControls: waveTextSelectionControls,
+                  contextMenuBuilder: waveTextContextMenuBuilder,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 30,
