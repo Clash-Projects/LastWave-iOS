@@ -352,7 +352,9 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextBox(padding: waveFieldPadding, 
+                          child: TextBox(
+                            selectionControls: waveTextSelectionControls,
+                            contextMenuBuilder: waveTextContextMenuBuilder,padding: waveFieldPadding, 
                             controller: _code,
                             placeholder: 'ABC123',
                             decoration: waveInputDecoration(),
@@ -779,7 +781,9 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextBox(padding: waveFieldPadding, 
+                  child: TextBox(
+                    selectionControls: waveTextSelectionControls,
+                    contextMenuBuilder: waveTextContextMenuBuilder,padding: waveFieldPadding, 
                     controller: _chat,
                     focusNode: _chatFocus,
                     placeholder: 'Message',
