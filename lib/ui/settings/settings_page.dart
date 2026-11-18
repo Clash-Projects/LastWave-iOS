@@ -192,7 +192,7 @@ class _WaveSettingsPageState extends ConsumerState<WaveSettingsPage> {
   Widget _sectionPane() {
     return ValueListenableBuilder<int>(
       valueListenable: _sectionRevision,
-      builder: (context, _, __) => _SectionSwap(
+      builder: (context, _, _) => _SectionSwap(
         child: RepaintBoundary(
           key: ValueKey(_section),
           child: _SectionBody(section: _section, onUpdate: _update),
