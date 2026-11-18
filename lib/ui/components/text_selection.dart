@@ -20,9 +20,8 @@ Widget waveTextContextMenuBuilder(
   EditableTextState state,
 ) {
   if (defaultTargetPlatform == TargetPlatform.iOS) {
-    return CupertinoAdaptiveTextSelectionToolbar.buttonItems(
-      anchors: state.contextMenuAnchors,
-      buttonItems: state.contextMenuButtonItems,
+    return CupertinoAdaptiveTextSelectionToolbar.editableText(
+      editableTextState: state,
     );
   }
   return TextBox.defaultContextMenuBuilder(context, state);
