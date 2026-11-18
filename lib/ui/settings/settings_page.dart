@@ -100,6 +100,9 @@ class _WaveSettingsPageState extends ConsumerState<WaveSettingsPage> {
   late final ScrollController _contentScrollController;
   late final ScrollController _narrowScrollController;
   late final ScrollController _railScrollController;
+  // Refresh the active settings section independently from the navigation
+  // tabs. Preference writes should not rebuild the selected-tab controls.
+  late final ValueNotifier<int> _sectionRevision = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -120,6 +123,7 @@ class _WaveSettingsPageState extends ConsumerState<WaveSettingsPage> {
     _contentScrollController.dispose();
     _narrowScrollController.dispose();
     _railScrollController.dispose();
+    _sectionRevision.dispose();
     super.dispose();
   }
 
@@ -153,9 +157,48 @@ class _WaveSettingsPageState extends ConsumerState<WaveSettingsPage> {
   }
 
   Future<void> _update(Future<void> Function(Prefs) fn) async {
-    await fn(ref.read(prefsProvider));
-    ref.read(themeControllerProvider.notifier).refresh();
-    if (mounted) setState(() {});
+    final prefs = ref.read(prefsProvider);
+    final themeBefore = (
+      prefs.themeMode,
+      prefs.amoled,
+      prefs.customThemeBase,
+      prefs.hazeMaterial,
+      prefs.hazeIntensity,
+      prefs.accentSource,
+    );
+    await fn(prefs);
+    if (!mounted) return;
+
+    final themeAfter = (
+      prefs.themeMode,
+      prefs.amoled,
+      prefs.customThemeBase,
+      prefs.hazeMaterial,
+      prefs.hazeIntensity,
+      prefs.accentSource,
+    );
+    // Only publish a new app theme when a theme preference actually changed.
+    // Refreshing it for unrelated audio/download/library options caused the
+    // whole app shell (including the Settings section tabs) to flash.
+    if (themeBefore != themeAfter) {
+      ref.read(themeControllerProvider.notifier).refresh();
+    }
+
+    // Rebuild just the active section so persisted values update without
+    // rebuilding the navigation tabs above it.
+    _sectionRevision.value++;
+  }
+
+  Widget _sectionPane() {
+    return ValueListenableBuilder<int>(
+      valueListenable: _sectionRevision,
+      builder: (context, _, __) => _SectionSwap(
+        child: RepaintBoundary(
+          key: ValueKey(_section),
+          child: _SectionBody(section: _section, onUpdate: _update),
+        ),
+      ),
+    );
   }
 
   @override
@@ -208,12 +251,7 @@ const WavePageHeader(
                   ),
                 ),
                 const SizedBox(height: 12),
-                _SectionSwap(
-                  child: RepaintBoundary(
-                    key: ValueKey(_section),
-                    child: _SectionBody(section: _section, onUpdate: _update),
-                  ),
-                ),
+                _sectionPane(),
         const WaveChromeSpacer.bottom(),
       ],
             );
@@ -263,15 +301,7 @@ const Text('Settings', style: WaveType.pageTitle),
                     const SizedBox(height: 20),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 640),
-                      child: _SectionSwap(
-                        child: RepaintBoundary(
-                          key: ValueKey(_section),
-                          child: _SectionBody(
-                            section: _section,
-                            onUpdate: _update,
-                          ),
-                        ),
-                      ),
+                      child: _sectionPane(),
                     ),
         const WaveChromeSpacer.bottom(),
       ],
