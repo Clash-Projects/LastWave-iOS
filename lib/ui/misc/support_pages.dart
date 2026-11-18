@@ -706,17 +706,25 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
               ),
               if (_mode == MixMode.similarTracks) ...[
                 const SizedBox(height: 8),
-                TextBox(padding: waveFieldPadding, controller: _seedTrack, placeholder: 'Song'),
+                TextBox(
+                  selectionControls: waveTextSelectionControls,
+                  contextMenuBuilder: waveTextContextMenuBuilder,padding: waveFieldPadding, controller: _seedTrack, placeholder: 'Song'),
                 const SizedBox(height: 8),
-                TextBox(padding: waveFieldPadding, controller: _seedArtist, placeholder: 'Artist'),
+                TextBox(
+                  selectionControls: waveTextSelectionControls,
+                  contextMenuBuilder: waveTextContextMenuBuilder,padding: waveFieldPadding, controller: _seedArtist, placeholder: 'Artist'),
               ],
               if (_mode == MixMode.similarArtists) ...[
                 const SizedBox(height: 8),
-                TextBox(padding: waveFieldPadding, controller: _seedArtist, placeholder: 'Artist'),
+                TextBox(
+                  selectionControls: waveTextSelectionControls,
+                  contextMenuBuilder: waveTextContextMenuBuilder,padding: waveFieldPadding, controller: _seedArtist, placeholder: 'Artist'),
               ],
               if (_mode == MixMode.tag) ...[
                 const SizedBox(height: 8),
-                TextBox(padding: waveFieldPadding, controller: _tag, placeholder: 'Tag'),
+                TextBox(
+                  selectionControls: waveTextSelectionControls,
+                  contextMenuBuilder: waveTextContextMenuBuilder,padding: waveFieldPadding, controller: _tag, placeholder: 'Tag'),
               ],
               const SizedBox(height: 12),
               Wrap(
