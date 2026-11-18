@@ -24,6 +24,7 @@ import 'friends_page.dart' show localFriendsProvider;
 import '../components/track_row.dart';
 import '../theme/tokens.dart';
 import '../components/inputs.dart';
+import '../components/text_selection.dart';
 
 export 'friends_page.dart' show WaveFriendsPage;
 
@@ -590,7 +591,10 @@ class _WaveMixLabPageState extends ConsumerState<WaveMixLabPage> {
       context: context,
       builder: (context) => ContentDialog(
         title: const Text('Save playlist'),
-        content: TextBox(padding: waveFieldPadding, 
+        content: TextBox(
+          selectionControls: waveTextSelectionControls,
+          contextMenuBuilder: waveTextContextMenuBuilder,
+          padding: waveFieldPadding, 
           controller: name,
           placeholder: 'Playlist name',
         ),
