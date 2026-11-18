@@ -1020,7 +1020,8 @@ class _Bubble extends StatelessWidget {
                   SelectableText(
                     line.text,
                     style: WaveType.body,
-                    contextMenuBuilder: TextBox.defaultContextMenuBuilder,
+                    selectionControls: waveTextSelectionControls,
+                    contextMenuBuilder: waveTextContextMenuBuilder,
                   ),
                 ],
               ),
