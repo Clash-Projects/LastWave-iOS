@@ -1,5 +1,6 @@
 import '../components/chrome_insets.dart';
 import '../components/inputs.dart';
+import '../components/text_selection.dart';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -132,6 +133,8 @@ class _WaveDownloadsPageState extends ConsumerState<WaveDownloadsPage> {
                     children: [
                       Expanded(
                         child: TextBox(
+                          selectionControls: waveTextSelectionControls,
+                          contextMenuBuilder: waveTextContextMenuBuilder,
                           padding: waveFieldPadding,
                           placeholder: 'Search downloads',
                           prefix: const Padding(
