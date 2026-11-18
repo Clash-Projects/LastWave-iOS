@@ -1,43 +1,54 @@
 import 'package:flutter/cupertino.dart'
-    show
-        CupertinoTextSelectionToolbar,
-        CupertinoTextSelectionToolbarButton,
-        cupertinoTextSelectionHandleControls;
+    show cupertinoTextSelectionHandleControls;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart'
-    show BuildContext, EditableTextState, SizedBox, TextSelectionControls, Widget;
-import 'package:fluent_ui/fluent_ui.dart' show TextBox;
+    show BuildContext, ContextMenuButtonItem, EditableTextState, TextSelectionControls, Widget;
+import 'package:fluent_ui/fluent_ui.dart'
+    show TextBox, WindowsTextSelectionToolbar;
 
-/// Keep the iOS selection handles while delegating its toolbar to the
-/// modern contextMenuBuilder below. Do not use cupertinoTextSelectionControls:
-/// its legacy buildToolbar path is incompatible with Fluent TextBox overlays.
+/// Keep iOS selection handles, but use the Fluent desktop-style toolbar.
+/// Keyboard shortcut labels are suppressed by converting the menu items to
+/// custom labeled actions before passing them to the Fluent toolbar.
 TextSelectionControls? get waveTextSelectionControls =>
     defaultTargetPlatform == TargetPlatform.iOS
         ? cupertinoTextSelectionHandleControls
         : null;
 
-/// Build a compact, native Cupertino selection toolbar on iOS. Avoid
-/// Fluent's Windows/Acrylic menu there; it produces a translucent overlay
-/// across the editable region instead of the expected iOS action bubble.
 Widget waveTextContextMenuBuilder(
   BuildContext context,
   EditableTextState state,
 ) {
   if (defaultTargetPlatform == TargetPlatform.iOS) {
-    final items = state.contextMenuButtonItems;
+    final items = state.contextMenuButtonItems
+        .map(
+          (item) => ContextMenuButtonItem(
+            type: ContextMenuButtonType.custom,
+            label: item.label ?? _labelFor(item.type),
+            onPressed: item.onPressed,
+          ),
+        )
+        .toList();
+
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return CupertinoTextSelectionToolbar(
-      anchorAbove: state.contextMenuAnchors.primaryAnchor,
-      anchorBelow:
-          state.contextMenuAnchors.secondaryAnchor ??
-          state.contextMenuAnchors.primaryAnchor,
-      children: [
-        for (final item in items)
-          CupertinoTextSelectionToolbarButton.buttonItem(buttonItem: item),
-      ],
+    return WindowsTextSelectionToolbar(
+      buttonItems: items,
+      anchors: state.contextMenuAnchors,
     );
   }
 
   return TextBox.defaultContextMenuBuilder(context, state);
 }
+
+String _labelFor(ContextMenuButtonType type) => switch (type) {
+  ContextMenuButtonType.cut => 'Cut',
+  ContextMenuButtonType.copy => 'Copy',
+  ContextMenuButtonType.paste => 'Paste',
+  ContextMenuButtonType.selectAll => 'Select All',
+  ContextMenuButtonType.delete => 'Delete',
+  ContextMenuButtonType.lookUp => 'Look Up',
+  ContextMenuButtonType.searchWeb => 'Search Web',
+  ContextMenuButtonType.share => 'Share',
+  ContextMenuButtonType.liveTextInput => 'Live Text Input',
+  ContextMenuButtonType.custom => '',
+};
