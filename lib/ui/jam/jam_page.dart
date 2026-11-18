@@ -11,6 +11,7 @@ import '../../features/jam/jam_client.dart';
 import '../components/artwork.dart';
 import '../components/buttons.dart';
 import '../components/inputs.dart';
+import '../components/text_selection.dart';
 import '../theme/tokens.dart';
 import '../theme/wave_icons.dart';
 
@@ -229,7 +230,10 @@ class _WaveJamPageState extends ConsumerState<WaveJamPage> {
                   children: [
                     _Label('Your name'),
                     const SizedBox(height: 6),
-                    TextBox(padding: waveFieldPadding, 
+                    TextBox(
+                      selectionControls: waveTextSelectionControls,
+                      contextMenuBuilder: waveTextContextMenuBuilder,
+                      padding: waveFieldPadding, 
                       controller: _name,
                       placeholder: 'Listener',
                       decoration: waveInputDecoration(),
