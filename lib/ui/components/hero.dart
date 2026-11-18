@@ -10,6 +10,7 @@ import 'ambient.dart';
 import 'artwork.dart';
 import 'buttons.dart' show LWTooltip, WaveButton;
 import 'inputs.dart';
+import 'text_selection.dart';
 import 'menus.dart';
 
 /// Artwork-led collection header.
@@ -223,7 +224,10 @@ class WaveFilterBar extends StatelessWidget {
           child: Row(
           children: [
             Expanded(
-              child: TextBox(padding: waveFieldPadding, 
+              child: TextBox(
+                selectionControls: waveTextSelectionControls,
+                contextMenuBuilder: waveTextContextMenuBuilder,
+                padding: waveFieldPadding, 
                 decoration: waveInputDecoration(),
                 controller: controller,
                 placeholder: hint,
