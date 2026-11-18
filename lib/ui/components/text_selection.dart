@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart'
     show BuildContext, EditableTextState, TextSelectionControls, Widget;
 import 'package:fluent_ui/fluent_ui.dart' show TextBox;
 
-/// Keep iOS-native selection handles and text highlighting, but hide the
-/// floating context toolbar. Desktop selection remains Fluent-native.
+/// Keep iOS-native selection handles, highlighting, and context toolbar.
+/// Desktop selection remains Fluent-native.
 TextSelectionControls? get waveTextSelectionControls =>
     defaultTargetPlatform == TargetPlatform.iOS
         ? cupertinoTextSelectionHandleControls
