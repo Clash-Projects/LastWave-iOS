@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart'
     show cupertinoTextSelectionHandleControls;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart'
-    show BuildContext, ContextMenuButtonItem, EditableTextState, TextSelectionControls, Widget;
+    show BuildContext, ContextMenuButtonItem, ContextMenuButtonType, EditableTextState, SizedBox, TextSelectionControls, Widget;
 import 'package:fluent_ui/fluent_ui.dart'
     show TextBox, WindowsTextSelectionToolbar;
 
