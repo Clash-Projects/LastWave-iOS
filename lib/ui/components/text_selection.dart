@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart'
         cupertinoTextSelectionHandleControls;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart'
-    show BuildContext, EditableTextState, TextSelectionControls, Widget;
+    show BuildContext, EditableTextState, SizedBox, TextSelectionControls, Widget;
 import 'package:fluent_ui/fluent_ui.dart' show TextBox;
 
 /// Keep the iOS selection handles while delegating its toolbar to the
